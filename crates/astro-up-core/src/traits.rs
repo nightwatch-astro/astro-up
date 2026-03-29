@@ -61,6 +61,36 @@ pub trait Downloader {
     ) -> Result<(), CoreError>;
 }
 
+/// Backup result from a completed backup operation.
+#[derive(Debug, Clone)]
+pub struct BackupResult {
+    pub software_id: String,
+    pub timestamp: String,
+    pub path: String,
+    pub size: u64,
+}
+
+/// Entry in a backup list.
+#[derive(Debug, Clone)]
+pub struct BackupEntry {
+    pub timestamp: String,
+    pub path: String,
+    pub size: u64,
+}
+
+/// Backs up and restores software configuration files.
+#[trait_variant::make(BackupManagerDyn: Send)]
+pub trait BackupManager {
+    async fn backup(
+        &self,
+        software_id: &str,
+        paths: &[String],
+    ) -> Result<BackupResult, CoreError>;
+    async fn restore(&self, software_id: &str, timestamp: &str) -> Result<(), CoreError>;
+    async fn list(&self, software_id: &str) -> Result<Vec<BackupEntry>, CoreError>;
+    async fn prune(&self, software_id: &str, keep: usize) -> Result<(), CoreError>;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
