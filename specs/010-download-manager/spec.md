@@ -98,3 +98,14 @@ If a download is interrupted (network drop, user cancel), the manager can resume
 - The download directory is configured in spec 004
 - Progress events feed into the CLI progress bar (spec 015) and GUI progress indicator (spec 017)
 - Depends on: spec 004 (config for proxy/timeouts/paths), spec 005 (catalog for URLs), spec 008 (autoupdate URL resolution)
+
+## Clarifications
+
+- **Temp file naming**: Download to `{download_dir}/{filename}.part`. On success + hash verify, rename to `{filename}`. On failure, delete the `.part` file.
+- **Progress event frequency**: Emit progress every 100ms or every 64KB, whichever comes first. This balances UI responsiveness with event overhead.
+- **Hash source**: SHA256 hashes come from the catalog version entries (spec 005). If no hash is available (new version, hash not yet computed by manifest CI), download proceeds with a warning.
+- **Redirect handling**: Follow up to 10 HTTP redirects. Log the final URL for debugging. GitHub Releases uses 302 redirects to CDN.
+- **Proxy support**: Use proxy settings from AppConfig.network.proxy (spec 004). Applies to all HTTP requests including redirects.
+- **Download directory creation**: Create `{download_dir}` if it doesn't exist. Don't fail if parent dirs are missing — create them recursively.
+- **Disk space pre-check**: If Content-Length is available, check available disk space before starting. Warn if less than 2x the file size (to account for temp + final copy).
+- **User-Agent header**: Send `astro-up/{version}` as User-Agent. Some vendor sites block default/missing User-Agents.
