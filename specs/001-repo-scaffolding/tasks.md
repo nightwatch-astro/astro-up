@@ -12,9 +12,9 @@
 
 **Purpose**: Root workspace configuration, toolchain pinning, and .gitignore
 
-- [ ] T001 Create workspace `Cargo.toml` at repo root with members `crates/astro-up-core`, `crates/astro-up-cli`, `crates/astro-up-gui` and shared workspace dependencies (serde, serde_json, insta)
-- [ ] T002 [P] Create `rust-toolchain.toml` pinning stable channel and 2024 edition
-- [ ] T003 [P] Create `.gitignore` covering `target/`, `node_modules/`, `frontend/dist/`, `*.swp`, `.DS_Store`, `Cargo.lock` exclusion for libraries (keep for workspace)
+- [x] T001 Create workspace `Cargo.toml` at repo root with members `crates/astro-up-core`, `crates/astro-up-cli`, `crates/astro-up-gui` and shared workspace dependencies (serde, serde_json, insta)
+- [x] T002 [P] Create `rust-toolchain.toml` pinning stable channel and 2024 edition
+- [x] T003 [P] Create `.gitignore` covering `target/`, `node_modules/`, `frontend/dist/`, `*.swp`, `.DS_Store`, `Cargo.lock` exclusion for libraries (keep for workspace)
 
 ---
 
