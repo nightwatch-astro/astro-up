@@ -20,7 +20,7 @@
   "devDependencies": {
     "typescript": "^5",
     "vite": "^6",
-    "@vitejs/plugin-vue": "^5",
+    "@vitejs/plugin-vue": "^6",
     "vitest": "^3",
     "eslint": "^9",
     "eslint-plugin-vue": "^10",
