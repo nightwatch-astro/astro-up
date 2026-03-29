@@ -710,20 +710,27 @@ discover-all-vid-pids:
 
 ### Phase 9: Migration Completion
 
-#### Spec 019 — Manifest Pipeline Simplification
+#### Spec 019 — Manifest Pipeline Modernization
 
-**Scope:** Update the shared manifest repository to support the new `[checkver]` format and simplified CI.
+**Scope:** Modernize the manifest repository with Scoop/winget-inspired patterns: self-describing manifests, SQLite compilation, per-version files, simplified CI, and GitHub Releases distribution.
 
 **Key decisions:**
-- Rename `[remote]` → `[checkver]` in TOML manifests
-- Adopt Scoop `$version`, `$majorVersion`, `$cleanVersion` template variables
-- Add `sha256` field to version entries in versions.json
-- Add `meta.json` for lightweight change detection
-- Collapse CI matrix to single `CheckAll()` job
+- Rename `[remote]` → `[checkver]` in TOML manifests (self-describing, not stripped by compiler)
+- Adopt Scoop `$version`, `$majorVersion`, `$cleanVersion`, `$minorVersion`, `$patchVersion`, `$underscoreVersion`, `$dashVersion` template variables for URL construction
+- Tiered hash discovery (Scoop pattern): URL+regex > JSON endpoint > download+compute
+- TOML → SQLite compilation (winget pattern): replaces `manifests.json` + `versions.json` with single `catalog.db`
+- Per-version files: `versions/{id}/{semver}.json` with `{ url, sha256, discovered_at, release_notes_url }` — git history is the audit trail
+- Collapse CI to single job: iterate manifests → checkver → update version files → compile SQLite → publish
+- Distribution via GitHub Releases: rolling `catalog/latest` tag with `catalog.db` + `catalog.db.minisig` assets. Upgrade path to Cloudflare R2 if custom cache headers needed later.
+- Client fetches SQLite via HTTP GET with ETag for conditional requests
 - Default installer switches per type (reduce manifest verbosity)
-- Backward compatible: old Go client can still read manifests.json
+- Schema versioning: `manifest_version` field in every TOML file
+- Keep separate repo (6h cron commits + Chromium deps stay out of main repo)
+- Backward compatible transition: old Go client reads `manifests.json` (generated alongside SQLite during transition)
 
-**Note:** This spec applies to `astro-up/astro-up-manifests`, not the new Rust repo. Both old and new clients consume the same output.
+**Research basis:** Scoop (self-describing manifests, variable substitution, tiered hash discovery), winget (YAML→SQLite compilation, CDN distribution, schema versioning).
+
+**Note:** This spec applies to `nightwatch-astro/astro-up-manifests`, not the main Rust repo. The main app's Spec 004 (Catalog) consumes the SQLite artifact.
 
 #### Spec 020 — Feature Parity Verification
 
