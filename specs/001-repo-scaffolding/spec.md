@@ -96,7 +96,7 @@ The repository receives automated pull requests when Rust crate or npm package u
 - **FR-011**: Repository MUST include Dependabot configuration for Cargo, npm, and GitHub Actions ecosystems (weekly schedule, `chore(deps)` / `chore(ci)` commit prefixes, matching nightwatch-astro org convention)
 - **FR-012**: Repository MUST include release-plz configuration (`release-plz.toml`) for automated version management, changelog generation, and crates.io publishing. The release workflow MUST delegate to the shared `nightwatch-astro/.github` reusable workflow (`rust-release.yml`). Release-plz MUST use conventional commit parsing with semantic groups (feat, fix, perf, refactor, docs, test, chore), enable git tags, GitHub releases, and dependency updates in release PRs
 - **FR-013**: Repository MUST include a `.gitignore` covering Rust (`target/`), Node (`node_modules/`), and Tauri build artifacts
-- **FR-014**: Repository MUST include a `cliff.toml` for git-cliff changelog generation
+- **FR-014**: Changelog generation MUST be handled by release-plz's built-in git-cliff integration via the `[changelog]` section in `release-plz.toml`. No separate `cliff.toml` is needed
 - **FR-015**: Repository MUST include a `Justfile` with recipes for common development tasks: `setup`, `dev`, `build`, `test`, `check`, `fmt`, `lint`
 - **FR-016**: `rust-toolchain.toml` MUST pin the Rust edition and toolchain channel
 - **FR-017**: Each crate MUST include a smoke test that verifies compilation and basic function availability

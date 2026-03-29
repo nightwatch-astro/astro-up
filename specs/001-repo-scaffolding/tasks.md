@@ -103,8 +103,7 @@
 
 **Purpose**: Documentation, changelog config, and branch protection
 
-- [ ] T032 [P] Create `cliff.toml` for git-cliff with conventional commit sections (feat, fix, refactor, docs, chore, test)
-- [ ] T033 [P] Write `CLAUDE.md` with project conventions: workspace layout, Justfile recipes, test commands, branch strategy, Tauri dev workflow, frontend structure, coding standards (Rust: cargo fmt + clippy -D warnings, Vue: ESLint flat config + TypeScript strict)
+- [ ] T032 [P] Write `CLAUDE.md` with project conventions: workspace layout, Justfile recipes, test commands, branch strategy, Tauri dev workflow, frontend structure, coding standards (Rust: cargo fmt + clippy -D warnings, Vue: ESLint flat config + TypeScript strict)
 - [ ] T034 Configure branch protection on `main` via `gh api`: require CI status checks (`check-rust`, `check-frontend`), require 1 PR review, enforce for admins
 - [ ] T035 Run `just check` one final time to verify everything passes end-to-end
 
@@ -137,7 +136,7 @@ T028 (dependabot) | T029 (release-please)  # parallel — different files
 
 Within Phase 7:
 ```
-T032 (cliff.toml) | T033 (CLAUDE.md)  # parallel — different files
+T032 (CLAUDE.md) | T034 (branch protection)  # parallel — different targets
 ```
 
 ## Implementation Strategy

@@ -97,7 +97,7 @@ nightwatch-astro/astro-up/
 ├── CLAUDE.md                         # Project conventions
 ├── LICENSE                           # Already exists (Apache-2.0)
 ├── Justfile                          # Dev recipes
-├── cliff.toml                        # git-cliff changelog config
+├── release-plz.toml                  # release-plz config (includes git-cliff changelog)
 ├── rust-toolchain.toml               # Pinned Rust toolchain
 └── .gitignore                        # Rust + Node + Tauri
 ```
