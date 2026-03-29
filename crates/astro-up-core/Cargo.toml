@@ -1,0 +1,17 @@
+[package]
+name = "astro-up-core"
+version = "0.1.0"
+description = "Shared library for astro-up — types, detection, download, install, engine"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+pretty_assertions.workspace = true

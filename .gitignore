@@ -1,0 +1,28 @@
+# Rust
+/target/
+*.rs.bk
+
+# Node
+node_modules/
+frontend/dist/
+
+# Tauri
+crates/astro-up-gui/icons/icon.ico
+crates/astro-up-gui/icons/icon.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env*
+!.env.example
+
+# Serena MCP cache
+.serena/
