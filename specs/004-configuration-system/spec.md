@@ -74,9 +74,11 @@ A user passes `--config /path/to/custom.toml` to use an alternate config file, o
 ### Edge Cases
 
 - What happens when the config file has a syntax error? The application reports the TOML parse error with line/column and exits with a non-zero code.
-- What happens when a path token like `{program_dir}` cannot be resolved? The application reports the unresolvable token and the field it was used in.
+- What happens when a path token like `{program_dir}` cannot be resolved? The application reports the unresolvable token and the field it was used in. `{program_dir}` is NOT a global token — it's per-package (resolved from detection, not config). Config only uses `{config_dir}`, `{cache_dir}`, `{data_dir}`, `{home_dir}`.
 - What happens when the config directory doesn't exist? The application creates it on first write (e.g., when saving defaults).
 - What happens when environment variables conflict with TOML config? Environment variables always win (documented precedence).
+- What happens when the config format changes between versions? Config is forward-compatible: unknown keys are warned but not rejected. Missing keys use defaults. No explicit version field needed — serde defaults handle migration.
+- What happens when the GitHub token is stored in plaintext in config.toml? This is accepted for v1. Users who want secure storage should use `ASTROUP_GITHUB_TOKEN` env var instead. Keychain integration is deferred.
 
 ## Requirements *(mandatory)*
 
@@ -85,13 +87,13 @@ A user passes `--config /path/to/custom.toml` to use an alternate config file, o
 - **FR-001**: System MUST load configuration in this precedence order (highest to lowest): CLI arguments → environment variables → TOML config file → compiled defaults
 - **FR-002**: System MUST use the `ASTROUP_` prefix for environment variable mapping, with double underscore for nesting (e.g., `ASTROUP_CATALOG__URL` maps to `catalog.url`)
 - **FR-003**: System MUST resolve the default config file path as `{config_dir}/astro-up/config.toml` using platform-aware directory resolution
-- **FR-004**: System MUST support these path tokens in string config values: `{config_dir}`, `{cache_dir}`, `{data_dir}`, `{program_dir}`, `{home_dir}`
+- **FR-004**: System MUST support these path tokens in config values: `{config_dir}`, `{cache_dir}`, `{data_dir}`, `{home_dir}`. Note: `{program_dir}` is per-package (resolved during detection, not config) and is NOT a config-level token.
 - **FR-005**: System MUST validate all configuration values after loading and merging, reporting the field name and constraint on failure
 - **FR-006**: System MUST provide these configuration sections: catalog (source URLs, cache TTL), paths (download, cache, data directories), network (proxy, timeouts, GitHub token), updates (check interval, auto-check enabled), logging (level, file path), telemetry (opt-in flag)
 - **FR-007**: System MUST allow the config file path to be overridden via `--config` CLI argument
 - **FR-008**: System MUST serialize the current effective configuration to TOML for `config show` and `config init` commands
 - **FR-009**: System MUST operate with sensible defaults when no config file exists and no environment variables are set
-- **FR-010**: System MUST reject unknown TOML keys with a warning (not silently ignore) to catch typos
+- **FR-010**: System MUST log a warning for unknown TOML keys to catch typos, but continue loading (do not fail)
 - **FR-011**: System MUST support boolean, integer, string, duration, and path types in config values
 - **FR-012**: System MUST expand path tokens (`{config_dir}` etc.) at config load time, not at usage time
 
@@ -114,6 +116,26 @@ A user passes `--config /path/to/custom.toml` to use an alternate config file, o
 - **SC-003**: Configuration validation catches all invalid values and reports actionable error messages within 100ms of startup
 - **SC-004**: `config init` generates a documented TOML file with all available settings and their defaults
 - **SC-005**: Round-trip test passes: load defaults → serialize to TOML → load from TOML → assert equality
+
+## Default Values
+
+| Section | Key | Default |
+|---------|-----|---------|
+| catalog | url | `https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db` |
+| catalog | cache_ttl | 24 hours |
+| catalog | offline | false |
+| paths | download_dir | `{cache_dir}/astro-up/downloads` |
+| paths | cache_dir | `{cache_dir}/astro-up` |
+| paths | data_dir | `{data_dir}/astro-up` |
+| network | proxy | none |
+| network | timeout | 30 seconds |
+| network | github_token | none |
+| updates | auto_check | true |
+| updates | check_interval | 24 hours |
+| logging | level | info |
+| logging | log_to_file | false |
+| logging | log_file | `{data_dir}/astro-up/astro-up.log` |
+| telemetry | enabled | false |
 
 ## Assumptions
 

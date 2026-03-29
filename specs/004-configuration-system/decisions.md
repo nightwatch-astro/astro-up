@@ -38,6 +38,29 @@
 **Choice**: Defer to spec 016 (Vue Frontend)
 **Reasoning**: This spec covers the configuration system (loading, validation, serialization). The GUI settings page is a frontend concern that depends on this spec's API but belongs in the frontend spec.
 
+## Clarify-Phase Decisions
+
+### C1: `{program_dir}` is NOT a config-level token
+**Finding**: `{program_dir}` varies per package (e.g., `C:\Program Files\NINA` vs `C:\Program Files\PHD2`). It's resolved during detection (spec 006), not at config load time.
+**Decision**: Removed from FR-004. Config tokens are: `{config_dir}`, `{cache_dir}`, `{data_dir}`, `{home_dir}`.
+**Impact**: Manifest `[backup]` and `[detection]` sections still use `{program_dir}` — but that's resolved per-package by the detection system, not by config.
+
+### C2: Config file forward-compatibility via serde defaults
+**Finding**: No explicit config version field needed. Serde's `#[serde(default)]` handles missing fields (new fields get defaults on old configs). Unknown fields get a warning (FR-010). This handles both upgrades and downgrades gracefully.
+**Decision**: No migration system. No version field. Rely on serde defaults + warn-on-unknown.
+
+### C3: GitHub token in plaintext is acceptable for v1
+**Finding**: The only secret in config is the GitHub API token. Storing it in TOML is plaintext on disk. Alternatives (keychain, 1Password CLI) add OS-specific complexity.
+**Decision**: Accept plaintext for v1. Users who want secure storage use `ASTROUP_GITHUB_TOKEN` env var. Document this in `config init` output.
+
+### C4: Default values explicitly documented
+**Finding**: Spec said "sensible defaults" without listing them. Added a defaults table to the spec covering all sections (catalog URL, TTL, paths, network, updates, logging, telemetry).
+**Decision**: Defaults are now part of the spec, not left to implementation judgment.
+
+### C5: Catalog URL points to GitHub Releases
+**Finding**: Default catalog URL uses GitHub Releases latest download pattern. This is stable, CDN-cached, and doesn't require any infrastructure beyond the manifest repo.
+**Decision**: `https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db`
+
 ## Questions I Would Have Asked
 
 ### Q1: Should config support hot-reloading?
