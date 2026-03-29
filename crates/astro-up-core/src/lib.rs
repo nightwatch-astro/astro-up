@@ -1,3 +1,9 @@
+pub mod error;
+pub mod events;
+pub mod ledger;
+pub mod metrics;
+pub mod release;
+pub mod traits;
 pub mod types;
 
 /// Returns the version of astro-up-core.
