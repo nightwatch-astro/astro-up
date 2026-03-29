@@ -407,7 +407,50 @@ config_paths = [
     "{config_dir}/NINA/Profiles",
     "{config_dir}/NINA/Settings",
 ]
+
+# For driver packages only:
+[hardware]
+vid_pid = ["03C3:*"]             # ZWO — match all products under vendor ID
+device_class = "Camera"          # Windows device class for WMI matching
+inf_provider = "ZWO"             # Match Win32_PnPSignedDriver.DriverProviderName
 ```
+
+**Hardware section:** Only for driver manifests. Used for:
+1. Device connection notifications (match USB VID:PID on connect event)
+2. WMI driver detection (filter `Win32_PnPSignedDriver` by provider/class)
+3. Driver verification when hardware is connected
+
+**VID:PID discovery automation:** A `just` task downloads driver packages, extracts INF files, and parses VID:PID declarations:
+
+```just
+# Justfile (manifest repo)
+discover-vid-pid package_id:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Download latest driver package
+    url=$(jq -r '.["{{package_id}}"].url' versions.json)
+    tmpdir=$(mktemp -d)
+    curl -L -o "$tmpdir/driver.exe" "$url"
+    # Extract (handles ZIP, NSIS self-extracting, etc.)
+    7z x "$tmpdir/driver.exe" -o"$tmpdir/extracted" -y 2>/dev/null || \
+        unzip "$tmpdir/driver.exe" -d "$tmpdir/extracted" 2>/dev/null || true
+    # Find INF files and extract VID:PID
+    grep -rhiE 'USB\\VID_[0-9A-Fa-f]{4}&PID_[0-9A-Fa-f]{4}' \
+        "$tmpdir/extracted/" --include='*.inf' | \
+        grep -oiE 'VID_[0-9A-Fa-f]{4}&PID_[0-9A-Fa-f]{4}' | \
+        sort -u | \
+        sed 's/VID_//;s/&PID_/:/' | tr '[:upper:]' '[:lower:]'
+    rm -rf "$tmpdir"
+
+discover-all-vid-pids:
+    @for manifest in manifests/driver/*.toml manifests/usb/*.toml; do \
+        id=$(basename "$manifest" .toml); \
+        echo "=== $id ==="; \
+        just discover-vid-pid "$id" 2>/dev/null || echo "  (no VID:PID found)"; \
+    done
+```
+
+**CI validation step:** Compare manifest `[hardware].vid_pid` against INF-extracted values. Warn on mismatch (new product IDs added by vendor, or manifest missing entries).
 
 **Reference:** Current Go types in `internal/core/` (software.go, config.go, interfaces.go, errors.go). winget installer schema v1.9.0.
 
