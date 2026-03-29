@@ -7,6 +7,7 @@ node_modules/
 frontend/dist/
 
 # Tauri
+crates/astro-up-gui/gen/
 crates/astro-up-gui/icons/icon.ico
 crates/astro-up-gui/icons/icon.png
 
