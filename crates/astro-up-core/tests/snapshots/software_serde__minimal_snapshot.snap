@@ -1,0 +1,33 @@
+---
+source: crates/astro-up-core/tests/software_serde.rs
+assertion_line: 119
+expression: software
+---
+{
+  "id": "test-app",
+  "slug": null,
+  "name": "Test App",
+  "type": "application",
+  "category": "capture",
+  "os": [],
+  "description": null,
+  "homepage": null,
+  "publisher": null,
+  "icon_url": null,
+  "license": null,
+  "license_url": null,
+  "aliases": [],
+  "tags": [],
+  "notes": null,
+  "docs_url": null,
+  "channel": null,
+  "min_os_version": null,
+  "manifest_version": null,
+  "detection": null,
+  "install": null,
+  "checkver": null,
+  "dependencies": null,
+  "hardware": null,
+  "backup": null,
+  "versioning": null
+}
