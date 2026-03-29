@@ -181,6 +181,19 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 | **tempfile** | 3 | Temporary directories for downloads, test fixtures |
 | **tokio-test** | 0.4 | Async test utilities |
 
+### Changes from Initial List
+
+| Crate | Change | Reason |
+|-------|--------|--------|
+| **color-eyre** | Added for astro-up-cli instead of anyhow | Colorized backtraces + tracing span integration |
+| **inquire** | Replaces dialoguer | Better UX: fuzzy select, custom validation, polished prompts |
+| **strum** | Added | Enum derive macros (Display, EnumString, EnumIter) for Category, Status enums |
+| **futures** | Added | Stream combinators for concurrent downloads |
+| **globset** | Added | File glob matching for asset patterns (more natural than regex for `*win64.exe`) |
+| **serde_with** | Added | Custom serde helpers (Duration as string, skip None) |
+| **cargo-nextest** | Added dev tool | Faster test runner, blessed.rs recommended |
+| **install-action** | Added CI tool | GitHub Action for installing Rust tools |
+
 ### Worth Considering (add when needed)
 
 | Crate | Version | Use case | When to add |
@@ -189,6 +202,25 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 | **proptest** | 1 | Property-based testing (fuzz version parsing, manifest deser) | When version parsing edge cases become a problem |
 | **derive_builder** | 0.20 | Builder pattern for complex option structs | If `InstallOptions`, `CheckverConfig` constructors get unwieldy. Struct literals may be enough. |
 | **fakeit** | 1 | Fake data generation for test manifests | When writing large-scale integration tests |
+| **notify** | 7 | File system watcher for live config reload, custom tool directory changes | When implementing live config reload |
+| **parking_lot** | 0.12 | Faster Mutex/RwLock (no poisoning) | Only if std::sync::Mutex contention becomes measurable |
+| **globset** | 0.4 | Glob matching for asset patterns | If regex feels unnatural for file pattern matching in manifests |
+
+### Explicitly Skipped
+
+| Crate | Reason |
+|-------|--------|
+| postcard | Serde format for embedded/no_std wire size — we read TOML/JSON, not binary |
+| rocksdb | Massive overkill — config is 20 TOML fields, status is 95 JSON entries |
+| axum | Web framework — we're not serving HTTP, Tauri invoke() handles IPC |
+| ureq | Blocking HTTP — need async streaming with progress for downloads |
+| argon2/bcrypt | Password hashing — no passwords in this app |
+| blake3 | We verify vendor SHA256 hashes, not our own hashes |
+| crossbeam-channel/flume/postage | tokio::sync::mpsc covers async channels |
+| async-trait | Native async traits since Rust 1.75 |
+| cargo-zigbuild | No cross-compilation needed (Windows → Windows) |
+| signal-hook | Windows doesn't use Unix signals, Tauri handles lifecycle |
+| tap/joinery/conv/educe/variantly/soa_derive | Niche — superseded by itertools, derive_more, strum, or stdlib |
 
 ## Spec Breakdown
 
@@ -218,22 +250,107 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 
 #### Spec 002 — Core Domain Types
 
-**Scope:** Define the shared types, traits, and error types that all other crates depend on. This is the `astro-up-core` crate's foundation.
+**Scope:** Define the shared types, traits, and error types that all other crates depend on. This is the `astro-up-core` crate's foundation. Data model informed by winget's schema (v1.9.0) — adopt fields that improve UX and correctness, skip fields that only serve winget's scale or Windows Store.
 
-**Key types to define:**
-- `Software` — ID, slug, name, category, OS, description, homepage, requires, optional_addons
+**Software metadata (winget-inspired enrichments):**
+- `Software` — ID, slug, name, category, OS, description, homepage, publisher, icon, license, aliases, tags, notes, docs_url, channel, min_os_version, requires (with min_version), optional_addons
 - `Category` — 10-category enum (capture, guiding, platesolving, equipment, focusing, planetarium, viewers, prerequisites, usb, driver)
-- `DetectionConfig` — method (registry, pefile, wmi, driver_store, ascom_profile, file_exists), keys, fallback chain
-- `InstallConfig` — method (exe, msi, innosetup, zip, zipwrap), quiet_args, interactive_args, install_dir, post_install
-- `RemoteConfig` / `CheckverConfig` — provider, owner, repo, checkver URL + regex/jsonpath pattern, autoupdate URL template
+
+**Detection:**
+- `DetectionConfig` — method (registry, pefile, wmi, driver_store, ascom_profile, file_exists), keys, fallback chain, product_code, upgrade_code
+
+**Install (winget switch model):**
+- `InstallConfig` — method (exe, msi, innosetup, nullsoft, wix, burn, zip, zipwrap, portable), scope (machine/user/either), elevation (required/prohibited/self), upgrade_behavior (install/uninstall_previous/deny), install_modes (interactive/silent), success_codes, pre_install, post_install
+- `InstallerSwitches` — silent, interactive, upgrade, install_location (with `<INSTALLPATH>` token), log (with `<LOGPATH>` token), custom
+- `KnownExitCodes` — map of exit code → semantic meaning (packageInUse, rebootRequired, cancelledByUser, alreadyInstalled, missingDependency, etc.)
+
+**Remote / Checkver:**
+- `CheckverConfig` — provider, owner, repo, checkver URL + regex/jsonpath pattern, autoupdate URL template
 - `DownloadConfig` — resolver steps (template, redirect, scrape)
-- `BackupConfig` — config_paths to preserve
+
+**Config / Policy:**
+- `BackupConfig` — config_paths to preserve (no persist/symlinks — avoids lock-in and brownfield issues)
 - `VersioningConfig` — side-by-side, major version pattern, overrides
 - `UpdatePolicy` — default + per-package overrides (minor, major, manual, none)
-- Error types: `ErrNotInstalled`, `ErrChecksumMismatch`, `ErrProviderUnavailable`, `ErrManifestInvalid`, `ErrInstallerFailed` (with exit code), `ErrElevationRequired`, `ErrRebootRequired`, `ErrInstallerTimeout`, `ErrInstallerBusy`
-- Traits: `Detector`, `Installer`, `Provider`, `Downloader`
 
-**Reference:** Current Go types in `internal/core/` (software.go, config.go, interfaces.go, errors.go)
+**Error types:**
+- `NotInstalled`, `ChecksumMismatch`, `ProviderUnavailable`, `ManifestInvalid`
+- `InstallerFailed { exit_code, response }` — wraps `KnownExitCode` semantic
+- `ElevationRequired`, `RebootRequired`, `InstallerTimeout`, `InstallerBusy`
+- `PackageInUse { process_name }`, `AlreadyInstalled`, `MissingDependency { dep_id }`
+
+**Traits:** `Detector`, `Installer`, `Provider`, `Downloader`
+
+**Example manifest (new format):**
+
+```toml
+id = "nina-app"
+name = "N.I.N.A."
+type = "application"
+category = "capture"
+publisher = "Stefan Berg (isbeorn)"
+description = "Nighttime Imaging 'N' Astronomy — advanced capture sequencer"
+homepage = "https://nighttime-imaging.eu"
+icon = "https://nighttime-imaging.eu/icon.png"
+license = "MPL-2.0"
+aliases = ["nina"]
+tags = ["sequencer", "dso", "ascom-compatible", "plate-solving", "autofocus"]
+notes = "Requires .NET Desktop Runtime 8 and ASCOM Platform"
+channel = "stable"
+min_os_version = "10.0"
+
+[dependencies]
+requires = [
+    { id = "ascom-platform", min_version = "6.6" },
+    { id = "dotnet-desktop-8" },
+]
+optional = ["phd2-guider"]
+
+[detection]
+method = "registry"
+registry_key = "SOFTWARE\\NINA"
+registry_value = "DisplayVersion"
+
+[detection.fallback]
+method = "pe_file"
+file_path = "{program_dir}/NINA/NINA.exe"
+
+[install]
+method = "innosetup"
+scope = "either"
+elevation = "self"
+upgrade_behavior = "install"
+install_modes = ["interactive", "silent"]
+success_codes = [3010]
+pre_install = []
+post_install = []
+
+[install.switches]
+silent = ["/VERYSILENT", "/NORESTART", "/SUPPRESSMSGBOXES"]
+interactive = ["/NORESTART"]
+upgrade = ["/VERYSILENT", "/NORESTART", "/SUPPRESSMSGBOXES"]
+install_location = "/DIR=<INSTALLPATH>"
+log = "/LOG=<LOGPATH>"
+
+[install.known_exit_codes]
+1 = "package_in_use"
+6 = "package_in_use_by_application"
+3010 = "reboot_required"
+
+[checkver]
+github = "isbeorn/nina"
+asset_pattern = "NINASetupBundle_*.zip"
+tag_prefix = "Version-"
+changelog_url = "https://github.com/isbeorn/nina/releases"
+
+[backup]
+config_paths = [
+    "{config_dir}/NINA/Profiles",
+    "{config_dir}/NINA/Settings",
+]
+```
+
+**Reference:** Current Go types in `internal/core/` (software.go, config.go, interfaces.go, errors.go). winget installer schema v1.9.0.
 
 #### Spec 003 — Configuration System
 
