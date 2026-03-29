@@ -1,0 +1,124 @@
+---
+source: crates/astro-up-core/tests/software_serde.rs
+assertion_line: 100
+expression: software
+---
+{
+  "id": "nina-app",
+  "slug": null,
+  "name": "N.I.N.A.",
+  "type": "application",
+  "category": "capture",
+  "os": [],
+  "description": "Nighttime Imaging 'N' Astronomy — advanced capture sequencer",
+  "homepage": "https://nighttime-imaging.eu",
+  "publisher": "Stefan Berg (isbeorn)",
+  "icon_url": null,
+  "license": "MPL-2.0",
+  "license_url": null,
+  "aliases": [
+    "nina"
+  ],
+  "tags": [
+    "sequencer",
+    "dso",
+    "ascom-compatible",
+    "plate-solving",
+    "autofocus"
+  ],
+  "notes": "Requires .NET Desktop Runtime 8 and ASCOM Platform",
+  "docs_url": null,
+  "channel": "stable",
+  "min_os_version": "10.0",
+  "manifest_version": null,
+  "detection": {
+    "method": "registry",
+    "registry_key": "SOFTWARE\\NINA",
+    "registry_value": "DisplayVersion",
+    "file_path": null,
+    "version_regex": null,
+    "product_code": null,
+    "upgrade_code": null,
+    "fallback": {
+      "method": "pe_file",
+      "registry_key": null,
+      "registry_value": null,
+      "file_path": "{program_dir}/NINA/NINA.exe",
+      "version_regex": null,
+      "product_code": null,
+      "upgrade_code": null,
+      "fallback": null
+    }
+  },
+  "install": {
+    "method": "inno_setup",
+    "scope": "either",
+    "elevation": "self",
+    "upgrade_behavior": "install",
+    "install_modes": [
+      "interactive",
+      "silent"
+    ],
+    "success_codes": [
+      3010
+    ],
+    "pre_install": [],
+    "post_install": [],
+    "switches": {
+      "silent": [
+        "/VERYSILENT",
+        "/NORESTART",
+        "/SUPPRESSMSGBOXES"
+      ],
+      "interactive": [
+        "/NORESTART"
+      ],
+      "upgrade": [
+        "/VERYSILENT",
+        "/NORESTART",
+        "/SUPPRESSMSGBOXES"
+      ],
+      "install_location": "/DIR=<INSTALLPATH>",
+      "log": "/LOG=<LOGPATH>",
+      "custom": []
+    },
+    "known_exit_codes": {}
+  },
+  "checkver": {
+    "provider": null,
+    "github": "isbeorn/nina",
+    "owner": null,
+    "repo": null,
+    "url": null,
+    "regex": null,
+    "jsonpath": null,
+    "asset_pattern": "NINASetupBundle_*.zip",
+    "tag_prefix": "Version-",
+    "changelog_url": "https://github.com/isbeorn/nina/releases",
+    "autoupdate": null,
+    "hash": null
+  },
+  "dependencies": {
+    "requires": [
+      {
+        "id": "ascom-platform",
+        "min_version": "6.6"
+      },
+      {
+        "id": "dotnet-desktop-8",
+        "min_version": null
+      }
+    ],
+    "optional": [
+      "phd2-guider"
+    ]
+  },
+  "hardware": null,
+  "backup": {
+    "config_paths": [
+      "{config_dir}/NINA/Profiles",
+      "{config_dir}/NINA/Settings"
+    ]
+  },
+  "versioning": null
+}

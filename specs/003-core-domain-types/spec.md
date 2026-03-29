@@ -133,7 +133,7 @@ For software that cannot be detected automatically (firmware files, manual downl
 - **FR-009**: `DetectionConfig` MUST include: `method`, method-specific fields (registry_key, registry_value, file_path, version_regex, product_code, upgrade_code), and optional `fallback` (boxed self-reference for chain).
 
 **Install (winget switch model):**
-- **FR-010**: `InstallConfig` MUST include: `method`, `scope`, `elevation`, `upgrade_behavior`, `install_modes` (Vec), `success_codes` (Vec<i32>), `pre_install` (Vec<String>), `post_install` (Vec<String>), and nested `switches` (InstallerSwitches) and `known_exit_codes` (HashMap<i32, KnownExitCode>).
+- **FR-010**: `InstallConfig` MUST include: `method`, `scope`, `elevation`, `upgrade_behavior`, `install_modes` (Vec), `success_codes` (Vec<i32>), `pre_install` (Vec<String>), `post_install` (Vec<String>), and nested `switches` (InstallerSwitches) and `known_exit_codes` (HashMap<String, KnownExitCode> — String keys for TOML compatibility).
 - **FR-011**: `InstallerSwitches` MUST include: `silent`, `interactive`, `upgrade` (each Vec<String>), `install_location` (with `<INSTALLPATH>` token), `log` (with `<LOGPATH>` token), `custom` (Vec<String>).
 - **FR-012**: `KnownExitCode` enum: `PackageInUse`, `PackageInUseByApplication`, `RebootRequired`, `CancelledByUser`, `AlreadyInstalled`, `MissingDependency`, `DiskFull`, `InsufficientMemory`, `NetworkError`, `ContactSupport`, `RestartRequired`, `SuccessRebootInitiated`. Serialized as snake_case.
 
@@ -165,7 +165,7 @@ For software that cannot be detected automatically (firmware files, manual downl
 
 **Events:**
 - **FR-027**: `Event` enum with `#[serde(tag = "type", content = "data")]` adjacently tagged serialization for clean TypeScript consumption (`{"type": "download_progress", "data": {...}}`): `CheckStarted { id }`, `CheckProgress { id, progress }`, `CheckComplete { id }`, `DownloadStarted { id, url }`, `DownloadProgress { id, progress, bytes_downloaded, total_bytes, speed }`, `DownloadComplete { id }`, `BackupStarted { id }`, `BackupComplete { id }`, `InstallStarted { id }`, `InstallComplete { id }`, `ManualDownloadRequired { id, url }`, `Error { id, error: String }`, `ScanStarted`, `ScanProgress { progress, current_id }`, `ScanComplete { total_found }`.
-- **FR-028**: Events MUST be `Send + 'static` for use with `tokio::sync::mpsc` channels.
+- **FR-028**: Events MUST be `Send + 'static` for use with `flume` channels (sync + async on the same channel — enables sync CLI recv and async GUI recv from the same sender).
 
 **Ledger:**
 - **FR-029**: `LedgerEntry` struct: `package_id`, `version`, `source` (LedgerSource enum: AstroUp, Manual, Acknowledged), `recorded_at` (chrono DateTime), `notes` (Option).
@@ -213,5 +213,5 @@ For software that cannot be detected automatically (firmware files, manual downl
 - Path tokens (`{config_dir}`, `{program_dir}`, `{cache_dir}`) are NOT expanded in the types module — expansion happens in the config module at runtime
 - The `Software` struct is the deserialization target for TOML (manifest files). For SQLite, the pragmatic normalized schema (Option D) stores top-level configs in separate tables with proper columns, and only arrays/maps (switches, exit_codes, tags, aliases, vid_pid, config_paths, autoupdate, hash) as JSON in TEXT columns. The `type` field uses `#[serde(rename = "type")]` (Rust keyword conflict).
 - Traits use native async fn (Rust 1.75+) with `trait_variant::make` to generate `dyn`-safe variants (e.g., `Detector` for static dispatch, `DetectorDyn` for `Box<dyn DetectorDyn>` in the engine). No `async-trait` crate.
-- The event channel type (`tokio::sync::mpsc`) is NOT defined in core types — only the `Event` enum is. Channel construction is the engine's responsibility.
+- The event channel type (`flume`) is NOT defined in core types — only the `Event` enum is. Channel construction is the engine's responsibility. `flume` chosen over `tokio::sync::mpsc` for dual sync/async API (CLI can `recv()` without tokio runtime).
 - This spec covers types only. Implementation of trait methods is in separate specs (detection: 005/006, providers: 007, install: 010, download: 009, backup: 012).
