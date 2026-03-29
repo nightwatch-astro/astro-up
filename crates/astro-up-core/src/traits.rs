@@ -81,11 +81,7 @@ pub struct BackupEntry {
 /// Backs up and restores software configuration files.
 #[trait_variant::make(BackupManagerDyn: Send)]
 pub trait BackupManager {
-    async fn backup(
-        &self,
-        software_id: &str,
-        paths: &[String],
-    ) -> Result<BackupResult, CoreError>;
+    async fn backup(&self, software_id: &str, paths: &[String]) -> Result<BackupResult, CoreError>;
     async fn restore(&self, software_id: &str, timestamp: &str) -> Result<(), CoreError>;
     async fn list(&self, software_id: &str) -> Result<Vec<BackupEntry>, CoreError>;
     async fn prune(&self, software_id: &str, keep: usize) -> Result<(), CoreError>;
