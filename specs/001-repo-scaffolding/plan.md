@@ -52,8 +52,10 @@ nightwatch-astro/astro-up/
 ├── .github/
 │   ├── workflows/
 │   │   └── ci.yml                    # 3-job CI: check-rust, check-frontend, check-windows
-│   ├── dependabot.yml                # Cargo + npm
-│   └── release-please.yml            # Automated releases
+│   ├── dependabot.yml                # Cargo + npm + GitHub Actions
+│   └── workflows/
+│       ├── ci.yml                    # 3-job CI
+│       └── release.yml              # Delegates to nightwatch-astro/.github rust-release.yml
 ├── .specify/                         # Already exists
 ├── crates/
 │   ├── astro-up-core/
@@ -145,9 +147,40 @@ Composables wrapping Tauri `invoke()` calls will be added in later specs.
 ### CI workflow structure
 
 Three parallel jobs in `ci.yml`:
-1. **check-rust** (ubuntu-latest): `cargo fmt --check`, `cargo clippy --workspace -- -D warnings`, `cargo test --workspace`
-2. **check-frontend** (ubuntu-latest): `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm test`, `pnpm build`
-3. **check-windows** (windows-latest): `cargo check --workspace`, `cargo test --workspace` — path filter on `crates/**`, `Cargo.toml`, `Cargo.lock`
+1. **check-rust** (ubuntu-latest): `cargo fmt --check`, `cargo clippy --workspace -- -D warnings`, `cargo test --workspace`. Caching via `Swatinem/rust-cache@v2`.
+2. **check-frontend** (ubuntu-latest): `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm test`, `pnpm build`. pnpm store caching.
+3. **check-windows** (windows-latest): `cargo check --workspace`, `cargo test --workspace` — path filter on `crates/**`, `Cargo.toml`, `Cargo.lock`. `Swatinem/rust-cache@v2`.
+
+Plus semantic PR title validation via `amannn/action-semantic-pull-request@v6`.
+
+### Release-plz configuration
+
+Matching the nightwatch-astro org pattern. `release-plz.toml`:
+```toml
+[workspace]
+publish = true
+git_tag_enable = true
+git_release_enable = true
+git_release_draft = false
+publish_timeout = "30m"
+semver_check = false
+features_always_increment_minor = true
+dependencies_update = true
+pr_labels = ["release"]
+
+[changelog]
+commit_parsers = [
+    { message = "^feat", group = "Features" },
+    { message = "^fix", group = "Bug Fixes" },
+    { message = "^perf", group = "Performance" },
+    { message = "^refactor", group = "Refactoring" },
+    { message = "^docs", group = "Documentation" },
+    { message = "^test", group = "Testing" },
+    { message = "^chore", group = "Miscellaneous" },
+]
+```
+
+`release.yml` delegates to `nightwatch-astro/.github/.github/workflows/rust-release.yml@main` with secrets for the GitHub App token and `CARGO_REGISTRY_TOKEN`.
 
 ### Justfile recipes
 

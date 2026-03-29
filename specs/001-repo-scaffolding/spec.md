@@ -77,6 +77,7 @@ The repository receives automated pull requests when Rust crate or npm package u
 - What happens when a developer builds on macOS or Linux (not Windows)? The workspace MUST compile, but Windows-specific crates are excluded via `cfg(windows)`. The Tauri dev server works on all platforms.
 - What happens when pnpm is not installed? `just setup` MUST detect missing tools and print clear installation instructions.
 - What happens when the Rust toolchain version is wrong? `rust-toolchain.toml` pins the version, and `rustup` auto-installs it on first build.
+- What happens when Tauri system dependencies are missing? `just setup` MUST check for platform-specific prerequisites and print the install command. Required deps: macOS — Xcode CLI tools; Linux — `libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`; Windows — Visual Studio Build Tools (C++ workload), WebView2 (pre-installed on Windows 11).
 
 ## Requirements *(mandatory)*
 
@@ -86,20 +87,21 @@ The repository receives automated pull requests when Rust crate or npm package u
 - **FR-002**: `astro-up-core` MUST compile as a library with no binary target and export a public API from `lib.rs`
 - **FR-003**: `astro-up-cli` MUST compile as both a library (`lib.rs`) and binary (`main.rs`) with `clap` as a dependency
 - **FR-004**: `astro-up-gui` MUST compile as both a library (`lib.rs`) and binary (`main.rs`) with Tauri v2 as a dependency
-- **FR-005**: `astro-up-gui` MUST include a `tauri.conf.json` with app identifier `dev.nightwatch.astro-up`, window title, and default dimensions
+- **FR-005**: `astro-up-gui` MUST include a `tauri.conf.json` with app identifier `dev.nightwatch.astro-up`, window title `Astro-Up`, and default window size 1024x768
 - **FR-006**: Frontend MUST be a Vue 3 application using PrimeVue component library and VueQuery for server state, built with Vite
-- **FR-007**: Frontend MUST render a placeholder page with PrimeVue components confirming the stack works
-- **FR-008**: GitHub Actions CI MUST run three jobs on every PR: (1) `check-rust` on Ubuntu — `cargo fmt --check`, `cargo clippy --workspace`, `cargo test --workspace`; (2) `check-frontend` on Ubuntu — `pnpm lint`, `pnpm test`, `pnpm build`; (3) `check-windows` on Windows — `cargo check --workspace`, `cargo test --workspace` — triggered only when files in `crates/**` change (path filter). The Windows job activates in Spec 005 when `cfg(windows)` code lands; until then it is defined but skipped. Each job is self-contained with no artifact sharing between runners.
+- **FR-007**: Frontend MUST render a placeholder page containing a PrimeVue Card component with the app name ("Astro-Up"), version (from package.json), and a brief description, confirming the PrimeVue theme and component rendering work
+- **FR-008**: GitHub Actions CI MUST run three jobs on every PR: (1) `check-rust` on Ubuntu — `cargo fmt --check`, `cargo clippy --workspace -- -D warnings`, `cargo test --workspace`, with Cargo registry and target caching via `Swatinem/rust-cache`; (2) `check-frontend` on Ubuntu — `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm test`, `pnpm build`, with pnpm store caching; (3) `check-windows` on Windows — `cargo check --workspace`, `cargo test --workspace` — triggered only when files in `crates/**` change (path filter). The Windows job activates in Spec 005 when `cfg(windows)` code lands; until then it is defined but skipped. Each job is self-contained with no artifact sharing between runners. CI MUST also validate semantic PR titles via `amannn/action-semantic-pull-request`.
 - **FR-009**: Branch protection on `main` MUST require CI passage and at least one PR review before merge
 - **FR-010**: Repository MUST include a `CLAUDE.md` documenting project conventions for Rust, Tauri, and Vue development
-- **FR-011**: Repository MUST include Dependabot configuration for both Cargo and npm ecosystems
-- **FR-012**: Repository MUST include release-please configuration for automated version management
+- **FR-011**: Repository MUST include Dependabot configuration for Cargo, npm, and GitHub Actions ecosystems (weekly schedule, `chore(deps)` / `chore(ci)` commit prefixes, matching nightwatch-astro org convention)
+- **FR-012**: Repository MUST include release-plz configuration (`release-plz.toml`) for automated version management, changelog generation, and crates.io publishing. The release workflow MUST delegate to the shared `nightwatch-astro/.github` reusable workflow (`rust-release.yml`). Release-plz MUST use conventional commit parsing with semantic groups (feat, fix, perf, refactor, docs, test, chore), enable git tags, GitHub releases, and dependency updates in release PRs
 - **FR-013**: Repository MUST include a `.gitignore` covering Rust (`target/`), Node (`node_modules/`), and Tauri build artifacts
 - **FR-014**: Repository MUST include a `cliff.toml` for git-cliff changelog generation
 - **FR-015**: Repository MUST include a `Justfile` with recipes for common development tasks: `setup`, `dev`, `build`, `test`, `check`, `fmt`, `lint`
 - **FR-016**: `rust-toolchain.toml` MUST pin the Rust edition and toolchain channel
 - **FR-017**: Each crate MUST include a smoke test that verifies compilation and basic function availability
 - **FR-018**: The workspace MUST compile on macOS, Linux, and Windows, with Windows-specific dependencies gated behind `cfg(windows)` or optional features
+- **FR-019**: `astro-up-gui` MUST include a Tauri v2 capabilities file (`capabilities/default.json`) granting core permissions: `core:default`, `window:default`, `app:default`. Additional permissions are added in later specs as features require them
 
 ### Key Entities
 
@@ -123,6 +125,12 @@ The repository receives automated pull requests when Rust crate or npm package u
 ### Session 2026-03-29
 
 - Q: CI platform matrix — which OS runners for which jobs? → A: Three self-contained jobs: `check-rust` (Ubuntu, every PR), `check-frontend` (Ubuntu, every PR), `check-windows` (Windows, only on `crates/**` changes). No artifact sharing between runners. Windows job defined but skipped until Spec 005 lands `cfg(windows)` code. Only Windows-requiring jobs run on Windows.
+- Q: Tauri system dependencies per platform? → A: Enumerated in edge cases and CLAUDE.md. macOS: Xcode CLI tools. Linux: WebKit2GTK + build tools. Windows: VS Build Tools + WebView2.
+- Q: Tauri v2 capability permissions? → A: FR-019 added — `core:default`, `window:default`, `app:default`. Extended in later specs.
+- Q: Placeholder page content? → A: FR-007 clarified — PrimeVue Card with app name, version, description.
+- Q: Default window dimensions? → A: FR-005 clarified — 1024x768.
+- Q: CI caching strategy? → A: FR-008 clarified — `Swatinem/rust-cache` for Cargo, pnpm store cache for frontend.
+- Q: Release automation tool? → A: FR-012 updated — release-plz (not release-please), matching nightwatch-astro org convention. Delegates to shared `rust-release.yml` reusable workflow.
 
 ## Assumptions
 

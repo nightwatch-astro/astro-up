@@ -78,9 +78,9 @@
 
 **Independent Test**: Push branch, open PR, verify CI passes
 
-- [ ] T027 [US3] Create `.github/workflows/ci.yml` with three jobs: `check-rust` (ubuntu-latest: checkout, setup rust via dtolnay/rust-toolchain, cargo fmt --check, cargo clippy --workspace -- -D warnings, cargo test --workspace), `check-frontend` (ubuntu-latest: checkout, setup node, pnpm install --frozen-lockfile, pnpm lint, pnpm test, pnpm build), `check-windows` (windows-latest: checkout, setup rust, cargo check --workspace, cargo test --workspace — with path filter on crates/**, Cargo.toml, Cargo.lock, skipped until cfg(windows) code exists)
-- [ ] T028 [P] [US3] Create `.github/dependabot.yml` with cargo (weekly, crates/ directory) and npm (weekly, frontend/ directory) ecosystems
-- [ ] T029 [P] [US3] Create `.github/release-please.yml` workflow with manifest-based release for Rust crates
+- [ ] T027 [US3] Create `.github/workflows/ci.yml` with three jobs: `check-rust` (ubuntu-latest: checkout, dtolnay/rust-toolchain@stable, Swatinem/rust-cache@v2, cargo fmt --check, cargo clippy --workspace -- -D warnings, cargo test --workspace), `check-frontend` (ubuntu-latest: checkout, setup node + pnpm with store cache, pnpm install --frozen-lockfile, pnpm lint, pnpm test, pnpm build), `check-windows` (windows-latest: checkout, dtolnay/rust-toolchain@stable, Swatinem/rust-cache@v2, cargo check --workspace, cargo test --workspace — path filter on crates/**, Cargo.toml, Cargo.lock). Add semantic PR title validation via amannn/action-semantic-pull-request@v6. Add concurrency group to cancel duplicate runs.
+- [ ] T028 [P] [US3] Create `.github/dependabot.yml` with three ecosystems: cargo (weekly, crates/ directory, `chore(deps)` prefix), npm (weekly, frontend/ directory, `chore(deps)` prefix), github-actions (weekly, / directory, `chore(ci)` prefix) — matching nightwatch-astro org convention
+- [ ] T029 [P] [US3] Create `release-plz.toml` with workspace config (publish, git_tag_enable, git_release_enable, dependencies_update, pr_labels=["release"]) and changelog commit_parsers for conventional commits (feat, fix, perf, refactor, docs, test, chore). Create `.github/workflows/release.yml` delegating to `nightwatch-astro/.github/.github/workflows/rust-release.yml@main` with secrets (NIGHTWATCH_APP_ID, NIGHTWATCH_APP_PRIVATE_KEY, CARGO_REGISTRY_TOKEN)
 - [ ] T030 [US3] Push branch, open test PR, verify `check-rust` and `check-frontend` jobs pass (check-windows may be skipped due to path filter)
 
 **Checkpoint**: US3 complete — CI enforces quality on every PR
