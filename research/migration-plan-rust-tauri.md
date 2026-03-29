@@ -206,12 +206,19 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 | **parking_lot** | 0.12 | Faster Mutex/RwLock (no poisoning) | Only if std::sync::Mutex contention becomes measurable |
 | **globset** | 0.4 | Glob matching for asset patterns | If regex feels unnatural for file pattern matching in manifests |
 
+### Added Since Initial Plan
+
+| Crate | Version | Purpose |
+|-------|---------|---------|
+| **rusqlite** | 0.32 (bundled) | Embedded SQLite for catalog, version history, ledger, config, ignored updates. Replaces three-tier cache, fuzzy search crate, JSON parsing, tauri-plugin-store for config, and deferred ledger feature (#347) |
+| **zip** | 2 | ZIP extraction for wrapped installers (includes flate2 internally) |
+
 ### Explicitly Skipped
 
 | Crate | Reason |
 |-------|--------|
 | postcard | Serde format for embedded/no_std wire size — we read TOML/JSON, not binary |
-| rocksdb | Massive overkill — config is 20 TOML fields, status is 95 JSON entries |
+| rocksdb | SQLite covers all our needs with less complexity |
 | axum | Web framework — we're not serving HTTP, Tauri invoke() handles IPC |
 | ureq | Blocking HTTP — need async streaming with progress for downloads |
 | argon2/bcrypt | Password hashing — no passwords in this app |
@@ -221,6 +228,58 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 | cargo-zigbuild | No cross-compilation needed (Windows → Windows) |
 | signal-hook | Windows doesn't use Unix signals, Tauri handles lifecycle |
 | tap/joinery/conv/educe/variantly/soa_derive | Niche — superseded by itertools, derive_more, strum, or stdlib |
+
+## Revised Data Model Decisions (post-debate)
+
+**SQLite replaces JSON caching.** Client uses `rusqlite` (bundled) for: catalog, version history, installed state, config, ignored updates, and the fallback ledger. Replaces three-tier cache, fuzzy search crate, JSON parsing, and the deferred ledger (#347).
+
+**Version history via per-version files.** The manifest repo stores discovered versions as individual files per product:
+```
+versions/nina-app/3.0.0.json    # { url, sha256, discovered_at, release_notes_url }
+versions/nina-app/3.1.0.json
+versions/phd2/2.6.14.json
+```
+The compiler produces a single `versions.json` for client download. Client imports into SQLite. Git history provides full audit trail. Enables rollback to any previously-discovered version.
+
+**Pin URL + SHA256 for all versions at discovery time.** CI checker computes SHA256 when discovering a new version. Sources: GitHub/GitLab API checksums, vendor checksum files (`hash_url` + `hash_regex`, Scoop pattern), or full download + compute for new versions only. Dynamic URLs resolved and pinned at discovery time.
+
+**Hybrid URL model.** ~64% predictable (pinned statically), ~9% dynamic (pinned at discovery time), ~27% download-only (pinned where possible).
+
+**Download-only install method.** `install.method = "download_only"` for firmware. Downloads to configured directory, notifies user. No ledger for download state — uninstalled downloads still show as outdated.
+
+**Driver sub-categories:**
+
+| Type | Install | Detection | Notes |
+|------|---------|-----------|-------|
+| Driver packs (ZWO, QHY) | Full install | Registry + WMI | Works without hardware |
+| ASCOM drivers | Full install | ASCOM Profile | Works without hardware |
+| USB serial (FTDI, CP210x) | Full install | WMI driver store | Works without hardware |
+| Firmware files | Download only | Never (device-side) | User acknowledges in ledger |
+| Firmware updater tools | Full install, `upgrade_behavior = "deny"` | Registry | Prevent auto-upgrade (bricking risk) |
+
+**Fallback ledger.** SQLite table for undetectable packages and manual tracking:
+
+```sql
+CREATE TABLE ledger (
+    package_id TEXT NOT NULL PRIMARY KEY,
+    version TEXT NOT NULL,
+    source TEXT NOT NULL,        -- 'astro-up' | 'manual' | 'acknowledged'
+    recorded_at TEXT NOT NULL,
+    notes TEXT
+);
+```
+
+Priority: auto-detection > ledger > unknown. If they disagree, warn the user. Supports firmware acknowledgment, manual version entry, and future compatibility for any untrackable software.
+
+**Device connection notifications (Phase 3).** WMI event subscription for USB connect. Match VID:PID against known devices. Notify if update available. Debounced, user-configurable.
+
+**License awareness.** `license` + `license_url` fields. First-install GUI prompt. `--accept-agreements` CLI flag. Tracked per-package in SQLite.
+
+**Portable installer type.** `install.method = "portable"` for standalone executables. Extract to directory, optionally add to PATH.
+
+**Scope model.** `scope = "machine" | "user" | "either"`. Prompted in CLI (or via `--scope` flag) and GUI dialog when `either`. Setting for default scope preference. Error if flag contradicts manifest requirement.
+
+**Setup wizard (future spec, Phase 3).** Equipment-based guided install: "What mount? What camera?" → recommended package set → one-click install with dependency ordering.
 
 ## Spec Breakdown
 
