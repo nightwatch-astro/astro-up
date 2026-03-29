@@ -113,3 +113,12 @@ The application detects ASCOM drivers by reading the ASCOM Profile registry keys
 - PE detection via pelite works cross-platform (reads PE headers without executing)
 - The ASCOM Platform must be installed for ASCOM Profile detection to work
 - Depends on: spec 003 (Version type, DetectionConfig), spec 004 (path token expansion)
+
+## Clarifications
+
+- **32-bit vs 64-bit registry**: On 64-bit Windows, check both `HKLM\SOFTWARE` (native) and `HKLM\SOFTWARE\WOW6432Node` (32-bit). Many astro apps (PHD2, SharpCap) are still 32-bit.
+- **Version string coercion**: Strip 4th component (`3.1.2.1001` → `3.1.2`), pad missing (`3.1` → `3.1.0`). Consistent with spec 003 Version type.
+- **ASCOM Profile path**: `HKLM\SOFTWARE\ASCOM\{DeviceType} Drivers\{DriverId}` — note the space in "Drivers". This is the ASCOM standard.
+- **Cross-platform PE detection**: pelite reads PE headers without executing. Works on Linux/macOS CI. Registry detection is Windows-only (returns Unavailable on other platforms).
+- **Detection caching**: No caching at this level. Detection is fast (<5s for all packages). The orchestration engine (spec 012) may cache results if needed.
+- **product_code and upgrade_code**: MSI-specific identifiers for detecting MSI-installed packages via the Windows Installer API. Optional fields in DetectionConfig.
