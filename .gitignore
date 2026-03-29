@@ -6,10 +6,8 @@
 node_modules/
 frontend/dist/
 
-# Tauri
+# Tauri build artifacts
 crates/astro-up-gui/gen/
-crates/astro-up-gui/icons/icon.ico
-crates/astro-up-gui/icons/icon.png
 
 # IDE
 .vscode/
