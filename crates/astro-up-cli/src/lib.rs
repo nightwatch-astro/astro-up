@@ -1,7 +1,11 @@
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "astro-up", version, about = "Astrophotography software manager")]
+#[command(
+    name = "astro-up",
+    version,
+    about = "Astrophotography software manager"
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
