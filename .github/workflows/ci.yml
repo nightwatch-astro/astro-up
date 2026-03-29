@@ -55,15 +55,27 @@ jobs:
       - run: pnpm --dir frontend test
       - run: pnpm --dir frontend build
 
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      crates: ${{ steps.filter.outputs.crates }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            crates:
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+
   check-windows:
     name: Windows Build
+    needs: changes
     runs-on: windows-latest
-    if: >-
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && (
-        contains(github.event.pull_request.changed_files_url, 'crates/') ||
-        contains(github.event.pull_request.title, 'windows')
-      ))
+    if: needs.changes.outputs.crates == 'true' || github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
