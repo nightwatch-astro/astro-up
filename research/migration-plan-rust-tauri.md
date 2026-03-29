@@ -144,7 +144,8 @@ Reference: [blessed.rs](https://blessed.rs/crates) as the authoritative source f
 | ~~once_cell~~ | — | Replaced by `std::sync::LazyLock` (stable since Rust 1.80) | `sync.Once` |
 | **itertools** | 0.14 | Iterator extensions (chunks, sorted_by, group_by) | manual loops |
 | **figment** | 0.10 (toml, env) | Layered config: defaults → TOML → env vars | `koanf` |
-| **validator** | 0.20 (derive) | Struct field validation (or `garde` for newer derive ergonomics) | `go-playground/validator` |
+| **garde** | 0.22 (derive) | Struct field validation — cleaner derive, automatic nested validation, async support | `go-playground/validator` |
+| **flume** | 0.11 | Sync+async channels for engine → UI event bridge (CLI sync recv, GUI async recv) | `std::sync::mpsc` + goroutine channels |
 | **directories** | 6 | Platform-aware config/cache/data dirs | `{config_dir}` expansion |
 | **derive_more** | 2 (display, from) | Derive Display, From, Into for wrapper types | manual implementations |
 | **reqwest** | 0.12 (stream, json) | HTTP client for downloads and API calls | `net/http` |
@@ -166,7 +167,7 @@ Reference: [blessed.rs](https://blessed.rs/crates) as the authoritative source f
 | Crate | Version | Purpose | Replaces (Go) |
 |-------|---------|---------|---------------|
 | **clap** | 4 (derive) | CLI argument parsing | `urfave/cli` |
-| **color-eyre** | 0.6 | Colorized error display with tracing span integration | `fmt.Errorf` |
+| **anyhow** | 1 | Application error handling (CLI uses anyhow + console for colored output) | `fmt.Errorf` |
 | **ratatui** | 0.29 | TUI progress bars and status display | `bubbletea/v2` |
 | **indicatif** | 0.17 | Simple progress bars for downloads | `bubbletea` |
 | **inquire** | 0.7 | Interactive prompts (fuzzy select, validation) | manual stdin |
@@ -193,7 +194,9 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 
 | Crate | Change | Reason |
 |-------|--------|--------|
-| **color-eyre** | Added for astro-up-cli instead of anyhow | Colorized backtraces + tracing span integration |
+| ~~color-eyre~~ | Removed — using anyhow + console for colored error output instead | eyre ecosystem fragmentation risk; anyhow is the gold standard |
+| **garde** | Replaces validator | Cleaner derive, automatic nested validation, async support |
+| **flume** | Replaces tokio::sync::mpsc for event channels | Dual sync/async API — CLI can recv() without tokio runtime |
 | **inquire** | Replaces dialoguer | Better UX: fuzzy select, custom validation, polished prompts |
 | **strum** | Added | Enum derive macros (Display, EnumString, EnumIter) for Category, Status enums |
 | **futures** | Added | Stream combinators for concurrent downloads |
