@@ -22,12 +22,12 @@
 
 **Purpose**: The three crates and frontend must exist before any user story can be validated
 
-- [ ] T004 Create `crates/astro-up-core/Cargo.toml` (lib crate, edition 2024) and `crates/astro-up-core/src/lib.rs` with a public `version()` function returning the crate version and a `#[cfg(test)]` smoke test
-- [ ] T005 [P] Create `crates/astro-up-cli/Cargo.toml` (lib+bin, depends on astro-up-core + clap 4 derive) and `crates/astro-up-cli/src/lib.rs` with a `run()` stub, and `crates/astro-up-cli/src/main.rs` calling `lib::run()`
-- [ ] T006 [P] Create `crates/astro-up-gui/Cargo.toml` (lib+bin, depends on astro-up-core + tauri 2), `crates/astro-up-gui/build.rs` calling `tauri_build::build()`, and `crates/astro-up-gui/src/lib.rs` with a `run()` function that initializes the Tauri app with an empty `invoke_handler`
-- [ ] T007 Create `crates/astro-up-gui/src/main.rs` calling `astro_up_gui::run()`, create `crates/astro-up-gui/tauri.conf.json` with identifier `dev.nightwatch.astro-up`, window title `Astro-Up`, default size 1024x768, `frontendDist` pointing to `../../frontend/dist`, `devUrl` to `http://localhost:5173`, `beforeDevCommand` and `beforeBuildCommand` invoking pnpm in `../../frontend`
-- [ ] T008 Create `crates/astro-up-gui/capabilities/default.json` granting core Tauri v2 permissions (window:default, app:default)
-- [ ] T009 Create default Tauri icons in `crates/astro-up-gui/icons/` (use `cargo tauri icon` or copy Tauri default set)
+- [x] T004 Create `crates/astro-up-core/Cargo.toml` (lib crate, edition 2024) and `crates/astro-up-core/src/lib.rs` with a public `version()` function returning the crate version and a `#[cfg(test)]` smoke test
+- [x] T005 [P] Create `crates/astro-up-cli/Cargo.toml` (lib+bin, depends on astro-up-core + clap 4 derive) and `crates/astro-up-cli/src/lib.rs` with a `run()` stub, and `crates/astro-up-cli/src/main.rs` calling `lib::run()`
+- [x] T006 [P] Create `crates/astro-up-gui/Cargo.toml` (lib+bin, depends on astro-up-core + tauri 2), `crates/astro-up-gui/build.rs` calling `tauri_build::build()`, and `crates/astro-up-gui/src/lib.rs` with a `run()` function that initializes the Tauri app with an empty `invoke_handler`
+- [x] T007 Create `crates/astro-up-gui/src/main.rs` calling `astro_up_gui::run()`, create `crates/astro-up-gui/tauri.conf.json` with identifier `dev.nightwatch.astro-up`, window title `Astro-Up`, default size 1024x768, `frontendDist` pointing to `../../frontend/dist`, `devUrl` to `http://localhost:5173`, `beforeDevCommand` and `beforeBuildCommand` invoking pnpm in `../../frontend`
+- [x] T008 Create `crates/astro-up-gui/capabilities/default.json` granting core Tauri v2 permissions (window:default, app:default)
+- [x] T009 Create default Tauri icons in `crates/astro-up-gui/icons/` (use `cargo tauri icon` or copy Tauri default set)
 - [ ] T010 Initialize frontend: create `frontend/package.json` with dependencies (vue ^3, primevue ^4, @primeuix/themes ^1, @tanstack/vue-query ^5, @tauri-apps/api ^2) and devDependencies (typescript ^5, vite ^6, @vitejs/plugin-vue ^5, vitest ^3, eslint ^9, vue-tsc), then run `pnpm install` to generate lockfile
 - [ ] T011 [P] Create `frontend/index.html` with Vite entry point linking to `src/main.ts`
 - [ ] T012 [P] Create `frontend/vite.config.ts` with Vue plugin, Tauri host configuration (`server.strictPort`, `server.host` for mobile, clearScreen false), and Vitest config
@@ -37,7 +37,7 @@
 - [ ] T016 [P] Create `frontend/src/styles.css` with minimal global styles (body margin reset, font-family)
 - [ ] T017 [P] Create `frontend/src/vite-env.d.ts` with Vite client type reference
 - [ ] T018 [P] Create `frontend/eslint.config.js` with flat config for Vue + TypeScript
-- [ ] T019 Verify `cargo check --workspace` compiles all three crates without errors
+- [x] T019 Verify `cargo check --workspace` compiles all three crates without errors
 - [ ] T020 Verify `pnpm --dir frontend build` produces `frontend/dist/` with index.html
 
 **Checkpoint**: All crates compile, frontend builds. Ready for user story implementation.

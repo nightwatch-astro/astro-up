@@ -1,0 +1,16 @@
+[package]
+name = "astro-up-cli"
+version = "0.1.0"
+description = "CLI for astro-up — clap + ratatui astrophotography software manager"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+astro-up-core.workspace = true
+anyhow.workspace = true
+clap = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
+insta.workspace = true
