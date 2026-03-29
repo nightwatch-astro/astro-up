@@ -74,3 +74,12 @@ When a USB device is connected, the application matches its VID:PID against know
 - WMI is available on all supported Windows versions (10+)
 - Driver manifests include `[hardware]` section with vid_pid, device_class, inf_provider
 - Depends on: spec 003 (types), spec 006 (detection framework/chain)
+
+## Clarifications
+
+- **WMI query scope**: Query `Win32_PnPSignedDriver` with `WHERE DriverProviderName = '{inf_provider}'`. Filter results by `DeviceClass` if specified. This returns drivers regardless of whether hardware is connected.
+- **Multiple matching drivers**: If multiple drivers match (e.g., ZWO has camera + EFW + focuser drivers), return all matches. The manifest specifies which one to use via `device_class`.
+- **Driver version format**: WMI returns `DriverVersion` as a string (e.g., "1.0.8.0"). Parse via spec 003 Version type with 4th-component stripping.
+- **VID:PID wildcard matching**: `03C3:*` matches any PID under ZWO's vendor ID. Implemented as prefix match on the device instance ID string.
+- **WMI timeout**: Default 10-second timeout per query. WMI can hang if the service is overloaded.
+- **Non-Windows platforms**: Return `DetectionResult::Unavailable("WMI is Windows-only")`. No compile error — the module compiles on all platforms but WMI calls are behind `cfg(windows)`.
