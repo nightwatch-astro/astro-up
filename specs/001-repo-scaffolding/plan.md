@@ -5,7 +5,7 @@
 
 ## Summary
 
-Scaffold the `nightwatch-astro/astro-up` repository with a Cargo workspace (3 crates), Tauri v2 desktop app, Vue 3 + PrimeVue frontend, GitHub Actions CI (3-job split), and developer tooling (Justfile, Dependabot, release-please, git-cliff).
+Scaffold the `nightwatch-astro/astro-up` repository with a Cargo workspace (3 crates), Tauri v2 desktop app, Vue 3 + PrimeVue frontend, GitHub Actions CI (3-job split), and developer tooling (Justfile, Dependabot, release-plz).
 
 ## Technical Context
 

@@ -127,6 +127,7 @@ For software that cannot be detected automatically (firmware files, manual downl
 - **FR-006**: `DetectionMethod` enum: `Registry`, `PeFile`, `Wmi`, `DriverStore`, `AscomProfile`, `FileExists`, `ConfigFile`. Serialized as snake_case.
 - **FR-007**: `InstallMethod` enum: `Exe`, `Msi`, `InnoSetup`, `Nullsoft`, `Wix`, `Burn`, `Zip`, `ZipWrap`, `Portable`, `DownloadOnly`. Serialized as snake_case.
 - **FR-008**: `Scope` enum: `Machine`, `User`, `Either`. `Elevation` enum: `Required`, `Prohibited`, `Self_`. `UpgradeBehavior` enum: `Install`, `UninstallPrevious`, `Deny`.
+- **FR-008b**: `CheckMethod` enum: `Github`, `Gitlab`, `DirectUrl`, `HttpHead`, `HtmlScrape` (formerly `go_scrape`), `BrowserScrape` (formerly `rod_scrape`), `PeDownload`, `Manual`, `RuntimeScrape`. Serialized as snake_case. Used by `CheckverConfig.provider` and the manifest repo checker for dispatch.
 
 **Detection:**
 - **FR-009**: `DetectionConfig` MUST include: `method`, method-specific fields (registry_key, registry_value, file_path, version_regex, product_code, upgrade_code), and optional `fallback` (boxed self-reference for chain).
