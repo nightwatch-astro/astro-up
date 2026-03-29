@@ -93,3 +93,10 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - Feature branches off `main`, merged with `--no-ff`
 - Branch protection: require CI + 1 review
 - Conventional commits required
+
+## Active Technologies
+- Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4 (003-core-domain-types)
+- N/A (types only — storage is in catalog/engine specs) (003-core-domain-types)
+
+## Recent Changes
+- 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4

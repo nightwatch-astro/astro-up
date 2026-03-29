@@ -1,0 +1,103 @@
+---
+source: crates/astro-up-core/src/events.rs
+assertion_line: 88
+expression: events
+---
+[
+  {
+    "type": "check_started",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "check_progress",
+    "data": {
+      "id": "test",
+      "progress": 0.5
+    }
+  },
+  {
+    "type": "check_complete",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "download_started",
+    "data": {
+      "id": "test",
+      "url": "https://example.com"
+    }
+  },
+  {
+    "type": "download_progress",
+    "data": {
+      "id": "test",
+      "progress": 0.75,
+      "bytes_downloaded": 768,
+      "total_bytes": 1024,
+      "speed": 256.0
+    }
+  },
+  {
+    "type": "download_complete",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "backup_started",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "backup_complete",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "install_started",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "install_complete",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "manual_download_required",
+    "data": {
+      "id": "test",
+      "url": "https://example.com"
+    }
+  },
+  {
+    "type": "error",
+    "data": {
+      "id": "test",
+      "error": "something failed"
+    }
+  },
+  {
+    "type": "scan_started"
+  },
+  {
+    "type": "scan_progress",
+    "data": {
+      "progress": 0.5,
+      "current_id": "test"
+    }
+  },
+  {
+    "type": "scan_complete",
+    "data": {
+      "total_found": 42
+    }
+  }
+]
