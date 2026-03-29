@@ -1,6 +1,6 @@
 ---
 source: crates/astro-up-core/src/error.rs
-assertion_line: 125
+assertion_line: 138
 expression: "errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(\"\\n\")"
 ---
 software not installed
@@ -16,3 +16,6 @@ already installed: nina-app 3.1.2
 missing dependency: ascom-platform
 unsupported platform
 not found: nonexistent
+version parse failed for 'not-a-version': invalid format
+provider 'github' unavailable: connection refused
+manual download required for firecapture: https://example.com/download (captcha required)

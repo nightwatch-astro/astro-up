@@ -133,7 +133,7 @@ For software that cannot be detected automatically (firmware files, manual downl
 - **FR-009**: `DetectionConfig` MUST include: `method`, method-specific fields (registry_key, registry_value, file_path, version_regex, product_code, upgrade_code), and optional `fallback` (boxed self-reference for chain).
 
 **Install (winget switch model):**
-- **FR-010**: `InstallConfig` MUST include: `method`, `scope`, `elevation`, `upgrade_behavior`, `install_modes` (Vec), `success_codes` (Vec<i32>), `pre_install` (Vec<String>), `post_install` (Vec<String>), and nested `switches` (InstallerSwitches) and `known_exit_codes` (HashMap<i32, KnownExitCode>).
+- **FR-010**: `InstallConfig` MUST include: `method`, `scope`, `elevation`, `upgrade_behavior`, `install_modes` (Vec), `success_codes` (Vec<i32>), `pre_install` (Vec<String>), `post_install` (Vec<String>), and nested `switches` (InstallerSwitches) and `known_exit_codes` (HashMap<String, KnownExitCode> — String keys for TOML compatibility).
 - **FR-011**: `InstallerSwitches` MUST include: `silent`, `interactive`, `upgrade` (each Vec<String>), `install_location` (with `<INSTALLPATH>` token), `log` (with `<LOGPATH>` token), `custom` (Vec<String>).
 - **FR-012**: `KnownExitCode` enum: `PackageInUse`, `PackageInUseByApplication`, `RebootRequired`, `CancelledByUser`, `AlreadyInstalled`, `MissingDependency`, `DiskFull`, `InsufficientMemory`, `NetworkError`, `ContactSupport`, `RestartRequired`, `SuccessRebootInitiated`. Serialized as snake_case.
 

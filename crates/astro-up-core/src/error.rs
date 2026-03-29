@@ -111,6 +111,19 @@ mod tests {
             CoreError::NotFound {
                 input: "nonexistent".into(),
             },
+            CoreError::VersionParseFailed {
+                raw: "not-a-version".into(),
+                cause: Box::new(std::io::Error::new(std::io::ErrorKind::Other, "invalid format")),
+            },
+            CoreError::ProviderUnavailable {
+                provider: "github".into(),
+                cause: Box::new(std::io::Error::new(std::io::ErrorKind::ConnectionRefused, "connection refused")),
+            },
+            CoreError::ManualDownloadRequired {
+                id: "firecapture".into(),
+                url: "https://example.com/download".into(),
+                cause: Box::new(std::io::Error::new(std::io::ErrorKind::Other, "captcha required")),
+            },
         ];
 
         for err in &errors {
