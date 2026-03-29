@@ -121,6 +121,75 @@ nightwatch-astro/scoop-bucket/                # Scoop distribution
 
 Inside `astro-up-core`, `types/`, `detect/`, `download/`, `install/`, `engine/`, `catalog/`, `providers/` are **modules** (not separate packages). They share one `Cargo.toml` and one compilation unit. When compile times justify it, any module can be extracted into its own package — move the directory to `crates/astro-up-{name}/`, add a `Cargo.toml`, update imports. The public API doesn't change because the module boundaries are already clean.
 
+## Rust Dependencies
+
+Reference: [blessed.rs](https://blessed.rs/crates) as the authoritative source for vetted Rust libraries.
+
+### Core Dependencies (astro-up-core)
+
+| Crate | Version | Purpose | Replaces (Go) |
+|-------|---------|---------|---------------|
+| **anyhow** | 1 | Error handling with context (application code) | `fmt.Errorf("...: %w", err)` |
+| **thiserror** | 2 | Typed error enums (library code) | `core/errors.go` sentinels |
+| **serde** | 1 (derive) | Serialization for TOML, JSON, config | `encoding/json`, `go-toml` |
+| **serde_json** | 1 | JSON parsing (manifests.json, API responses) | `encoding/json` |
+| **toml** | 0.8 | TOML manifest parsing | `go-toml/v2` |
+| **tokio** | 1 (full) | Async runtime (HTTP, WMI, concurrent downloads) | goroutines |
+| **tracing** | 0.1 | Structured logging (Tauri uses tracing internally) | `slog` |
+| **chrono** | 0.4 (serde) | Timestamps, cache TTL, version dates | `time` |
+| **semver** | 1 (serde) | Version parsing and comparison | `go-version` |
+| **regex** | 1 | Version extraction from vendor pages | `regexp` |
+| **once_cell** | 1 | Lazy statics (config, public key, compiled regex) | `sync.Once` |
+| **itertools** | 0.14 | Iterator extensions (chunks, sorted_by, group_by) | manual loops |
+| **validator** | 0.20 (derive) | Struct field validation | `go-playground/validator` |
+| **directories** | 6 | Platform-aware config/cache/data dirs | `{config_dir}` expansion |
+| **derive_more** | 2 (display, from) | Derive Display, From, Into for wrapper types | manual implementations |
+| **reqwest** | 0.12 (stream, json) | HTTP client for downloads and API calls | `net/http` |
+| **sha2** | 0.10 | SHA256 hash verification for downloads | `crypto/sha256` |
+| **minisign-verify** | 0.2 | Minisign signature verification (by minisign creator) | `go-minisign` |
+| **scraper** | 0.22 | HTML parsing for vendor page scraping | `goquery` |
+| **walkdir** | 0.2 | Directory traversal (backup paths, manifest scanning) | `filepath.Walk` |
+| **pelite** | 0.10 | PE file version extraction (cross-platform!) | `debug/pe` + Windows API |
+
+**Windows-only (behind `cfg(windows)` / optional features):**
+
+| Crate | Version | Purpose |
+|-------|---------|---------|
+| **winreg** | 0.56 | Windows registry access for detection |
+| **wmi** | 0.18 | WMI queries for driver detection |
+
+### CLI Dependencies (astro-up-cli)
+
+| Crate | Version | Purpose | Replaces (Go) |
+|-------|---------|---------|---------------|
+| **clap** | 4 (derive) | CLI argument parsing | `urfave/cli` |
+| **ratatui** | 0.29 | TUI progress bars and status display | `bubbletea/v2` |
+| **indicatif** | 0.17 | Simple progress bars (alternative to ratatui for basic cases) | `bubbletea` |
+| **dialoguer** | 0.11 | Interactive prompts (confirm, select, input) | manual stdin |
+| **console** | 0.15 | Terminal styling (colors, bold, width detection) | `lipgloss` |
+
+### GUI Dependencies (astro-up-gui)
+
+Tauri v2 + official plugins (see Tauri Plugins section above).
+
+### Dev Dependencies (all crates)
+
+| Crate | Version | Purpose |
+|-------|---------|---------|
+| **insta** | 1 (json, toml) | Snapshot testing — compare CLI output, JSON responses |
+| **pretty_assertions** | 1 | Diff display in test failures |
+| **tempfile** | 3 | Temporary directories for downloads, test fixtures |
+| **tokio-test** | 0.4 | Async test utilities |
+
+### Worth Considering (add when needed)
+
+| Crate | Version | Use case | When to add |
+|-------|---------|----------|-------------|
+| **rayon** | 1 | Parallel manifest checking (CPU-bound regex) | Only if sequential checking is too slow. Tokio handles I/O concurrency. |
+| **proptest** | 1 | Property-based testing (fuzz version parsing, manifest deser) | When version parsing edge cases become a problem |
+| **derive_builder** | 0.20 | Builder pattern for complex option structs | If `InstallOptions`, `CheckverConfig` constructors get unwieldy. Struct literals may be enough. |
+| **fakeit** | 1 | Fake data generation for test manifests | When writing large-scale integration tests |
+
 ## Spec Breakdown
 
 ### Phase 0: Foundation
