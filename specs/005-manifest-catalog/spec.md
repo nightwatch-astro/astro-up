@@ -111,9 +111,16 @@ A CLI user runs `astro-up check nina-app` or `astro-up check nina` to look up so
 - **SC-003**: Invalid signatures are rejected 100% of the time
 - **SC-004**: Application remains functional in offline mode using cached data
 
+## Clarifications
+
+- **Catalog format detection**: The client determines format by file extension — `.db` for SQLite, `.json` for JSON. The configured URL dictates the format. No runtime sniffing.
+- **Concurrent cache access**: File-level locking on the cache file. If CLI and GUI run simultaneously, second reader waits or uses stale cache. No shared-memory cache between processes.
+- **meta.json deferred**: The migration plan mentions a lightweight `meta.json` for change detection. This is deferred — ETag on the catalog URL achieves the same goal with less complexity.
+- **Catalog includes version entries**: The SQLite catalog bundles both manifest metadata AND latest version info. The client does NOT need to fetch `versions.json` separately — that's the manifest repo's concern.
+
 ## Assumptions
 
-- Catalog artifact is a signed SQLite database (or signed JSON during transition) on GitHub Releases
+- Catalog artifact is a signed SQLite database on GitHub Releases (JSON fallback during transition only)
 - Minisign public key is baked into the binary — no key rotation in this spec
-- Fuzzy search uses substring matching — full-text search deferred to SQLite catalog
+- Fuzzy search uses case-insensitive substring matching; FTS5 available when using SQLite format
 - Depends on: spec 003 (types), spec 004 (configuration for catalog URL/TTL)

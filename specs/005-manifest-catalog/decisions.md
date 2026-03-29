@@ -33,3 +33,21 @@
 
 ### Q3: How to handle catalog schema versioning?
 **My decision**: Version field in catalog metadata. Client rejects catalogs with unsupported schema versions. Backward-compatible additions don't bump the version.
+
+## Clarify-Phase Decisions
+
+### C1: Format detection by URL extension, not content sniffing
+**Finding**: Spec was ambiguous about how the client knows whether it received SQLite or JSON.
+**Decision**: URL extension dictates format. Default URL ends in `.db` (SQLite). JSON URL would end in `.json`. No magic bytes detection.
+
+### C2: File locking for concurrent cache access
+**Finding**: CLI and GUI could run simultaneously, both accessing the cache.
+**Decision**: Use file-level advisory locking. Second reader gets stale cache if lock is held. Simple, no shared-memory complexity.
+
+### C3: meta.json deferred — ETag is sufficient
+**Finding**: Migration plan mentions a 100-byte `meta.json` for lightweight change detection.
+**Decision**: Defer. HTTP ETag on the catalog URL achieves the same goal (conditional GET) without an extra file to maintain.
+
+### C4: Catalog bundles version info
+**Finding**: In the old Go system, the client fetches both `manifests.json` and `versions.json` separately.
+**Decision**: The SQLite catalog bundles everything — manifest metadata + latest version per package. One fetch, not two. The manifest repo's CI compiles both into the catalog.
