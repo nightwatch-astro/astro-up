@@ -139,9 +139,10 @@ Reference: [blessed.rs](https://blessed.rs/crates) as the authoritative source f
 | **chrono** | 0.4 (serde) | Timestamps, cache TTL, version dates | `time` |
 | **semver** | 1 (serde) | Version parsing and comparison | `go-version` |
 | **regex** | 1 | Version extraction from vendor pages | `regexp` |
-| **once_cell** | 1 | Lazy statics (config, public key, compiled regex) | `sync.Once` |
+| ~~once_cell~~ | — | Replaced by `std::sync::LazyLock` (stable since Rust 1.80) | `sync.Once` |
 | **itertools** | 0.14 | Iterator extensions (chunks, sorted_by, group_by) | manual loops |
-| **validator** | 0.20 (derive) | Struct field validation | `go-playground/validator` |
+| **figment** | 0.10 (toml, env) | Layered config: defaults → TOML → env vars | `koanf` |
+| **validator** | 0.20 (derive) | Struct field validation (or `garde` for newer derive ergonomics) | `go-playground/validator` |
 | **directories** | 6 | Platform-aware config/cache/data dirs | `{config_dir}` expansion |
 | **derive_more** | 2 (display, from) | Derive Display, From, Into for wrapper types | manual implementations |
 | **reqwest** | 0.12 (stream, json) | HTTP client for downloads and API calls | `net/http` |
@@ -163,10 +164,13 @@ Reference: [blessed.rs](https://blessed.rs/crates) as the authoritative source f
 | Crate | Version | Purpose | Replaces (Go) |
 |-------|---------|---------|---------------|
 | **clap** | 4 (derive) | CLI argument parsing | `urfave/cli` |
+| **color-eyre** | 0.6 | Colorized error display with tracing span integration | `fmt.Errorf` |
 | **ratatui** | 0.29 | TUI progress bars and status display | `bubbletea/v2` |
-| **indicatif** | 0.17 | Simple progress bars (alternative to ratatui for basic cases) | `bubbletea` |
-| **dialoguer** | 0.11 | Interactive prompts (confirm, select, input) | manual stdin |
+| **indicatif** | 0.17 | Simple progress bars for downloads | `bubbletea` |
+| **inquire** | 0.7 | Interactive prompts (fuzzy select, validation) | manual stdin |
 | **console** | 0.15 | Terminal styling (colors, bold, width detection) | `lipgloss` |
+| **tabled** | 0.15 | Formatted table output for `list`, `check`, `scan` | `lipgloss` tables |
+| **tracing-subscriber** | 0.3 (env-filter) | Log output formatting and filtering | `slog` handlers |
 
 ### GUI Dependencies (astro-up-gui)
 
@@ -180,6 +184,8 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 | **pretty_assertions** | 1 | Diff display in test failures |
 | **tempfile** | 3 | Temporary directories for downloads, test fixtures |
 | **tokio-test** | 0.4 | Async test utilities |
+| **rstest** | 0.23 | Parameterized tests for version parsing, manifest deserialization |
+| **wiremock** | 0.6 | HTTP server mocking for provider integration tests |
 
 ### Changes from Initial List
 
