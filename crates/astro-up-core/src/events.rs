@@ -8,10 +8,20 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub enum Event {
-    CheckStarted { id: String },
-    CheckProgress { id: String, progress: f64 },
-    CheckComplete { id: String },
-    DownloadStarted { id: String, url: String },
+    CheckStarted {
+        id: String,
+    },
+    CheckProgress {
+        id: String,
+        progress: f64,
+    },
+    CheckComplete {
+        id: String,
+    },
+    DownloadStarted {
+        id: String,
+        url: String,
+    },
     DownloadProgress {
         id: String,
         progress: f64,
@@ -19,16 +29,37 @@ pub enum Event {
         total_bytes: u64,
         speed: f64,
     },
-    DownloadComplete { id: String },
-    BackupStarted { id: String },
-    BackupComplete { id: String },
-    InstallStarted { id: String },
-    InstallComplete { id: String },
-    ManualDownloadRequired { id: String, url: String },
-    Error { id: String, error: String },
+    DownloadComplete {
+        id: String,
+    },
+    BackupStarted {
+        id: String,
+    },
+    BackupComplete {
+        id: String,
+    },
+    InstallStarted {
+        id: String,
+    },
+    InstallComplete {
+        id: String,
+    },
+    ManualDownloadRequired {
+        id: String,
+        url: String,
+    },
+    Error {
+        id: String,
+        error: String,
+    },
     ScanStarted,
-    ScanProgress { progress: f64, current_id: String },
-    ScanComplete { total_found: u32 },
+    ScanProgress {
+        progress: f64,
+        current_id: String,
+    },
+    ScanComplete {
+        total_found: u32,
+    },
 }
 
 // Compile-time assertion: Event must be Send + 'static (required for flume channels)
@@ -61,9 +92,15 @@ mod tests {
     fn all_events_snapshot() {
         let events = vec![
             Event::CheckStarted { id: "test".into() },
-            Event::CheckProgress { id: "test".into(), progress: 0.5 },
+            Event::CheckProgress {
+                id: "test".into(),
+                progress: 0.5,
+            },
             Event::CheckComplete { id: "test".into() },
-            Event::DownloadStarted { id: "test".into(), url: "https://example.com".into() },
+            Event::DownloadStarted {
+                id: "test".into(),
+                url: "https://example.com".into(),
+            },
             Event::DownloadProgress {
                 id: "test".into(),
                 progress: 0.75,
@@ -76,10 +113,19 @@ mod tests {
             Event::BackupComplete { id: "test".into() },
             Event::InstallStarted { id: "test".into() },
             Event::InstallComplete { id: "test".into() },
-            Event::ManualDownloadRequired { id: "test".into(), url: "https://example.com".into() },
-            Event::Error { id: "test".into(), error: "something failed".into() },
+            Event::ManualDownloadRequired {
+                id: "test".into(),
+                url: "https://example.com".into(),
+            },
+            Event::Error {
+                id: "test".into(),
+                error: "something failed".into(),
+            },
             Event::ScanStarted,
-            Event::ScanProgress { progress: 0.5, current_id: "test".into() },
+            Event::ScanProgress {
+                progress: 0.5,
+                current_id: "test".into(),
+            },
             Event::ScanComplete { total_found: 42 },
         ];
 
