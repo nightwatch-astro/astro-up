@@ -97,3 +97,13 @@ The application queries GitLab Tags API for packages hosted on GitLab (e.g., som
 - HTML scraping is inherently fragile — the manifest repo CI validates scrape patterns weekly
 - Browser-based scraping (headless Chrome) is NOT in this spec — it stays in the manifest repo checker
 - Depends on: spec 003 (types), spec 004 (config for tokens/timeouts), spec 005 (catalog for manifest data)
+
+## Clarifications
+
+- **Provider selection is manifest-driven**: Each manifest declares its `[checkver]` section. The client dispatches to the matching provider. No auto-detection.
+- **GitHub provider shorthand**: `checkver.github = "owner/repo"` is equivalent to a full config with GitHub Releases API, `tag_prefix` stripping, and `asset_pattern` matching.
+- **Rate limiting strategy**: Per-host token bucket. GitHub: 60/hour unauthenticated, 5000/hour with token. GitLab: 300/min. Custom hosts: 10/min default. Token refills continuously, not per-window.
+- **Parallel checking with concurrency limit**: Check packages in parallel (default: 10 concurrent). Rate limiter gates per-host. Total wall time for ~95 packages: under 60s with token.
+- **No browser scraping in client**: HTML scraping uses reqwest + scraper (CSS selectors). JavaScript-heavy sites are handled by the manifest repo's CI checker, not the client.
+- **Autoupdate URL templates**: After discovering a new version, construct the download URL using `$version`, `$majorVersion`, `$cleanVersion` etc. Template expansion happens in this spec, feeding into spec 010 (download).
+- **Failed checks don't block**: Each package check is independent. Failures are collected and reported at the end. The user sees "3 of 95 checks failed" not a crash.
