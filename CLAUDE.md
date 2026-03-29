@@ -59,6 +59,11 @@ just lint     # Clippy + ESLint
 
 ## CI
 
+**Tauri CI requirements:**
+- Ubuntu Rust jobs MUST install system deps: `libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`
+- `crates/astro-up-gui/icons/icon.ico` and `icon.png` MUST be tracked in git (Tauri build.rs requires icon.ico for Windows resource file)
+- Path-conditional jobs MUST use `dorny/paths-filter@v3`, never `contains()` on event URLs
+
 Three parallel jobs on every PR:
 1. **check-rust** (Ubuntu) — fmt, clippy, test + Swatinem/rust-cache
 2. **check-frontend** (Ubuntu) — lint, test, build + pnpm cache
