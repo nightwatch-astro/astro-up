@@ -64,10 +64,11 @@ just lint     # Clippy + ESLint
 - `crates/astro-up-gui/icons/icon.ico` and `icon.png` MUST be tracked in git (Tauri build.rs requires icon.ico for Windows resource file)
 - Path-conditional jobs MUST use `dorny/paths-filter@v3`, never `contains()` on event URLs
 
-Three parallel jobs on every PR:
-1. **check-rust** (Ubuntu) — fmt, clippy, test + Swatinem/rust-cache
-2. **check-frontend** (Ubuntu) — lint, test, build + pnpm cache
-3. **check-windows** (Windows) — check, test — only on `crates/**` changes
+Four jobs (fast path + conditional slow paths):
+1. **check-rust** (Ubuntu) — fmt, clippy, test for core + cli only (~30s, no Tauri deps)
+2. **check-gui** (Ubuntu) — clippy, test for gui crate with Tauri system deps — only on `crates/astro-up-gui/**` changes
+3. **check-frontend** (Ubuntu) — lint, test, build + pnpm cache
+4. **check-windows** (Windows) — check, test — only on `crates/**` changes
 
 Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 
