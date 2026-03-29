@@ -135,13 +135,16 @@ Reference: [blessed.rs](https://blessed.rs/crates) as the authoritative source f
 | **serde_json** | 1 | JSON parsing (manifests.json, API responses) | `encoding/json` |
 | **toml** | 0.8 | TOML manifest parsing | `go-toml/v2` |
 | **tokio** | 1 (full) | Async runtime (HTTP, WMI, concurrent downloads) | goroutines |
-| **tracing** | 0.1 | Structured logging (Tauri uses tracing internally) | `slog` |
+| **tracing** | 0.1 | Structured logging + spans (Tauri uses tracing internally) | `slog` |
+| **metrics** | 0.24 | Metrics facade (counters, gauges, histograms) for UI display + future telemetry | — |
+| **metrics-util** | 0.18 | In-memory recorder for exposing metrics to Tauri UI | — |
 | **chrono** | 0.4 (serde) | Timestamps, cache TTL, version dates | `time` |
 | **semver** | 1 (serde) | Version parsing and comparison | `go-version` |
 | **regex** | 1 | Version extraction from vendor pages | `regexp` |
-| **once_cell** | 1 | Lazy statics (config, public key, compiled regex) | `sync.Once` |
+| ~~once_cell~~ | — | Replaced by `std::sync::LazyLock` (stable since Rust 1.80) | `sync.Once` |
 | **itertools** | 0.14 | Iterator extensions (chunks, sorted_by, group_by) | manual loops |
-| **validator** | 0.20 (derive) | Struct field validation | `go-playground/validator` |
+| **figment** | 0.10 (toml, env) | Layered config: defaults → TOML → env vars | `koanf` |
+| **validator** | 0.20 (derive) | Struct field validation (or `garde` for newer derive ergonomics) | `go-playground/validator` |
 | **directories** | 6 | Platform-aware config/cache/data dirs | `{config_dir}` expansion |
 | **derive_more** | 2 (display, from) | Derive Display, From, Into for wrapper types | manual implementations |
 | **reqwest** | 0.12 (stream, json) | HTTP client for downloads and API calls | `net/http` |
@@ -163,10 +166,13 @@ Reference: [blessed.rs](https://blessed.rs/crates) as the authoritative source f
 | Crate | Version | Purpose | Replaces (Go) |
 |-------|---------|---------|---------------|
 | **clap** | 4 (derive) | CLI argument parsing | `urfave/cli` |
+| **color-eyre** | 0.6 | Colorized error display with tracing span integration | `fmt.Errorf` |
 | **ratatui** | 0.29 | TUI progress bars and status display | `bubbletea/v2` |
-| **indicatif** | 0.17 | Simple progress bars (alternative to ratatui for basic cases) | `bubbletea` |
-| **dialoguer** | 0.11 | Interactive prompts (confirm, select, input) | manual stdin |
+| **indicatif** | 0.17 | Simple progress bars for downloads | `bubbletea` |
+| **inquire** | 0.7 | Interactive prompts (fuzzy select, validation) | manual stdin |
 | **console** | 0.15 | Terminal styling (colors, bold, width detection) | `lipgloss` |
+| **tabled** | 0.15 | Formatted table output for `list`, `check`, `scan` | `lipgloss` tables |
+| **tracing-subscriber** | 0.3 (env-filter) | Log output formatting and filtering | `slog` handlers |
 
 ### GUI Dependencies (astro-up-gui)
 
@@ -180,6 +186,8 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 | **pretty_assertions** | 1 | Diff display in test failures |
 | **tempfile** | 3 | Temporary directories for downloads, test fixtures |
 | **tokio-test** | 0.4 | Async test utilities |
+| **rstest** | 0.23 | Parameterized tests for version parsing, manifest deserialization |
+| **wiremock** | 0.6 | HTTP server mocking for provider integration tests |
 
 ### Changes from Initial List
 
@@ -205,6 +213,9 @@ Tauri v2 + official plugins (see Tauri Plugins section above).
 | **notify** | 7 | File system watcher for live config reload, custom tool directory changes | When implementing live config reload |
 | **parking_lot** | 0.12 | Faster Mutex/RwLock (no poisoning) | Only if std::sync::Mutex contention becomes measurable |
 | **globset** | 0.4 | Glob matching for asset patterns | If regex feels unnatural for file pattern matching in manifests |
+| **sentry** | 0.34 (tracing feature) | Error reporting + performance traces | When telemetry feature is implemented. Opt-in, user consent required. `sentry-tracing` integrates with existing tracing spans. |
+| **posthog** | — (HTTP API via reqwest) | Product analytics (feature usage, update patterns) | When telemetry feature is implemented. Opt-in, user consent required. No official Rust SDK — use `reqwest` POST to `/capture`. |
+| **flume** | 0.11 | Faster async+sync channels | If `tokio::sync::mpsc` performance is insufficient for event streaming |
 
 ### Added Since Initial Plan
 
