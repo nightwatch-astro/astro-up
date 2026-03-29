@@ -27,6 +27,6 @@
     "typescript-eslint": "^8",
     "vue-tsc": "^2",
     "@vue/test-utils": "^2",
-    "jsdom": "^26"
+    "jsdom": "^29"
   }
 }
