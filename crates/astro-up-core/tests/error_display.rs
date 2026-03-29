@@ -68,9 +68,11 @@ fn error_messages_are_readable() {
         );
     }
 
-    insta::assert_snapshot!(errors
-        .iter()
-        .map(|e| e.to_string())
-        .collect::<Vec<_>>()
-        .join("\n"));
+    insta::assert_snapshot!(
+        errors
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
 }
