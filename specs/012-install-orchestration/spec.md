@@ -116,3 +116,14 @@ The user configures update policies: "allow minor updates for all packages, requ
 - The orchestration engine runs sequentially (one install at a time) to avoid conflicts
 - Backup is optional per package — only runs if `[backup]` is defined in the manifest
 - Depends on: spec 005 (catalog), spec 006+007 (detection), spec 008 (version checking), spec 010 (download), spec 011 (install), spec 013 (backup)
+
+## Clarifications
+
+- **Dependency graph is static**: Dependencies are declared in manifests (`[dependencies].requires`). No runtime dependency discovery. The graph is built from the catalog at plan time.
+- **Topological sort with priority**: Sort by dependency order first, then by user-specified priority within the same dependency level. Circular dependencies are rejected at plan time.
+- **Partial update plans**: If updating 5 packages and package 3 fails, packages 4-5 still run if they don't depend on package 3. The plan tracks which packages are independent.
+- **Dry-run output format**: JSON-serializable plan showing: package, current_version, target_version, download_url, download_size, dependencies. Both CLI and GUI can display this.
+- **Update policy inheritance**: Global policy from config (spec 004). Per-package overrides in config (`[updates.overrides.nina-app]`). CLI flags override both (`--allow-major`).
+- **Verification step**: After install, re-run detection (spec 006/007) for the just-installed package. Compare detected version against expected. If mismatch, report "install succeeded but version doesn't match" (possible installer bug).
+- **Backup integration**: If the package has `[backup]` in its manifest, run backup (spec 013) BEFORE install. If backup fails, ask user whether to proceed without backup.
+- **Event sequence**: For each package: PlanCreated → CheckStarted → CheckComplete → DownloadStarted → DownloadProgress* → DownloadComplete → BackupStarted → BackupComplete → InstallStarted → InstallComplete → VerifyStarted → VerifyComplete.
