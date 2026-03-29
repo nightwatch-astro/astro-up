@@ -114,3 +114,20 @@ A user configures a custom install directory. The system passes this to the inst
 - UAC prompts are expected and handled by the OS — the app triggers elevation, Windows shows the prompt
 - Pre/post install hooks are simple shell commands, not arbitrary scripts (limited scope)
 - Depends on: spec 003 (types), spec 004 (config for timeouts/paths), spec 010 (download manager provides the installer file)
+
+## Clarifications
+
+- **Default silent switches by installer type**:
+  - InnoSetup: `/VERYSILENT /NORESTART /SUPPRESSMSGBOXES`
+  - MSI: `msiexec /i <file> /qn /norestart`
+  - NSIS (Nullsoft): `/S`
+  - WiX/Burn: `/quiet /norestart`
+  - ZIP/ZipWrap: extract to target directory (no switches)
+  - Portable: copy to target directory
+  - DownloadOnly: no execution — just download
+- **Manifest switches override defaults**: If `[install.switches]` is present, its values replace (not merge with) the defaults for that installer type.
+- **InstallDir token**: `<INSTALLPATH>` in switch templates is replaced with the actual install directory. Similarly `<LOGPATH>` for installer logs.
+- **Elevation detection**: Check manifest `elevation` field first. If "required", launch with `runas`. If "self", let the installer handle UAC. If not specified, try without elevation, retry with elevation on exit code 740.
+- **Process monitoring**: After launching the installer, wait for the process to exit. Don't poll — use OS wait with timeout. If the process spawns children (common with bootstrappers), wait for the entire process tree.
+- **ZIP extraction path**: For ZIP and ZipWrap, extract to `{install_dir}/{package_id}/` unless the ZIP contains a single root directory, in which case extract its contents directly (avoid double nesting).
+- **Pre/post install hooks**: Shell commands from the manifest. Run in the package's install directory. Timeout: 60 seconds. Failure in pre_install aborts the install. Failure in post_install is logged but doesn't fail the overall install.
