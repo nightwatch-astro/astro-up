@@ -94,3 +94,12 @@ The system automatically prunes old backups beyond a configurable retention coun
 - Backup runs automatically before install (spec 012) if `[backup]` is defined in the manifest
 - ZIP format chosen for portability and built-in compression
 - Depends on: spec 003 (types), spec 004 (config for backup paths/retention)
+
+## Clarifications
+
+- **Backup archive naming**: `{package_id}_{version}_{YYYYMMDD_HHMMSS}.zip` in `{data_dir}/astro-up/backups/{package_id}/`.
+- **Locked file handling**: Use shadow copy (VSS) on Windows if available, otherwise skip locked files with a warning. Most config files are not locked during normal operation.
+- **Restore confirmation**: In interactive mode, list files that will be overwritten. In non-interactive mode (CLI with --yes), proceed without confirmation.
+- **Selective restore**: `astro-up restore nina-app --file Profiles/MyProfile.json` restores a single file from the backup. Full restore is the default.
+- **Backup metadata schema**: `metadata.json` inside the ZIP: `{"package_id": "nina-app", "version": "3.1.2", "created_at": "2026-03-29T12:00:00Z", "paths": [...], "total_size": 12345678}`.
+- **Pruning trigger**: Pruning runs after each successful backup, not on a schedule. This keeps the count bounded without needing a background job.
