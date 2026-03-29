@@ -92,3 +92,13 @@ When Alpaca is unavailable (ASCOM Platform not installed, or server not running)
 - The ascom-alpaca-core crate (nightwatch-astro/ascom-alpaca-core) provides the API types
 - mDNS discovery may not work in all network configurations (firewalls, VLANs)
 - Depends on: spec 003 (types), spec 006 (registry fallback)
+
+## Clarifications
+
+- **Discovery protocol**: Alpaca standard uses UDP broadcast on port 32227 for discovery. The response contains the API server's host:port. Fallback: configured static host:port in config (spec 004).
+- **API versioning**: Query `/management/apiversions` first to confirm API compatibility. Require Alpaca API v1 minimum.
+- **Device enumeration**: `/management/v1/configureddevices` returns all registered devices. Each has deviceType, deviceNumber, deviceName.
+- **Driver version query**: Per-device `/api/v1/{deviceType}/{deviceNumber}/driverversion` returns the version string. Also query `/interfaceversion` for the ASCOM interface version.
+- **Connection state**: Devices can be configured but not connected. Query `/connected` before assuming the device is usable. Report "configured but not connected" vs "not found".
+- **Timeout strategy**: 2s for discovery broadcast, 5s for API calls. These are LAN operations — anything longer indicates a problem.
+- **Alpaca vs registry precedence**: If both Alpaca and registry return a version, Alpaca wins (it reports the actually loaded driver, not what's registered).
