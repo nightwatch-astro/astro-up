@@ -97,15 +97,18 @@ jobs:
       - run: pnpm --dir frontend test
       - run: pnpm --dir frontend build
 
-  # Windows: only when crate files change.
+  # Windows: full workspace including GUI. Primary target platform.
+  # Runs on crate changes (PRs) and always on push to main.
   check-windows:
-    name: Windows Build
+    name: Windows Integration
     needs: changes
     runs-on: windows-latest
     if: needs.changes.outputs.crates == 'true' || github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --workspace
+      - run: cargo clippy --workspace -- -D warnings
       - run: cargo test --workspace
