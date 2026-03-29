@@ -35,7 +35,10 @@ fn try_parse_lenient(raw: &str) -> Option<semver::Version> {
     let trimmed = raw.trim();
 
     // Strip leading 'v' or 'V'
-    let s = trimmed.strip_prefix('v').or(trimmed.strip_prefix('V')).unwrap_or(trimmed);
+    let s = trimmed
+        .strip_prefix('v')
+        .or(trimmed.strip_prefix('V'))
+        .unwrap_or(trimmed);
 
     // Try again after stripping prefix
     if let Ok(v) = semver::Version::parse(s) {
@@ -80,7 +83,10 @@ fn try_parse_lenient(raw: &str) -> Option<semver::Version> {
     let mut v = semver::Version::new(major, minor, patch);
 
     if let Some(suf) = suffix {
-        let cleaned: String = suf.chars().filter(|c| c.is_alphanumeric() || *c == '-' || *c == '.').collect();
+        let cleaned: String = suf
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '.')
+            .collect();
         if !cleaned.is_empty() {
             v.pre = semver::Prerelease::new(&cleaned).unwrap_or_default();
         }
@@ -163,7 +169,12 @@ mod tests {
     #[case("5", 5, 0, 0)]
     #[case("3.1.2.3001", 3, 1, 2)]
     #[case("4.1.12288.0", 4, 1, 12288)]
-    fn parse_valid_versions(#[case] input: &str, #[case] major: u64, #[case] minor: u64, #[case] patch: u64) {
+    fn parse_valid_versions(
+        #[case] input: &str,
+        #[case] major: u64,
+        #[case] minor: u64,
+        #[case] patch: u64,
+    ) {
         let v = Version::parse(input);
         assert_eq!(v.raw, input);
         let parsed = v.parsed.expect("should parse");
@@ -194,15 +205,24 @@ mod tests {
 
     #[test]
     fn ordering_raw_fallback() {
-        let v1 = Version { raw: "abc".into(), parsed: None };
-        let v2 = Version { raw: "def".into(), parsed: None };
+        let v1 = Version {
+            raw: "abc".into(),
+            parsed: None,
+        };
+        let v2 = Version {
+            raw: "def".into(),
+            parsed: None,
+        };
         assert!(v1 < v2);
     }
 
     #[test]
     fn parsed_beats_unparsed() {
         let parsed = Version::parse("1.0.0");
-        let raw = Version { raw: "zzz".into(), parsed: None };
+        let raw = Version {
+            raw: "zzz".into(),
+            parsed: None,
+        };
         assert!(parsed > raw);
     }
 
