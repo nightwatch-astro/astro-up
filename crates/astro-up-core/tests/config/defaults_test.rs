@@ -20,7 +20,6 @@ fn load_config_with_empty_db_returns_defaults() {
         "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db"
     );
     assert_eq!(config.catalog.cache_ttl.as_secs(), 86400);
-    assert!(!config.catalog.offline);
     assert_eq!(config.paths.download_dir, paths.download_dir);
     assert_eq!(config.paths.cache_dir, paths.cache_dir);
     assert_eq!(config.paths.data_dir, paths.data_dir);
@@ -77,5 +76,5 @@ fn known_keys_discovers_all_fields() {
     assert!(keys.contains(&"network.timeout".to_string()));
     assert!(keys.contains(&"logging.level".to_string()));
     assert!(keys.contains(&"telemetry.enabled".to_string()));
-    assert_eq!(keys.len(), 15); // 15 leaf fields
+    assert_eq!(keys.len(), 14); // 14 leaf fields
 }

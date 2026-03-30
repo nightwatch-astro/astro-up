@@ -50,7 +50,6 @@ pub struct CatalogConfig {
     pub url: String,
     #[garde(custom(validate_positive_duration))]
     pub cache_ttl: Duration,
-    pub offline: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
