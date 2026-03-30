@@ -1,44 +1,59 @@
 # Decisions Report: 020-manifest-modernization
-**Created**: 2026-03-29
-**Mode**: Unattended
+
+**Created**: 2026-03-30
+**Mode**: Unattended, then interactive clarify with user
 
 ## Decisions Made
 
-### D1: SQLite replaces JSON as primary catalog format
-**Choice**: catalog.db (SQLite) is the primary artifact. JSON is generated for backward compat during transition only.
-**Reasoning**: SQLite enables FTS5 search, indexed queries, and efficient partial reads. JSON requires loading everything into memory. The Rust client (spec 005) benefits from SQLite.
+### D1: SQLite replaces JSON as the distribution format
+**Choice**: catalog.db (SQLite) is the only published artifact. No manifests.json or versions.json.
+**Reasoning**: SQLite enables FTS5 search, indexed queries, single-file distribution. JSON requires loading everything into memory.
 
 ### D2: Per-version files instead of monolithic versions.json
 **Choice**: `versions/{id}/{semver}.json` individual files.
-**Reasoning**: Cleaner git history (one commit per discovery), easier CI (only process changed files), and natural deduplication (file existence = version known).
+**Reasoning**: Cleaner git history, natural deduplication (file existence = version known), simpler CI.
 
-### D3: Keep [checkver] in compiled catalog
-**Choice**: Don't strip `[checkver]` during compilation (unlike the old `[remote]` which was stripped).
-**Reasoning**: Self-describing manifests allow the client to do its own version checking. Stripping checkver would force all checking through the manifest repo CI.
+### D3: Rolling GitHub Release tag for distribution
+**Choice**: `catalog/latest` tag updated on each pipeline run.
+**Reasoning**: Simple, CDN-cached via GitHub, no custom infrastructure.
 
-### D4: Rolling GitHub Release tag for distribution
-**Choice**: `catalog/latest` tag updated on each pipeline run with new catalog.db.
-**Reasoning**: Simple, CDN-cached (GitHub's CDN), no custom infrastructure. Upgrade path to Cloudflare R2 if custom cache headers are needed later.
+### D4: Single CI job for full pipeline
+**Choice**: One job: check → compile → sign → publish. No multi-stage.
+**Reasoning**: Manifest repo is small enough. Multi-stage adds inter-job artifact passing overhead.
 
-## Clarify-Phase Decisions
+## Clarify-Phase Decisions (Interactive)
 
-### C1: Single CI job, not multi-stage pipeline
-**Decision**: One job does: check versions → compile → sign → publish. Multi-stage adds inter-job artifact passing overhead. The manifest repo is small enough for a single job.
+### C1: Remove committed build artifacts from git
+**Finding**: User asked if we still need versions.json/manifests.json.
+**Decision**: No — remove them from git entirely. They're build artifacts, not source. Add to .gitignore. The repo contains only:
+- Source: `manifests/*.toml` + `versions/{id}/{semver}.json`
+- Build artifacts go to GitHub Releases only: `catalog.db`, `catalog.db.minisig`, `stats.json`
+**Reasoning**: Build artifacts in git cause merge conflicts, bloat the repo, and confuse source-of-truth. The Go client that consumed them is archived.
 
-### C2: Backward compat via dual output, not format negotiation
-**Decision**: During transition, the pipeline outputs BOTH catalog.db and manifests.json + versions.json. The old Go client reads JSON. The new Rust client reads SQLite. When the Go client is retired, JSON generation is removed.
+### C2: Manifest ID rename is part of this spec
+**Finding**: User confirmed rename should be in this spec, not separate.
+**Decision**: One-time rename of all 96 manifests from `{vendor}-{product}` to short IDs. Per-version directories also renamed. No old IDs in aliases (clean break). CI validates uniqueness.
 
-### C3: Scoop-style template variables adopted wholesale
-**Decision**: Use Scoop's exact variable names and semantics ($version, $majorVersion, etc.). No custom variables. This is a proven pattern from Scoop's 18,000+ package ecosystem.
+### C3: stats.json published to GitHub Releases for docs site
+**Finding**: The docs site (astro-up.github.io) currently fetches stats.json from raw.githubusercontent.com.
+**Decision**: stats.json moves to GitHub Releases alongside catalog.db. Docs site updated to fetch from there. Same rolling `catalog/latest` tag.
 
-### C4: Hash discovery follows Scoop's tiered pattern
-**Decision**: Try in order: (1) URL+regex on a hash page, (2) JSON API endpoint, (3) download the file and compute SHA256. Most packages use (3) as fallback. This matches Scoop's `hash` section.
+### C4: No backward compatibility — clean break
+**Decision**: Go client is archived. No dual JSON+SQLite output. No old manifest IDs. One format, one set of IDs.
+
+### C5: version_format field in catalog for client-side comparison
+**Decision**: The packages table includes `version_format` (from the manifest TOML). The client (spec 012) uses this to select the correct version parser (semver, date, or custom regex).
+
+### C6: Catalog includes full manifest as JSON column
+**Decision**: The `packages.manifest` column stores the full manifest as JSON. This lets the client access detection config, install config, checkver config, etc. without a separate fetch. One table, one query.
 
 ## Questions I Would Have Asked
 
-### Q1: Should the catalog include historical versions or only latest?
-**My decision**: Only latest per package. Historical versions are in the git history and per-version files. The client only needs current versions for update checking.
-**Impact if wrong**: Low — adding historical versions later is a catalog schema change, not a pipeline change.
+### Q1: Should per-version files include changelog/release notes URL?
+**My decision**: Yes — `{url, sha256, discovered_at, release_notes_url}`. The release notes URL feeds into the client's "what's new" display. Optional field.
 
-### Q2: Should we support incremental catalog updates (delta)?
-**My decision**: No — full catalog rebuild each time. At ~95 packages, the catalog is small (<5MB). Incremental adds complexity for minimal bandwidth savings.
+### Q2: Should the catalog include ALL historical versions or only latest?
+**My decision**: Latest only in catalog.db (one row per package in versions table with the newest). Historical versions remain as per-version files in git. Keeps the catalog small. Client only needs latest for update checking.
+
+### Q3: Should the rename be automated or manual?
+**My decision**: Automated script. Generate the rename mapping from a CSV (old_id → new_id), rename files + directories, update any cross-references, validate with the compiler. One PR.
