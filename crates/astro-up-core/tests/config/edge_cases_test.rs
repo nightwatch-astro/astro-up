@@ -64,7 +64,7 @@ fn config_list_empty_db_returns_all_defaults() {
     let config = load_config(&db_path, paths, log_file, &[]).unwrap();
 
     let list = config_list(&config, &[]);
-    assert_eq!(list.len(), 15);
+    assert_eq!(list.len(), 14);
     assert!(list.iter().all(|(_, _, overridden)| !overridden));
 }
 

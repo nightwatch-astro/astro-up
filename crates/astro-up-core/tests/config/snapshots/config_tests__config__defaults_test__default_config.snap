@@ -1,6 +1,6 @@
 ---
 source: crates/astro-up-core/tests/config/defaults_test.rs
-assertion_line: 48
+assertion_line: 52
 expression: value
 ---
 {
@@ -9,7 +9,6 @@ expression: value
       "nanos": 0,
       "secs": 86400
     },
-    "offline": false,
     "url": "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db"
   },
   "logging": {

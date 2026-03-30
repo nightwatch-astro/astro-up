@@ -8,7 +8,6 @@ impl Default for CatalogConfig {
         Self {
             url: "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db".into(),
             cache_ttl: Duration::from_secs(86400), // 24h
-            offline: false,
         }
     }
 }

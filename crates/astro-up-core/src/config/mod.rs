@@ -103,11 +103,6 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
             config.catalog.cache_ttl =
                 parse_duration(value).map_err(|_| parse_err("duration (e.g. 24h, 30s)"))?;
         }
-        "catalog.offline" => {
-            config.catalog.offline = value
-                .parse::<bool>()
-                .map_err(|_| parse_err("boolean (true/false)"))?;
-        }
         "paths.download_dir" => config.paths.download_dir = PathBuf::from(value),
         "paths.cache_dir" => config.paths.cache_dir = PathBuf::from(value),
         "paths.data_dir" => config.paths.data_dir = PathBuf::from(value),
@@ -168,7 +163,6 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         "catalog.cache_ttl" => {
             Some(humantime::format_duration(config.catalog.cache_ttl).to_string())
         }
-        "catalog.offline" => Some(config.catalog.offline.to_string()),
         "paths.download_dir" => Some(config.paths.download_dir.display().to_string()),
         "paths.cache_dir" => Some(config.paths.cache_dir.display().to_string()),
         "paths.data_dir" => Some(config.paths.data_dir.display().to_string()),
