@@ -131,11 +131,11 @@ Downloaded installers are kept after installation for potential offline re-insta
 
 ### Key Entities
 
-- **DownloadRequest**: URL, expected hash, destination path, resume flag
-- **DownloadProgress**: bytes_downloaded, total_bytes, speed, elapsed, estimated_remaining
-- **DownloadResult**: Success(path, hash_verified) or Error(reason)
-- **ThrottleConfig**: max_bytes_per_sec (0 = unlimited), from AppConfig
-- **PurgeConfig**: max_age_days (0 = disabled), from AppConfig
+- **DownloadRequest**: url, expected_hash, dest_dir, filename, resume
+- **DownloadResult**: Success(path, hash_verified, bytes_downloaded, resumed) or Cached(path)
+- **DownloadProgress** (via `Event::DownloadProgress`): id, progress, bytes_downloaded, total_bytes, speed, elapsed, estimated_remaining
+- **PurgeResult**: files_deleted, bytes_reclaimed
+- **Throttle/purge config**: inlined on `NetworkConfig.download_speed_limit` and `PathsConfig.purge_installers_after_days` (no separate types — Principle VI)
 
 ## Success Criteria *(mandatory)*
 

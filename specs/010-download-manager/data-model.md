@@ -54,11 +54,10 @@ Download-specific errors (extends `CoreError`).
 
 | Variant | Fields | Description |
 |---------|--------|-------------|
-| `HttpError` | `url, status, body` | Non-2xx response (except 304/206) |
-| `TooManyRedirects` | `url, count` | Exceeded 10 redirect hops |
-| `HashMismatch` | `expected, actual, path` | SHA256 verification failed |
-| `DiskSpaceInsufficient` | `required, available, path` | Less than 2x file size available |
-| `RenameFailed` | `from, to, cause` | `.part` → final rename failed after retries |
+| `DownloadFailed` | `url, status: u16, reason` | Non-2xx response, network error, or redirect overflow |
+| `ChecksumMismatch` | `expected, actual` | SHA256 verification failed (existing CoreError variant) |
+| `DiskSpaceInsufficient` | `required, available` | Less than 2x file size available |
+| `RenameFailed` | `from, to, cause: Box<dyn Error>` | `.part` → final rename failed after retries |
 | `DownloadInProgress` | `url` | Sequential download lock contention |
 | `Cancelled` | — | User cancelled via CancellationToken |
 
@@ -94,9 +93,15 @@ AppConfig (spec 004)
                         │
                         ▼
 Event (spec 003)
-  ├─ DownloadStarted
-  ├─ DownloadProgress  ◄── DownloadProgress struct
-  └─ DownloadComplete
+  ├─ DownloadStarted { id, url }
+  ├─ DownloadProgress { id, progress, bytes_downloaded, total_bytes, speed, elapsed, estimated_remaining }
+  └─ DownloadComplete { id }
+
+Filesystem artifacts:
+  download_dir/
+  ├─ {filename}.part    ── in-progress download
+  ├─ {filename}         ── completed download
+  └─ {filename}.etag    ── cached ETag for conditional requests (FR-008)
 ```
 
 ## State Transitions
