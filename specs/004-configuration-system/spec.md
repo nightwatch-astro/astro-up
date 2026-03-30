@@ -27,7 +27,7 @@ A user installs astro-up for the first time and launches it. Without creating an
 
 ### User Story 2 - TOML Config File (Priority: P2)
 
-A power user creates a `config.toml` file at `{config_dir}/astro-up/config.toml` to customize behavior. They change the download directory and set a proxy. The TOML values override the defaults but can themselves be overridden by environment variables.
+A power user creates a `config.toml` file at `{config_dir}/config.toml` to customize behavior. They change the download directory and set a proxy. The TOML values override the defaults but can themselves be overridden by environment variables.
 
 **Why this priority**: TOML config is the primary customization mechanism for persistent settings. Power users expect file-based configuration.
 
@@ -82,7 +82,7 @@ A user passes `--config /path/to/custom.toml` to use an alternate config file, o
 - What happens when `{cache_dir}` or `{data_dir}` cannot be resolved (e.g., `$HOME` unset on Linux CI)? The application reports the unresolvable token, the field it was used in, and exits with a non-zero code.
 - What happens when paths resolve to locations with non-ASCII characters or spaces (e.g., `C:\Users\José\AppData`)? The platform directories crate handles this natively; no special treatment needed.
 - What happens when `config show` is run with no config file? It shows the effective configuration (compiled defaults with any env var overrides applied).
-- What happens when `config init` is run and a config file already exists? It exits with an error message pointing to the existing file. Use `--force` to overwrite.
+- What happens when `config init` is run and a config file already exists? The core library's `generate_config_template()` returns the template string — the CLI layer (spec 015) handles the file existence check, `--force` flag, and file write.
 - What happens when `--config /path/to/custom.toml` is combined with environment variables? Env vars still apply on top of the custom file — the layering precedence is always CLI → env → file → defaults, regardless of which file is loaded.
 
 ## Requirements *(mandatory)*
@@ -91,12 +91,12 @@ A user passes `--config /path/to/custom.toml` to use an alternate config file, o
 
 - **FR-001**: System MUST load configuration in this precedence order (highest to lowest): CLI arguments → environment variables → TOML config file → compiled defaults. Implementation note: CLI overrides are applied via `.set_override("key", value)` on the `ConfigBuilder`, which is the highest-precedence layer.
 - **FR-002**: System MUST use the `ASTROUP_` prefix for environment variable mapping, with double underscore (`__`) as the ONLY nesting delimiter (e.g., `ASTROUP_CATALOG__URL` maps to `catalog.url`). Single underscores are literal (e.g., `ASTROUP_UPDATES__CHECK_INTERVAL` maps to `updates.check_interval`). config-rs lowercases env var keys after prefix stripping (or use `convert_case` feature for explicit control). Unknown `ASTROUP_` env vars that don't map to a config field are silently ignored (unlike unknown TOML keys which produce a warning — this asymmetry is intentional since env vars may be set by unrelated processes).
-- **FR-003**: System MUST resolve the default config file path as `{config_dir}/astro-up/config.toml` using platform-aware directory resolution
-- **FR-004**: System MUST support these path tokens in config values: `{config_dir}`, `{cache_dir}`, `{data_dir}`, `{home_dir}`. Note: `{program_dir}` is per-package (resolved during detection, not config) and is NOT a config-level token.
-- **FR-005**: System MUST validate all configuration values after loading and merging, reporting errors in the format `"config.{section}.{field}: {constraint}, got {actual_value}"` (e.g., `"config.network.timeout: expected positive duration, got -5s"`). Type mismatches (e.g., `timeout = true` instead of a duration string) are reported the same way.
+- **FR-003**: System MUST resolve the default config file path as `{config_dir}/config.toml` using platform-aware directory resolution. The `{config_dir}` token maps to `ProjectDirs::from("", "", "astro-up").config_dir()` which already includes the app name (e.g., `%APPDATA%/astro-up/config` on Windows, `~/.config/astro-up` on Linux).
+- **FR-004**: System MUST support these path tokens in config values: `{config_dir}`, `{cache_dir}`, `{data_dir}`, `{home_dir}`. All tokens except `{home_dir}` map to `ProjectDirs::from("", "", "astro-up")` methods which already include the app name in the path — defaults MUST NOT add an extra `/astro-up` suffix. `{home_dir}` maps to `BaseDirs::home_dir()`. Note: `{program_dir}` is per-package (resolved during detection, not config) and is NOT a config-level token.
+- **FR-005**: System MUST validate all configuration values after loading and merging, reporting errors with the field path and constraint. garde produces errors in the format `"field.path: message"` (e.g., `"network.timeout: duration must be positive"`). Type mismatches (e.g., `timeout = true` instead of a duration string) are caught earlier by serde deserialization and reported via config-rs's `ConfigError::Type` which includes the key, expected type, and actual type.
 - **FR-006**: System MUST provide these configuration sections: catalog (source URL, cache TTL, offline flag), paths (download, cache, data directories), network (proxy, timeout, user agent), updates (check interval, auto-check enabled), logging (level, log-to-file flag, log file path), telemetry (opt-in flag). Note: downstream specs will add fields to these sections (e.g., `network.download_speed_limit` from spec 010, `backup.retention_count` from spec 013, `ui.*` from spec 016) — the config system MUST support adding new sections and fields without breaking existing configs.
 - **FR-007**: System MUST allow the config file path to be overridden via `--config` CLI argument
-- **FR-008**: `config show` MUST serialize the current effective configuration (all layers merged, tokens expanded to absolute paths) to TOML. `config init` MUST generate a fully-documented TOML file with all settings commented out at their default values, including explanatory comments per section. `config init` MUST fail with an error if the config file already exists (use `--force` to overwrite).
+- **FR-008**: `config show` MUST serialize the current effective configuration (all layers merged, tokens expanded to absolute paths) to TOML. `config init` MUST generate a fully-documented TOML file with all settings commented out at their default values, including explanatory comments per section. `config init` file existence check and `--force` flag are CLI-layer concerns (spec 015) — the core library only generates the template string.
 - **FR-009**: System MUST operate with the defaults documented in the Default Values table when no config file exists and no environment variables are set
 - **FR-010**: System MUST log a warning for unknown TOML keys to catch typos, but continue loading (do not fail). Implementation note: config-rs does not natively detect unknown keys — requires a two-pass approach: parse TOML to raw `toml::Value` table, diff keys against the known `AppConfig` fields, warn on unrecognized keys, then proceed with normal config-rs deserialization.
 - **FR-011**: System MUST support boolean, integer, string, duration, and path types in config values. Duration values MUST use human-readable strings (e.g., `"24h"`, `"30s"`, `"500ms"`) via `humantime-serde`.
@@ -120,7 +120,7 @@ Note: The catalog signature verification public key is hardcoded, not configurab
 
 - **SC-001**: Application starts and operates correctly with zero configuration (no file, no env vars)
 - **SC-002**: Any config value can be overridden via environment variable without modifying files
-- **SC-003**: Configuration validation catches all invalid values and reports actionable error messages within 100ms of startup
+- **SC-003**: Configuration validation catches all invalid values and reports actionable error messages. Target: complete config load + validate pipeline under 100ms (aspirational — validated empirically during integration tests, no dedicated benchmark required for ~15 fields)
 - **SC-004**: `config init` generates a documented TOML file with all available settings and their defaults
 - **SC-005**: Round-trip test passes: load defaults → serialize to TOML → load from TOML → assert equality. Note: `config show` outputs expanded absolute paths, so round-trip equality is tested on the pre-expansion config (tokens preserved in serialization, expanded only in the effective config).
 - **SC-006**: Layering precedence test passes: set the same field at all four layers with different values, assert CLI value wins. Remove CLI layer, assert env var wins. Remove env layer, assert TOML wins. Remove TOML, assert default wins.
@@ -132,9 +132,9 @@ Note: The catalog signature verification public key is hardcoded, not configurab
 | catalog | url | `https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db` |
 | catalog | cache_ttl | 24 hours |
 | catalog | offline | false |
-| paths | download_dir | `{cache_dir}/astro-up/downloads` |
-| paths | cache_dir | `{cache_dir}/astro-up` |
-| paths | data_dir | `{data_dir}/astro-up` |
+| paths | download_dir | `{cache_dir}/downloads` |
+| paths | cache_dir | `{cache_dir}` |
+| paths | data_dir | `{data_dir}` |
 | network | proxy | none |
 | network | timeout | 30 seconds |
 | network | user_agent | `astro-up/{version}` |
@@ -142,7 +142,7 @@ Note: The catalog signature verification public key is hardcoded, not configurab
 | updates | check_interval | 24 hours |
 | logging | level | info |
 | logging | log_to_file | false |
-| logging | log_file | `{data_dir}/astro-up/astro-up.log` |
+| logging | log_file | `{data_dir}/astro-up.log` |
 | telemetry | enabled | false |
 
 ## Assumptions
