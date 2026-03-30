@@ -29,6 +29,15 @@ pub struct DetectionConfig {
     pub product_code: Option<String>,
     #[serde(default)]
     pub upgrade_code: Option<String>,
+    /// WMI: filter by DriverProviderName (e.g., "ZWO")
+    #[serde(default)]
+    pub inf_provider: Option<String>,
+    /// WMI: filter by DeviceClass
+    #[serde(default)]
+    pub device_class: Option<String>,
+    /// WMI: filter by InfName
+    #[serde(default)]
+    pub inf_name: Option<String>,
     #[serde(default)]
     pub fallback: Option<Box<DetectionConfig>>,
 }
