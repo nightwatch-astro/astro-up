@@ -1,0 +1,43 @@
+---
+source: crates/astro-up-core/tests/config/defaults_test.rs
+assertion_line: 48
+expression: value
+---
+{
+  "catalog": {
+    "cache_ttl": {
+      "nanos": 0,
+      "secs": 86400
+    },
+    "offline": false,
+    "url": "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db"
+  },
+  "logging": {
+    "level": "info",
+    "log_file": "[platform_path]",
+    "log_to_file": false
+  },
+  "network": {
+    "proxy": null,
+    "timeout": {
+      "nanos": 0,
+      "secs": 30
+    },
+    "user_agent": "astro-up/0.1.0"
+  },
+  "paths": {
+    "cache_dir": "[platform_path]",
+    "data_dir": "[platform_path]",
+    "download_dir": "[platform_path]"
+  },
+  "telemetry": {
+    "enabled": false
+  },
+  "updates": {
+    "auto_check": true,
+    "check_interval": {
+      "nanos": 0,
+      "secs": 86400
+    }
+  }
+}

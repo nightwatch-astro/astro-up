@@ -1,29 +1,29 @@
 use garde::Validate;
 
+use crate::error::CoreError;
+
 use super::model::AppConfig;
 use super::store::ConfigStore;
-use super::{get_field_value, set_field, ConfigError};
+use super::{get_field_value, set_field};
 
 /// Get the effective value of a config key (stored override or default).
 pub fn config_get(
     store: &ConfigStore,
     config: &AppConfig,
     key: &str,
-) -> Result<String, ConfigError> {
+) -> Result<String, CoreError> {
     if !config.is_known_key(key) {
-        return Err(ConfigError::UnknownKey {
+        return Err(CoreError::ConfigUnknownKey {
             key: key.to_string(),
             valid_keys: config.known_keys(),
         });
     }
 
-    // Check stored value first
-    if let Some(stored) = store.get(key).map_err(ConfigError::Store)? {
+    if let Some(stored) = store.get(key)? {
         return Ok(stored);
     }
 
-    // Fall back to default
-    get_field_value(config, key).ok_or_else(|| ConfigError::UnknownKey {
+    get_field_value(config, key).ok_or_else(|| CoreError::ConfigUnknownKey {
         key: key.to_string(),
         valid_keys: config.known_keys(),
     })
@@ -35,21 +35,19 @@ pub fn config_set(
     config: &AppConfig,
     key: &str,
     value: &str,
-) -> Result<(), ConfigError> {
+) -> Result<(), CoreError> {
     if !config.is_known_key(key) {
-        return Err(ConfigError::UnknownKey {
+        return Err(CoreError::ConfigUnknownKey {
             key: key.to_string(),
             valid_keys: config.known_keys(),
         });
     }
 
-    // Build a temporary config with the proposed change and validate
     let mut temp = config.clone();
     set_field(&mut temp, key, value)?;
-    temp.validate().map_err(ConfigError::Validation)?;
+    temp.validate().map_err(CoreError::from)?;
 
-    // Persist
-    store.set(key, value).map_err(ConfigError::Store)?;
+    store.set(key, value)?;
     Ok(())
 }
 
@@ -73,8 +71,7 @@ pub fn config_list(
 }
 
 /// Reset a config key to its default (remove stored override).
-pub fn config_reset(store: &ConfigStore, key: &str) -> Result<(), ConfigError> {
-    // We don't validate the key here — reset on unknown key is harmless
-    store.reset(key).map_err(ConfigError::Store)?;
+pub fn config_reset(store: &ConfigStore, key: &str) -> Result<(), CoreError> {
+    store.reset(key)?;
     Ok(())
 }

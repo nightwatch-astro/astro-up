@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use garde::Validate;
 
-use astro_up_core::config::{AppConfig, NetworkConfig, PathsConfig, UpdateConfig};
+use astro_up_core::config::{AppConfig, PathsConfig};
 
 #[test]
 fn zero_timeout_fails_validation() {
@@ -57,6 +57,24 @@ fn check_interval_under_one_minute_fails() {
     assert!(result.is_err());
     let report = result.unwrap_err().to_string();
     assert!(report.contains("at least 1 minute"), "got: {report}");
+}
+
+#[test]
+fn invalid_proxy_url_fails_validation() {
+    let mut config = AppConfig::with_paths(
+        PathsConfig {
+            download_dir: PathBuf::from("/tmp/dl"),
+            cache_dir: PathBuf::from("/tmp/cache"),
+            data_dir: PathBuf::from("/tmp/data"),
+        },
+        PathBuf::from("/tmp/app.log"),
+    );
+    config.network.proxy = Some("not-a-url".to_string());
+
+    let result = config.validate();
+    assert!(result.is_err());
+    let report = result.unwrap_err().to_string();
+    assert!(report.contains("url"), "got: {report}");
 }
 
 #[test]

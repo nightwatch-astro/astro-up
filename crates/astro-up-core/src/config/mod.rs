@@ -9,6 +9,8 @@ use std::time::Duration;
 
 use garde::Validate;
 
+use crate::error::CoreError;
+
 pub use api::{config_get, config_list, config_reset, config_set};
 pub use model::{
     AppConfig, CatalogConfig, LogConfig, LogLevel, NetworkConfig, PathsConfig, TelemetryConfig,
@@ -17,23 +19,18 @@ pub use model::{
 pub use store::ConfigStore;
 
 /// Load configuration with 3-layer precedence: defaults → SQLite → CLI flags.
-///
-/// - `db_path`: Path to the SQLite database file. Auto-creates if missing.
-/// - `default_paths`: Platform-resolved paths (from `directories::ProjectDirs`).
-/// - `log_file`: Platform-resolved log file path.
-/// - `cli_overrides`: Key-value pairs from CLI flags (highest precedence, not persisted).
 pub fn load_config(
     db_path: &Path,
     default_paths: PathsConfig,
     log_file: PathBuf,
     cli_overrides: &[(&str, &str)],
-) -> Result<AppConfig, ConfigError> {
+) -> Result<AppConfig, CoreError> {
     // Layer 1: compiled defaults with caller-provided platform paths
     let mut config = AppConfig::with_paths(default_paths, log_file);
 
     // Layer 2: SQLite stored overrides
     let store = open_store(db_path)?;
-    let stored = store.list().map_err(ConfigError::Store)?;
+    let stored = store.list()?;
     merge_overrides(&mut config, &stored)?;
 
     // Layer 3: CLI flag overrides (highest precedence)
@@ -44,13 +41,13 @@ pub fn load_config(
     merge_overrides(&mut config, &cli_pairs)?;
 
     // Validate
-    config.validate().map_err(ConfigError::Validation)?;
+    config.validate().map_err(CoreError::from)?;
 
     Ok(config)
 }
 
 /// Open a ConfigStore, handling corruption by renaming the corrupt file and starting fresh.
-fn open_store(db_path: &Path) -> Result<ConfigStore, ConfigError> {
+fn open_store(db_path: &Path) -> Result<ConfigStore, CoreError> {
     match rusqlite::Connection::open(db_path) {
         Ok(conn) => match ConfigStore::new(conn) {
             Ok(store) => Ok(store),
@@ -60,24 +57,23 @@ fn open_store(db_path: &Path) -> Result<ConfigStore, ConfigError> {
     }
 }
 
-fn recover_corrupt(db_path: &Path, original_err: rusqlite::Error) -> Result<ConfigStore, ConfigError> {
+fn recover_corrupt(db_path: &Path, original_err: rusqlite::Error) -> Result<ConfigStore, CoreError> {
     let corrupt_path = db_path.with_extension("corrupt");
     tracing::warn!(
         "Config database corrupt ({}), renaming to {} and starting fresh",
         original_err,
         corrupt_path.display()
     );
-    // Best-effort rename — if it fails, we still try to create a new DB
     let _ = std::fs::rename(db_path, &corrupt_path);
-    let conn = rusqlite::Connection::open(db_path).map_err(ConfigError::Store)?;
-    ConfigStore::new(conn).map_err(ConfigError::Store)
+    let conn = rusqlite::Connection::open(db_path)?;
+    Ok(ConfigStore::new(conn)?)
 }
 
 /// Merge key-value overrides into an AppConfig.
-fn merge_overrides(config: &mut AppConfig, overrides: &[(String, String)]) -> Result<(), ConfigError> {
+fn merge_overrides(config: &mut AppConfig, overrides: &[(String, String)]) -> Result<(), CoreError> {
     for (key, value) in overrides {
         if !config.is_known_key(key) {
-            return Err(ConfigError::UnknownKey {
+            return Err(CoreError::ConfigUnknownKey {
                 key: key.clone(),
                 valid_keys: config.known_keys(),
             });
@@ -88,15 +84,14 @@ fn merge_overrides(config: &mut AppConfig, overrides: &[(String, String)]) -> Re
 }
 
 /// Set a single field on AppConfig by dot-path key.
-fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Result<(), ConfigError> {
-    let parse_err = |expected: &str| ConfigError::Parse {
+pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Result<(), CoreError> {
+    let parse_err = |expected: &str| CoreError::ConfigParse {
         key: key.to_string(),
         expected: expected.to_string(),
         got: value.to_string(),
     };
 
     match key {
-        // catalog
         "catalog.url" => config.catalog.url = value.to_string(),
         "catalog.cache_ttl" => {
             config.catalog.cache_ttl = parse_duration(value).map_err(|_| parse_err("duration (e.g. 24h, 30s)"))?;
@@ -104,11 +99,9 @@ fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Result<(), Confi
         "catalog.offline" => {
             config.catalog.offline = value.parse::<bool>().map_err(|_| parse_err("boolean (true/false)"))?;
         }
-        // paths
         "paths.download_dir" => config.paths.download_dir = PathBuf::from(value),
         "paths.cache_dir" => config.paths.cache_dir = PathBuf::from(value),
         "paths.data_dir" => config.paths.data_dir = PathBuf::from(value),
-        // network
         "network.proxy" => {
             config.network.proxy = if value.is_empty() || value == "none" {
                 None
@@ -120,14 +113,12 @@ fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Result<(), Confi
             config.network.timeout = parse_duration(value).map_err(|_| parse_err("duration (e.g. 30s, 1m)"))?;
         }
         "network.user_agent" => config.network.user_agent = value.to_string(),
-        // updates
         "updates.auto_check" => {
             config.updates.auto_check = value.parse::<bool>().map_err(|_| parse_err("boolean (true/false)"))?;
         }
         "updates.check_interval" => {
             config.updates.check_interval = parse_duration(value).map_err(|_| parse_err("duration (e.g. 24h, 6h)"))?;
         }
-        // logging
         "logging.level" => {
             config.logging.level = LogLevel::from_str(value).map_err(|_| parse_err("log level (error/warn/info/debug/trace)"))?;
         }
@@ -135,12 +126,11 @@ fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Result<(), Confi
             config.logging.log_to_file = value.parse::<bool>().map_err(|_| parse_err("boolean (true/false)"))?;
         }
         "logging.log_file" => config.logging.log_file = PathBuf::from(value),
-        // telemetry
         "telemetry.enabled" => {
             config.telemetry.enabled = value.parse::<bool>().map_err(|_| parse_err("boolean (true/false)"))?;
         }
         _ => {
-            return Err(ConfigError::UnknownKey {
+            return Err(CoreError::ConfigUnknownKey {
                 key: key.to_string(),
                 valid_keys: config.known_keys(),
             });
@@ -173,24 +163,4 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         "telemetry.enabled" => Some(config.telemetry.enabled.to_string()),
         _ => None,
     }
-}
-
-/// Configuration error types.
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigError {
-    #[error("config validation failed:\n{0}")]
-    Validation(garde::Report),
-
-    #[error("unknown config key {key:?}, valid keys: {}", valid_keys.join(", "))]
-    UnknownKey { key: String, valid_keys: Vec<String> },
-
-    #[error("config parse error for {key:?}: expected {expected}, got {got:?}")]
-    Parse {
-        key: String,
-        expected: String,
-        got: String,
-    },
-
-    #[error("config store error: {0}")]
-    Store(#[from] rusqlite::Error),
 }

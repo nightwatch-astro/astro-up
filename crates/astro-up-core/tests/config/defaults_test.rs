@@ -33,6 +33,19 @@ fn load_config_with_empty_db_returns_defaults() {
     assert!(!config.logging.log_to_file);
     assert_eq!(config.logging.log_file, log_file);
     assert!(!config.telemetry.enabled);
+
+    // Snapshot the config shape (excluding platform-dependent paths)
+    let mut value = serde_json::to_value(&config).unwrap();
+    // Redact platform-dependent paths for stable snapshots
+    for path in ["paths.download_dir", "paths.cache_dir", "paths.data_dir", "logging.log_file"] {
+        let parts: Vec<&str> = path.split('.').collect();
+        if let Some(section) = value.get_mut(parts[0]) {
+            if let Some(field) = section.get_mut(parts[1]) {
+                *field = serde_json::Value::String("[platform_path]".to_string());
+            }
+        }
+    }
+    insta::assert_json_snapshot!("default_config", value);
 }
 
 #[test]

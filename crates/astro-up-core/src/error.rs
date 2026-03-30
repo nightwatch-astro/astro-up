@@ -66,6 +66,22 @@ pub enum CoreError {
         cause: Box<dyn std::error::Error + Send + Sync>,
     },
 
+    #[error("config validation failed:\n{0}")]
+    ConfigValidation(#[from] garde::Report),
+
+    #[error("unknown config key {key:?}, valid keys: {}", valid_keys.join(", "))]
+    ConfigUnknownKey { key: String, valid_keys: Vec<String> },
+
+    #[error("config parse error for {key:?}: expected {expected}, got {got:?}")]
+    ConfigParse {
+        key: String,
+        expected: String,
+        got: String,
+    },
+
+    #[error("config store error: {0}")]
+    ConfigStore(#[from] rusqlite::Error),
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
