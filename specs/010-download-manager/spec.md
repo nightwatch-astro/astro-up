@@ -111,7 +111,7 @@ Downloaded installers are kept after installation for potential offline re-insta
 
 - **FR-001**: System MUST download files via HTTP/HTTPS with streaming using a fixed chunk size (default 64KB buffer — not buffering entire response in memory)
 - **FR-002**: System MUST verify downloaded files against expected SHA256 hashes. On hash mismatch after resume, retry once from scratch before reporting failure.
-- **FR-003**: System MUST emit progress events (bytes_downloaded, total_bytes, speed_bytes_per_sec) via the project event bus (existing `Event` enum + `tokio::sync::broadcast` channel, capacity 64). When total_bytes is unknown (no Content-Length), report 0 for total_bytes (indeterminate progress).
+- **FR-003**: System MUST emit progress events (id, progress, bytes_downloaded, total_bytes, speed, elapsed, estimated_remaining) via the project event bus (existing `Event` enum + `tokio::sync::broadcast` channel, capacity 64). When total_bytes is unknown (no Content-Length), report 0 for total_bytes (indeterminate progress). `estimated_remaining` is `None` when total is unknown.
 - **FR-004**: System MUST support resume via HTTP Range headers for failed downloads. Before resuming, validate the `.part` file size is consistent with the expected offset.
 - **FR-005**: System MUST probe server resume support (send Range, check for 206 vs 200 response)
 - **FR-006**: System MUST validate partial file freshness against server Last-Modified before resuming
