@@ -4,7 +4,6 @@ use astro_up_core::types::{CheckMethod, KnownExitCode};
 #[test]
 fn error_messages_are_readable() {
     let errors: Vec<CoreError> = vec![
-        CoreError::NotInstalled,
         CoreError::ChecksumMismatch {
             expected: "abc123".into(),
             actual: "def456".into(),
@@ -31,7 +30,6 @@ fn error_messages_are_readable() {
         CoreError::MissingDependency {
             dep_id: "ascom-platform".into(),
         },
-        CoreError::UnsupportedPlatform,
         CoreError::NotFound {
             input: "nonexistent".into(),
         },
