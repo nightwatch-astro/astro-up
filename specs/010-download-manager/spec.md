@@ -91,35 +91,43 @@ Downloaded installers are kept after installation for potential offline re-insta
 
 ### Edge Cases
 
-- Server returns a redirect: Follow redirects (up to 10 hops). GitHub Releases uses 302 to CDN.
-- Server returns 403/404: Report clear download error with URL.
+- Server returns a redirect: Follow redirects (up to 10 hops). If exceeded, report error with the redirect chain. GitHub Releases uses 302 to CDN. (CHK001)
+- Server returns 403/404: Report clear download error with URL and HTTP status.
 - Disk full during download: Detect via write error, report required vs available space.
 - Download via proxy: Use proxy settings from config (spec 004).
 - Resume probe fails (server error on Range request): Fall back to full re-download.
 - Multiple downloads for the same package (e.g., retry after hash mismatch): Delete the old .part file first.
+- No Content-Length header (chunked transfer): Progress reports bytes_downloaded with total_bytes=0 (indeterminate). Disk space check is skipped (cannot estimate). Hash verification still runs after completion. (CHK015)
+- Corrupt `.part` file (e.g., disk error during previous write): Validate `.part` file size against Range offset before resuming. If the local file is larger than the server reports remaining, delete and restart. (CHK011)
+- Hash mismatch after resumed download: Delete the file and retry once from scratch (the `.part` may have been corrupted). If the second attempt also fails, report error. (CHK012)
+- Server file changed between attempts (same size, different Last-Modified): Restart from scratch — freshness check catches this. (CHK013)
+- Rename from `.part` to final fails (target locked by another process): Retry rename up to 3 times with 1-second delay. If still locked, report error with the blocking path. (CHK016)
+- URL with special characters or spaces: URLs are used as-is from the catalog (already URL-encoded by the manifest pipeline). No additional encoding applied. (CHK017)
+- Download directory doesn't exist: Auto-create the directory tree before downloading. (CHK018)
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST download files via HTTP/HTTPS with streaming (not buffering entire response in memory)
-- **FR-002**: System MUST verify downloaded files against expected SHA256 hashes
-- **FR-003**: System MUST emit progress events (bytes_downloaded, total_bytes, speed_bytes_per_sec)
-- **FR-004**: System MUST support resume via HTTP Range headers for failed downloads
+- **FR-001**: System MUST download files via HTTP/HTTPS with streaming using a fixed chunk size (default 64KB buffer — not buffering entire response in memory)
+- **FR-002**: System MUST verify downloaded files against expected SHA256 hashes. On hash mismatch after resume, retry once from scratch before reporting failure.
+- **FR-003**: System MUST emit progress events (bytes_downloaded, total_bytes, speed_bytes_per_sec) via the project event bus (existing `Event` enum + `tokio::sync::broadcast` channel, capacity 64). When total_bytes is unknown (no Content-Length), report 0 for total_bytes (indeterminate progress).
+- **FR-004**: System MUST support resume via HTTP Range headers for failed downloads. Before resuming, validate the `.part` file size is consistent with the expected offset.
 - **FR-005**: System MUST probe server resume support (send Range, check for 206 vs 200 response)
 - **FR-006**: System MUST validate partial file freshness against server Last-Modified before resuming
-- **FR-007**: System MUST download to a `.part` temp file, verify hash, then rename to final (atomic)
-- **FR-008**: System MUST use ETag/Last-Modified conditional requests to skip re-downloading unchanged files
-- **FR-009**: System MUST support configurable request timeouts and proxy settings from config (spec 004)
-- **FR-010**: System MUST follow HTTP redirects (up to 10 hops)
+- **FR-007**: System MUST download to a `.part` temp file (named `{final_filename}.part`), verify hash, then rename to final. If rename fails (file locked), retry up to 3 times with 1-second delay.
+- **FR-008**: System MUST use ETag/Last-Modified conditional requests to skip re-downloading unchanged files on fresh downloads (not resume — resume uses Range)
+- **FR-009**: System MUST support separate connect timeout (default 10s) and read timeout (default 30s), plus proxy settings, all from config (spec 004)
+- **FR-010**: System MUST follow HTTP redirects (up to 10 hops). If exceeded, report error.
 - **FR-011**: System MUST report download errors with the URL and HTTP status code
-- **FR-012**: System MUST support cancellation — stop downloading when the user cancels
-- **FR-013**: System MUST support configurable bandwidth throttling (bytes/sec, 0 = unlimited)
-- **FR-014**: System MUST retain downloaded installers after installation by default
-- **FR-015**: System MUST support configurable auto-purge of installers older than N days (default: 30, 0 = disabled)
-- **FR-016**: System MUST only run auto-purge when the application is active (background/tray mode)
-- **FR-017**: System MUST check available disk space before starting a download (warn if < 2x file size)
-- **FR-018**: System MUST send `astro-up/{version}` as User-Agent header
+- **FR-012**: System MUST support cancellation — stop downloading when the user cancels. The download manager itself enforces sequential downloads (one at a time); concurrent requests are queued or rejected.
+- **FR-013**: System MUST support configurable bandwidth throttling (bytes/sec, 0 = unlimited). Measured as a 5-second rolling average.
+- **FR-014**: System MUST retain downloaded installers after installation by default. Download directory is flat: `{download_dir}/{filename}`.
+- **FR-015**: System MUST support configurable auto-purge of installers older than N days (default: 30, 0 = disabled). Purge logic lives in the download manager module but is only invoked by the background service (spec 016).
+- **FR-016**: System MUST only run auto-purge when the application is active (background/tray mode). The download manager exposes a `purge()` method; the caller decides when to invoke it.
+- **FR-017**: System MUST check available disk space before starting a download (warn if < 2x file size). If Content-Length is unknown, skip the disk space check.
+- **FR-018**: System MUST send `astro-up/{version}` User-Agent header using the crate version at build time (compile-time `env!("CARGO_PKG_VERSION")`)
+- **FR-019**: System MUST auto-create the download directory if it doesn't exist before starting a download
 
 ### Key Entities
 
@@ -133,11 +141,11 @@ Downloaded installers are kept after installation for potential offline re-insta
 
 ### Measurable Outcomes
 
-- **SC-001**: Downloads saturate available bandwidth when no throttle is set
+- **SC-001**: Downloads achieve at least 80% of available bandwidth when no throttle is set
 - **SC-002**: Hash verification adds less than 1 second overhead for files under 500MB
 - **SC-003**: Resume saves download time proportional to the already-downloaded portion
 - **SC-004**: Progress events are emitted at least once per second during active downloads
-- **SC-005**: Bandwidth throttling stays within 10% of the configured limit
+- **SC-005**: Bandwidth throttling stays within 10% of the configured limit (measured as 5-second rolling average)
 
 ## Default Values
 
@@ -146,13 +154,22 @@ Downloaded installers are kept after installation for potential offline re-insta
 | Bandwidth limit | 0 (unlimited) | `network.download_speed_limit` |
 | Installer retention | enabled | `paths.keep_installers` |
 | Auto-purge age | 30 days | `paths.purge_installers_after_days` |
-| Request timeout | 30 seconds | `network.timeout` |
+| Connect timeout | 10 seconds | `network.connect_timeout` |
+| Read timeout | 30 seconds | `network.timeout` |
+| Streaming chunk size | 64 KB | (not configurable) |
+| Broadcast channel capacity | 64 | (not configurable) |
+
+## Clarifications
+
+### Session 2026-03-30
+
+- Q: How do consumers (CLI, GUI) receive progress events? → A: Via the existing project event bus — `Event` enum (spec 003) with `DownloadStarted`/`DownloadProgress`/`DownloadComplete` variants, delivered through `tokio::sync::broadcast` channels (multi-producer, multi-consumer). Replaces the originally-planned flume dependency — all consumers already run tokio. Lagged receivers skip stale progress events gracefully.
 
 ## Assumptions
 
 - Download URLs come from the catalog version entries (spec 005)
-- The download directory is configured in spec 004
+- The download directory path is configured in spec 004 (`paths.download_dir`), with config key names consistent with spec 004's naming convention (`network.*` for network settings, `paths.*` for directory settings)
 - Progress events feed into the CLI progress bar (spec 015) and GUI progress indicator (spec 017)
-- Sequential downloads (one at a time) — the orchestration engine (spec 012) controls sequencing
-- Auto-purge runs as a background task when the app is in tray mode (spec 016)
+- Sequential downloads enforced by the download manager itself (one active download at a time). Concurrent callers receive a "download in progress" error. The orchestration engine (spec 012) is the primary caller but other callers must handle rejection.
+- Auto-purge logic lives in the download manager module as a `purge()` method. The background service (spec 016) calls it on a schedule. The download manager does not own the scheduling.
 - Depends on: spec 004 (config for proxy/timeouts/paths/throttle/purge), spec 005 (catalog for download URLs)
