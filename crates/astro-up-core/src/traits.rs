@@ -2,9 +2,7 @@ use std::path::Path;
 
 use crate::error::CoreError;
 use crate::release::Release;
-use crate::types::{
-    CheckverConfig, DetectionConfig, DetectionMethod, InstallConfig, InstallMethod, Version,
-};
+use crate::types::{CheckverConfig, InstallConfig, InstallMethod};
 
 /// Options for an install operation.
 #[derive(Debug, Clone)]
@@ -22,13 +20,6 @@ pub struct DownloadOptions {
     pub on_progress: Option<ProgressCallback>,
     pub checksum: Option<String>,
     pub resume: bool,
-}
-
-/// Detects the installed version of software on the local system.
-#[trait_variant::make(DetectorDyn: Send)]
-pub trait Detector {
-    async fn detect(&self, cfg: &DetectionConfig) -> Result<Version, CoreError>;
-    fn supports(&self, method: &DetectionMethod) -> bool;
 }
 
 /// Checks for the latest version of software from a remote source.
@@ -87,45 +78,3 @@ pub trait BackupManager {
     async fn prune(&self, software_id: &str, keep: usize) -> Result<(), CoreError>;
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    struct MockDetector;
-
-    impl Detector for MockDetector {
-        async fn detect(&self, _cfg: &DetectionConfig) -> Result<Version, CoreError> {
-            Ok(Version::parse("1.0.0"))
-        }
-
-        fn supports(&self, _method: &DetectionMethod) -> bool {
-            true
-        }
-    }
-
-    #[test]
-    fn mock_detector_supports() {
-        let detector = MockDetector;
-        assert!(detector.supports(&DetectionMethod::Registry));
-    }
-
-    #[tokio::test]
-    async fn mock_detector_detect() {
-        let detector = MockDetector;
-        let cfg = DetectionConfig {
-            method: DetectionMethod::Registry,
-            registry_key: None,
-            registry_value: None,
-            file_path: None,
-            version_regex: None,
-            product_code: None,
-            upgrade_code: None,
-            inf_provider: None,
-            device_class: None,
-            inf_name: None,
-            fallback: None,
-        };
-        let version = detector.detect(&cfg).await.unwrap();
-        assert_eq!(version.raw, "1.0.0");
-    }
-}

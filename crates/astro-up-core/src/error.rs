@@ -2,9 +2,6 @@ use crate::types::{CheckMethod, KnownExitCode};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CoreError {
-    #[error("software not installed")]
-    NotInstalled,
-
     #[error("checksum mismatch: expected {expected}, got {actual}")]
     ChecksumMismatch { expected: String, actual: String },
 
@@ -51,9 +48,6 @@ pub enum CoreError {
         #[source]
         cause: Box<dyn std::error::Error + Send + Sync>,
     },
-
-    #[error("unsupported platform")]
-    UnsupportedPlatform,
 
     #[error("not found: {input}")]
     NotFound { input: String },
