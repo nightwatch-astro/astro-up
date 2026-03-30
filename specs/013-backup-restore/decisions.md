@@ -1,28 +1,56 @@
 # Decisions Report: 013-backup-restore
-**Created**: 2026-03-29
-**Mode**: Unattended
 
-## Decisions
-- **ZIP format**: Portable, compressed, well-supported in Rust (zip crate). No custom format.
-- **Metadata in archive**: Include manifest.json inside the ZIP so the backup is self-describing.
-- **Skip locked files, don't fail**: NINA may be running during backup. Skip files that can't be read rather than failing the entire backup.
-- **Default retention of 5**: Balances disk space with recovery options. Configurable via spec 004.
-- **No incremental/differential backups**: Full backup each time. Config sizes are small (<100MB). Incrementals add complexity.
+**Created**: 2026-03-30
+**Mode**: Unattended, then interactive clarify with user
+
+## Decisions Made
+
+### D1: ZIP format, no custom archive
+**Choice**: Standard ZIP. Portable, compressed, random-accessible for selective restore.
+
+### D2: Skip locked files, no VSS
+**Choice**: Skip with warning listing excluded files. No Volume Shadow Copy.
+**Reasoning**: VSS requires admin. Most astro configs aren't locked during normal operation.
+
+### D3: Prune after each new backup
+**Choice**: Delete oldest if over retention limit immediately after creating a new backup.
+
+### D4: Metadata in archive (self-describing)
+**Choice**: `metadata.json` inside the ZIP with package_id, version, timestamp, paths, file count, excluded files.
+
+## Clarify-Phase Decisions (Interactive)
+
+### C1: Manual backup supported
+**Finding**: User confirmed — safety net before risky config experiments.
+**Decision**: `astro-up backup nina` uses the same logic as pre-update automatic backup. Same format, same storage, same pruning.
+
+### C2: Multiple config locations per package
+**Finding**: User noted NINA stores things in AppData, Documents, plugin dirs.
+**Decision**: `[backup].config_paths` is a list. All paths go into a single archive. Directory structure preserved with source path as prefix:
+```
+metadata.json
+config_dir/NINA/Profiles/...
+config_dir/NINA/Settings/...
+home_dir/Documents/N.I.N.A/...
+```
+
+### C3: No config validation — app handles migration
+**Finding**: User agreed config validation isn't feasible.
+**Decision**: Version mismatch warning + file change summary. No config content parsing.
+
+### C4: File change summary before restore
+**Decision**: Show per-file status before overwriting: overwrite (differs), unchanged (identical), new (not on disk). Gives confidence without parsing config content.
+
+### C5: Selective restore via --path
+**Decision**: `restore nina --path "Profiles/"` restores only that subtree from the archive.
 
 ## Questions I Would Have Asked
-- Q1: Should we support backup to cloud (S3, OneDrive)? Decision: No — local only. Cloud backup is out of scope for an astronomy tool.
-- Q2: Should restore require the same software version? Decision: No — warn but allow. Config formats rarely change between minor versions.
 
-## Clarify-Phase Decisions
+### Q1: Should backup include application binaries?
+**My decision**: No — config only. Binaries can be re-downloaded. Config is irreplaceable.
 
-### C1: Filename includes version for easy identification
-**Decision**: `nina-app_3.1.2_20260329_120000.zip` lets users identify which version a backup is from without opening it. Supports multiple backups of the same version (different timestamps).
+### Q2: Should we encrypt backups?
+**My decision**: No — config isn't sensitive enough. If the data dir is compromised, backup encryption alone doesn't help.
 
-### C2: Skip locked files, don't use VSS by default
-**Decision**: VSS (Volume Shadow Copy) is complex and requires admin. Most astro app configs are simple files that aren't locked during operation. Skip locked files with a warning. If VSS is needed, it's a future enhancement.
-
-### C3: Prune after backup, not on schedule
-**Decision**: Pruning immediately after a new backup ensures the count stays bounded. No background scheduler needed. Simple and predictable.
-
-### C4: Selective restore supported
-**Decision**: Users sometimes want to restore just their profile without overwriting all settings. `--file` flag enables this. The backup ZIP is random-accessible.
+### Q3: GUI context menu for backup/restore?
+**My decision**: Yes — frontend spec (017) should expose "Backup Now" and "Restore..." per package. This spec is the core logic.
