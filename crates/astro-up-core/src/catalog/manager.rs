@@ -125,10 +125,9 @@ impl CatalogManager {
                 sig_bytes,
                 etag,
             }) => {
+                // Verify in memory before saving — preserve previous catalog on failure
+                verify::verify_bytes(&catalog_bytes, &sig_bytes)?;
                 fetch::save_fetched(&self.catalog_path, &catalog_bytes, &sig_bytes)?;
-
-                let sig_path = verify::sig_path_for(&self.catalog_path);
-                verify::verify_catalog(&self.catalog_path, &sig_path)?;
 
                 let new_sidecar = CatalogSidecar {
                     etag,
