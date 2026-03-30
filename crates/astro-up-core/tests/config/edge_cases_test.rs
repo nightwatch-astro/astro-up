@@ -10,6 +10,7 @@ fn test_paths(dir: &std::path::Path) -> (PathsConfig, PathBuf) {
             download_dir: dir.join("downloads"),
             cache_dir: dir.join("cache"),
             data_dir: dir.join("data"),
+            ..PathsConfig::default()
         },
         dir.join("astro-up.log"),
     )
@@ -64,7 +65,7 @@ fn config_list_empty_db_returns_all_defaults() {
     let config = load_config(&db_path, paths, log_file, &[]).unwrap();
 
     let list = config_list(&config, &[]);
-    assert_eq!(list.len(), 14);
+    assert_eq!(list.len(), 18);
     assert!(list.iter().all(|(_, _, overridden)| !overridden));
 }
 

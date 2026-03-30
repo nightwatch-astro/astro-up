@@ -161,14 +161,31 @@ impl DownloadManager {
             false
         };
 
-        // Rename .part to final destination
+        // Rename .part to final destination, retry up to 3 times (Windows file locks)
         let dest = request.dest_path();
         let part = request.part_path();
-        tokio::fs::rename(&part, &dest).await.map_err(|e| CoreError::RenameFailed {
-            from: part.display().to_string(),
-            to: dest.display().to_string(),
-            cause: Box::new(e),
-        })?;
+        let mut last_err = None;
+        for attempt in 0..3 {
+            match tokio::fs::rename(&part, &dest).await {
+                Ok(()) => {
+                    last_err = None;
+                    break;
+                }
+                Err(e) => {
+                    last_err = Some(e);
+                    if attempt < 2 {
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+                }
+            }
+        }
+        if let Some(e) = last_err {
+            return Err(CoreError::RenameFailed {
+                from: part.display().to_string(),
+                to: dest.display().to_string(),
+                cause: Box::new(e),
+            });
+        }
 
         let _ = self.event_tx.send(Event::DownloadComplete {
             id: request.filename.clone(),

@@ -127,6 +127,16 @@ pub(crate) async fn stream_download(
         });
     }
 
+    // Disk space check (FR-017): require 2x file size, skip if unknown
+    if let Some(content_length) = response.content_length() {
+        let required = content_length * 2;
+        if let Some(available) = available_disk_space(part_path) {
+            if available < required {
+                return Err(CoreError::DiskSpaceInsufficient { required, available });
+            }
+        }
+    }
+
     stream_response(
         response, part_path, false, &mut hasher, 0,
         event_tx, id, throttle_bytes_per_sec, cancel_token, false,
@@ -259,4 +269,21 @@ async fn stream_response(
         hasher: hasher.clone(),
         resumed,
     })
+}
+
+/// Get available disk space for the partition containing `path`.
+fn available_disk_space(path: &Path) -> Option<u64> {
+    use sysinfo::Disks;
+    let disks = Disks::new_with_refreshed_list();
+    let mut best_match: Option<(usize, u64)> = None;
+    for disk in disks.list() {
+        let mount = disk.mount_point();
+        if path.starts_with(mount) {
+            let mount_len = mount.as_os_str().len();
+            if best_match.is_none() || mount_len > best_match.unwrap().0 {
+                best_match = Some((mount_len, disk.available_space()));
+            }
+        }
+    }
+    best_match.map(|(_, space)| space)
 }

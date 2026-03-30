@@ -10,6 +10,7 @@ fn load_config_with_empty_db_returns_defaults() {
         download_dir: dir.path().join("downloads"),
         cache_dir: dir.path().join("cache"),
         data_dir: dir.path().join("data"),
+        ..PathsConfig::default()
     };
     let log_file = dir.path().join("astro-up.log");
 
@@ -60,6 +61,7 @@ fn load_config_with_no_db_file_creates_it() {
         download_dir: PathBuf::from("/tmp/dl"),
         cache_dir: PathBuf::from("/tmp/cache"),
         data_dir: PathBuf::from("/tmp/data"),
+        ..PathsConfig::default()
     };
 
     assert!(!db_path.exists());
@@ -76,5 +78,5 @@ fn known_keys_discovers_all_fields() {
     assert!(keys.contains(&"network.timeout".to_string()));
     assert!(keys.contains(&"logging.level".to_string()));
     assert!(keys.contains(&"telemetry.enabled".to_string()));
-    assert_eq!(keys.len(), 14); // 14 leaf fields
+    assert_eq!(keys.len(), 18); // 18 leaf fields (14 original + 4 download config)
 }

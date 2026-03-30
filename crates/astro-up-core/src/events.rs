@@ -62,7 +62,7 @@ pub enum Event {
     },
 }
 
-// Compile-time assertion: Event must be Send + 'static (required for flume channels)
+// Compile-time assertion: Event must be Send + 'static (required for broadcast channels)
 fn _assert_event_send() {
     fn _require_send<T: Send + 'static>() {}
     _require_send::<Event>();

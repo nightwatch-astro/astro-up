@@ -118,13 +118,13 @@
 
 **Purpose**: Edge cases, robustness, and cleanup
 
-- [ ] T023 [P] Implement disk space pre-check in `crates/astro-up-core/src/download/stream.rs`: before downloading, use `sysinfo::Disks` to check available space ≥ 2x Content-Length (FR-017). Skip if Content-Length unknown. Return `DiskSpaceInsufficient` error if insufficient
-- [ ] T024 [P] Implement cancellation support in `crates/astro-up-core/src/download/stream.rs`: accept `CancellationToken` parameter, check `token.is_cancelled()` after each chunk. On cancellation, leave `.part` file on disk, return `CoreError::Cancelled` (add variant to error.rs)
-- [ ] T025 [P] Implement rename retry logic in `crates/astro-up-core/src/download/mod.rs`: after hash verification, `fs::rename(.part, final)` with up to 3 retries and 1-second `tokio::time::sleep()` delay. On final failure return `CoreError::RenameFailed`
-- [ ] T026 [P] Handle indeterminate Content-Length in `crates/astro-up-core/src/download/stream.rs`: when `response.content_length()` is `None`, set `total_bytes = 0` in progress events, skip disk space check, still run hash verification after completion (CHK015)
-- [ ] T027 Update `Downloader` trait in `crates/astro-up-core/src/traits.rs` to align signature with `DownloadManager::download()` — accept `DownloadRequest` + `CancellationToken`, return `Result<DownloadResult, CoreError>`
-- [ ] T028 Update flume channel comment in `crates/astro-up-core/src/events.rs` line 65 — change "flume channels" to "broadcast channels" to match actual implementation
-- [ ] T029 Run `just check` — ensure clippy, fmt, and all tests pass across core, cli, gui crates
+- [x] T023 [P] Implement disk space pre-check in `crates/astro-up-core/src/download/stream.rs`: before downloading, use `sysinfo::Disks` to check available space ≥ 2x Content-Length (FR-017). Skip if Content-Length unknown. Return `DiskSpaceInsufficient` error if insufficient
+- [x] T024 [P] Implement cancellation support in `crates/astro-up-core/src/download/stream.rs`: accept `CancellationToken` parameter, check `token.is_cancelled()` after each chunk. On cancellation, leave `.part` file on disk, return `CoreError::Cancelled` (add variant to error.rs)
+- [x] T025 [P] Implement rename retry logic in `crates/astro-up-core/src/download/mod.rs`: after hash verification, `fs::rename(.part, final)` with up to 3 retries and 1-second `tokio::time::sleep()` delay. On final failure return `CoreError::RenameFailed`
+- [x] T026 [P] Handle indeterminate Content-Length in `crates/astro-up-core/src/download/stream.rs`: when `response.content_length()` is `None`, set `total_bytes = 0` in progress events, skip disk space check, still run hash verification after completion (CHK015)
+- [x] T027 Update `Downloader` trait in `crates/astro-up-core/src/traits.rs` to align signature with `DownloadManager::download()` — accept `DownloadRequest` + `CancellationToken`, return `Result<DownloadResult, CoreError>`
+- [x] T028 Update flume channel comment in `crates/astro-up-core/src/events.rs` line 65 — change "flume channels" to "broadcast channels" to match actual implementation
+- [x] T029 Run `just check` — ensure clippy, fmt, and all tests pass across core, cli, gui crates
 
 ---
 
