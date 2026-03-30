@@ -2,7 +2,8 @@
 
 **Feature Branch**: `008-remote-providers`
 **Created**: 2026-03-29
-**Status**: Draft
+**Status**: Deferred
+**Deferred Reason**: Client relies on catalog for version info. Deferred with spec 014 (Custom Tools)
 **Project**: Rust Migration
 **Project Number**: 1
 **Input**: Migration plan Spec 007 — check latest versions from GitHub, GitLab, and vendor websites
