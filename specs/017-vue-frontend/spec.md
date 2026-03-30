@@ -79,22 +79,23 @@ On first launch, the user sees a welcome screen with three choices: Scan (detect
 
 ---
 
-### User Story 4 - Hardware Setup Wizard (Priority: P4)
+### User Story 4 - Setup Wizard (Priority: P4)
 
-The user selects their use case (deep sky imaging, planetary, live stacking) and hardware (mount, camera, guider, focuser, filter wheel). The wizard recommends a software bundle (NINA + PHD2 + ASCOM Platform + hardware-specific drivers) and installs everything.
+The user picks apps from a curated list (catalog minus drivers/runtimes, grouped by category) and selects their hardware. The dependency resolver automatically adds ASCOM Platform, ASTAP, drivers, and other dependencies. The review step shows everything that will be installed (user picks + resolved dependencies). No predefined bundles — the manifest dependency graph is the bundle.
 
-**Why this priority**: Killer feature for new astrophotographers — one-click rig setup.
+**Why this priority**: Killer feature for new astrophotographers — pick apps + hardware, install everything at once.
 
-**Independent Test**: Select "deep sky" + ZWO camera + iOptron mount, verify the correct bundle is recommended.
+**Independent Test**: Select NINA + ZWO camera, verify ASCOM Platform and ZWO drivers are auto-resolved in the review step.
 
 **Acceptance Scenarios**:
 
-1. **Given** the wizard starts, **When** step 1, **Then** the user selects use case: Deep Sky / Planetary / Live Stacking / EAA
-2. **Given** use case selected, **When** step 2, **Then** hardware selection with multiple items per category (users may have 2 cameras — imaging + guiding)
-3. **Given** hardware selected, **When** step 3, **Then** a recommended bundle is shown: core apps (NINA, PHD2) + ASCOM Platform + specific drivers for selected hardware
-4. **Given** the user reviews the bundle, **When** step 4, **Then** all packages are installed in dependency order with progress
-5. **Given** the wizard completes, **Then** a summary shows what was installed and the user is taken to the dashboard
-6. **Given** the wizard is accessed later via "Setup Wizard" menu, **Then** it shows previously selected hardware as defaults
+1. **Given** the wizard starts, **When** step 1 (Apps), **Then** the catalog is shown grouped by category (Capture, Guiding, Platesolver, Planetarium, etc.) with checkboxes — no drivers, runtimes, or infrastructure shown
+2. **Given** the user ticks NINA, **When** reviewing, **Then** ASCOM Platform and ASTAP are auto-added as dependencies
+3. **Given** step 2 (Hardware), **Then** the user selects hardware with multiple items per category (e.g., imaging camera + guide camera)
+4. **Given** hardware selected, **When** reviewing, **Then** the corresponding driver packages are auto-added
+5. **Given** the review step, **Then** the user sees: selected apps + auto-resolved dependencies + hardware drivers, clearly distinguished
+6. **Given** the user confirms, **Then** all packages install in dependency order with progress
+7. **Given** the wizard is accessed later via "Setup Wizard" menu, **Then** previously selected apps and hardware are shown as defaults
 
 ---
 
@@ -148,9 +149,9 @@ The software list row expansion includes backup/restore actions. Users can trigg
 - **FR-007**: System MUST show a progress overlay/drawer for install/update operations with per-package progress
 - **FR-008**: System MUST use PrimeVue Toast for operation notifications (success, error, info)
 - **FR-009**: System MUST provide a first-run welcome screen with: Scan / Set Up My Rig / Skip
-- **FR-010**: System MUST provide a hardware setup wizard with: use case → hardware selection → bundle recommendation → install
+- **FR-010**: System MUST provide a setup wizard with: app selection (curated catalog by category) → hardware selection → review (with auto-resolved dependencies) → install
 - **FR-011**: System MUST allow multiple hardware items per category in the wizard (multiple cameras, mounts, etc.)
-- **FR-012**: System MUST include ASCOM Platform and appropriate drivers in all wizard bundles
+- **FR-012**: System MUST auto-resolve dependencies (ASCOM Platform, drivers, platesolver) from the manifest dependency graph — no predefined bundles
 - **FR-013**: System MUST provide a Settings page with grouped, validated form fields
 - **FR-014**: System MUST support three theme modes: System / Light / Dark with immediate switching
 - **FR-015**: System MUST use VueQuery composables wrapping all Tauri invoke() calls
@@ -166,20 +167,8 @@ The software list row expansion includes backup/restore actions. Users can trigg
 - **SoftwareRow**: DataTable row — name, category, installed version, latest version, status badge, action button
 - **StatusBadge**: Green (up to date), Blue (update available), Orange (major upgrade), Red (error), Gray (not installed), Purple (newer than catalog)
 - **FilterState**: Pinia store — active filter chip, selected categories, search query
-- **WizardState**: Pinia store — selected use case, hardware list, recommended bundle, install progress
-- **UseCase**: Deep Sky / Planetary / Live Stacking / EAA — maps to recommended software bundles
+- **WizardState**: Pinia store — selected apps, hardware list, resolved dependencies, install progress
 - **HardwareSelection**: Category (mount/camera/guider/focuser/filter) + model + quantity
-
-## Use Case → Bundle Mapping
-
-| Use Case | Core Apps | Recommended |
-|----------|-----------|-------------|
-| Deep Sky | NINA, PHD2, ASCOM Platform | ASTAP or PlateSolve, Stellarium |
-| Planetary | SharpCap or FireCapture, ASCOM Platform | PIPP, AutoStakkert, RegiStax |
-| Live Stacking | SharpCap, ASCOM Platform | Stellarium |
-| EAA (Electronic Assisted Astronomy) | SharpCap, ASCOM Platform | Stellarium |
-
-All bundles include ASCOM Platform + drivers for selected hardware.
 
 ## Success Criteria *(mandatory)*
 
@@ -197,5 +186,5 @@ All bundles include ASCOM Platform + drivers for selected hardware.
 - VueQuery handles caching and loading states for all Tauri invoke() calls
 - No direct file system access from frontend — all operations through Tauri commands
 - PrimeVue provides all UI components — no additional component library
-- Bundle recommendations are hardcoded in v1 — configurable bundle definitions deferred
+- No predefined bundles — the manifest dependency graph drives the wizard's auto-resolution
 - Depends on: spec 016 (Tauri commands and events)

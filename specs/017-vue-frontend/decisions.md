@@ -32,9 +32,9 @@
 
 "Set up my rig" is also accessible later from the main UI via a "Setup Wizard" menu item.
 
-### C3: Bundle-based rig setup by use case
-**Finding**: User wanted Ubuntu-style bundle selection (deep sky, planetary, live stacking).
-**Decision**: Wizard flow: select use case → select hardware (multiple per category) → recommended bundle (core apps + ASCOM + hardware drivers) → review → install all. All bundles include ASCOM Platform. Bundle definitions hardcoded in v1 — configurable later.
+### C3: No predefined bundles — dependency graph is the bundle
+**Finding**: User initially wanted Ubuntu-style bundles, but realized the manifest dependency graph already handles this. Selecting NINA auto-pulls ASCOM + ASTAP via `requires`. No need for hardcoded bundle definitions.
+**Decision**: Wizard shows curated app list (catalog minus drivers/runtimes) grouped by category. User picks apps + hardware. Dependency resolver builds the full install list. Review step shows user picks vs auto-resolved deps clearly. Much simpler than maintaining bundle definitions.
 
 ### C4: Multiple hardware per category
 **Finding**: Users control multiple mounts, have separate imaging + guiding cameras.
@@ -55,8 +55,8 @@
 ### C7: Row expansion for package details and actions
 **Decision**: Click a row → expand inline showing: publisher, license, homepage, dependencies, backup status, and action buttons (Install/Update/Backup/Restore/Uninstall). No modal dialogs for package details — keep the list context.
 
-### C8: Bundle recommendations hardcoded in v1
-**Decision**: Use case → bundle mapping is a static data structure in the frontend. Not fetched from the catalog. This is simple and sufficient for ~4 use cases × ~10 core packages. Configurable bundle definitions (community-contributed bundles) deferred.
+### C8: Empty dashboard shows skip button
+**Decision**: First-run welcome has two large buttons (Scan / Set Up My Rig) and a smaller "Skip" link at the bottom. Power users go straight to the empty dashboard which also has a "Scan" CTA.
 
 ## Questions I Would Have Asked
 
