@@ -1,4 +1,4 @@
-mod ascom;
+pub mod ascom;
 mod cache;
 mod file;
 pub mod hardware;
