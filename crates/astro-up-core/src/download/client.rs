@@ -14,10 +14,10 @@ pub fn build_client(config: &NetworkConfig) -> Result<reqwest::Client, CoreError
     if let Some(proxy_url) = &config.proxy {
         let proxy =
             reqwest::Proxy::all(proxy_url.as_str()).map_err(|e| CoreError::DownloadFailed {
-            url: proxy_url.clone(),
-            status: 0,
-            reason: format!("invalid proxy URL: {e}"),
-        })?;
+                url: proxy_url.clone(),
+                status: 0,
+                reason: format!("invalid proxy URL: {e}"),
+            })?;
         builder = builder.proxy(proxy);
     }
 

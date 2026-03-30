@@ -31,10 +31,7 @@ async fn resume_with_range_206() {
                         let remaining = &b"AAAAABBBBB"[start..];
                         return ResponseTemplate::new(206)
                             .set_body_bytes(remaining.to_vec())
-                            .insert_header(
-                                "Content-Range",
-                                format!("bytes {start}-9/10"),
-                            );
+                            .insert_header("Content-Range", format!("bytes {start}-9/10"));
                     }
                 }
             }
@@ -122,7 +119,10 @@ async fn resume_server_returns_200_restarts_from_scratch() {
             ..
         } => {
             // Server returned 200, so it's a full re-download, not a resume
-            assert!(!resumed, "should NOT be marked as resumed (server returned 200)");
+            assert!(
+                !resumed,
+                "should NOT be marked as resumed (server returned 200)"
+            );
             assert_eq!(bytes_downloaded, full_body.len() as u64);
             let contents = tokio::fs::read(&path).await.unwrap();
             assert_eq!(contents, full_body);
@@ -209,7 +209,10 @@ async fn resume_restarts_when_server_file_is_newer() {
     let part_path = dir.path().join("newer.exe.part");
     tokio::fs::write(&part_path, b"old p").await.unwrap();
     let past = std::time::SystemTime::now() - std::time::Duration::from_secs(365 * 86400);
-    let file = std::fs::File::options().write(true).open(&part_path).unwrap();
+    let file = std::fs::File::options()
+        .write(true)
+        .open(&part_path)
+        .unwrap();
     file.set_times(std::fs::FileTimes::new().set_modified(past))
         .unwrap();
     drop(file);

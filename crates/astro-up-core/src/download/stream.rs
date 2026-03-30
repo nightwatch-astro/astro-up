@@ -54,7 +54,9 @@ pub(crate) async fn stream_download(
 
             if probe.status() == reqwest::StatusCode::PARTIAL_CONTENT {
                 // Check freshness: if server's Last-Modified is newer than .part mtime, restart
-                let should_restart = if let Some(last_modified) = probe.headers().get("Last-Modified") {
+                let should_restart = if let Some(last_modified) =
+                    probe.headers().get("Last-Modified")
+                {
                     if let Ok(server_date) = httpdate_parse(last_modified.to_str().unwrap_or("")) {
                         if let Ok(part_modified) = part_meta.modified() {
                             let part_time: chrono::DateTime<chrono::Utc> = part_modified.into();
@@ -70,20 +72,25 @@ pub(crate) async fn stream_download(
                 };
 
                 // Validate .part size against server Content-Range
-                let server_reports_valid = if let Some(content_range) = probe.headers().get("Content-Range") {
-                    // Format: bytes START-END/TOTAL
-                    if let Some(total_str) = content_range.to_str().ok().and_then(|s| s.split('/').next_back()) {
-                        if let Ok(total) = total_str.parse::<u64>() {
-                            part_size <= total
+                let server_reports_valid =
+                    if let Some(content_range) = probe.headers().get("Content-Range") {
+                        // Format: bytes START-END/TOTAL
+                        if let Some(total_str) = content_range
+                            .to_str()
+                            .ok()
+                            .and_then(|s| s.split('/').next_back())
+                        {
+                            if let Ok(total) = total_str.parse::<u64>() {
+                                part_size <= total
+                            } else {
+                                true // Can't parse, allow
+                            }
                         } else {
-                            true // Can't parse, allow
+                            true
                         }
                     } else {
                         true
-                    }
-                } else {
-                    true
-                };
+                    };
 
                 if !should_restart && server_reports_valid {
                     // Resume: hash existing bytes first, then append
@@ -101,8 +108,17 @@ pub(crate) async fn stream_download(
                     // Stream remaining bytes from the probe response
                     // Resume doesn't capture a new ETag (use existing one)
                     return stream_response(
-                        probe, part_path, true, &mut hasher, part_size,
-                        event_tx, id, throttle_bytes_per_sec, cancel_token, true, None,
+                        probe,
+                        part_path,
+                        true,
+                        &mut hasher,
+                        part_size,
+                        event_tx,
+                        id,
+                        throttle_bytes_per_sec,
+                        cancel_token,
+                        true,
+                        None,
                     )
                     .await;
                 }
@@ -114,11 +130,15 @@ pub(crate) async fn stream_download(
     }
 
     // Fresh download
-    let response = client.get(url).send().await.map_err(|e| CoreError::DownloadFailed {
-        url: url.to_owned(),
-        status: e.status().map_or(0, |s| s.as_u16()),
-        reason: e.to_string(),
-    })?;
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| CoreError::DownloadFailed {
+            url: url.to_owned(),
+            status: e.status().map_or(0, |s| s.as_u16()),
+            reason: e.to_string(),
+        })?;
 
     let status = response.status();
     if !status.is_success() {
@@ -141,14 +161,26 @@ pub(crate) async fn stream_download(
         let required = content_length * 2;
         if let Some(available) = available_disk_space(part_path) {
             if available < required {
-                return Err(CoreError::DiskSpaceInsufficient { required, available });
+                return Err(CoreError::DiskSpaceInsufficient {
+                    required,
+                    available,
+                });
             }
         }
     }
 
     stream_response(
-        response, part_path, false, &mut hasher, 0,
-        event_tx, id, throttle_bytes_per_sec, cancel_token, false, etag,
+        response,
+        part_path,
+        false,
+        &mut hasher,
+        0,
+        event_tx,
+        id,
+        throttle_bytes_per_sec,
+        cancel_token,
+        false,
+        etag,
     )
     .await
 }
@@ -207,11 +239,15 @@ async fn stream_response(
 
     let url = response.url().to_string();
 
-    while let Some(chunk) = response.chunk().await.map_err(|e| CoreError::DownloadFailed {
-        url: url.clone(),
-        status: 0,
-        reason: e.to_string(),
-    })? {
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|e| CoreError::DownloadFailed {
+            url: url.clone(),
+            status: 0,
+            reason: e.to_string(),
+        })?
+    {
         if cancel_token.is_cancelled() {
             file.flush().await?;
             return Err(CoreError::Cancelled);

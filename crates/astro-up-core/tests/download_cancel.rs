@@ -56,7 +56,10 @@ async fn cancel_leaves_part_file_and_returns_cancelled() {
 
     // .part file should still exist (left for resume)
     let part_path = dir.path().join("big.exe.part");
-    assert!(part_path.exists(), ".part file should be preserved on cancel");
+    assert!(
+        part_path.exists(),
+        ".part file should be preserved on cancel"
+    );
 
     // Final file should NOT exist
     assert!(

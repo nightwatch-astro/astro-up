@@ -121,8 +121,14 @@ async fn download_error_reports_url_and_status() {
         .unwrap_err();
 
     let msg = err.to_string();
-    assert!(msg.contains("/forbidden.exe"), "error should contain URL: {msg}");
-    assert!(msg.contains("403"), "error should contain status code: {msg}");
+    assert!(
+        msg.contains("/forbidden.exe"),
+        "error should contain URL: {msg}"
+    );
+    assert!(
+        msg.contains("403"),
+        "error should contain status code: {msg}"
+    );
 }
 
 #[tokio::test]
@@ -232,17 +238,13 @@ async fn download_follows_redirect_chain() {
     // /redirect1 -> /redirect2 -> /final.exe
     Mock::given(method("GET"))
         .and(path("/redirect1"))
-        .respond_with(
-            ResponseTemplate::new(302).insert_header("Location", "/redirect2"),
-        )
+        .respond_with(ResponseTemplate::new(302).insert_header("Location", "/redirect2"))
         .mount(&server)
         .await;
 
     Mock::given(method("GET"))
         .and(path("/redirect2"))
-        .respond_with(
-            ResponseTemplate::new(302).insert_header("Location", "/final.exe"),
-        )
+        .respond_with(ResponseTemplate::new(302).insert_header("Location", "/final.exe"))
         .mount(&server)
         .await;
 

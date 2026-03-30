@@ -24,7 +24,16 @@ pub enum SoftwareType {
 }
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString, EnumIter,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    Display,
+    EnumString,
+    EnumIter,
     EnumTable,
 )]
 #[serde(rename_all = "snake_case")]

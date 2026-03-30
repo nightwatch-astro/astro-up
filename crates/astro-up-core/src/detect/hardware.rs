@@ -76,19 +76,18 @@ pub async fn discover(
     }
 
     let result = tokio::time::timeout(Duration::from_secs(10), async {
-        let con = tokio::task::spawn_blocking(|| wmi::WMIConnection::new())
-            .await
-            .map_err(|e| format!("{e}"))?
-            .map_err(|e| format!("{e}"))?;
-
-        let devices: Vec<PnPEntity> = con
-            .async_raw_query(
-                "SELECT DeviceID, Name FROM Win32_PnPEntity WHERE DeviceID LIKE 'USB\\\\VID_%'",
-            )
-            .await
-            .map_err(|e| format!("{e}"))?;
-
-        Ok::<_, String>(devices)
+        tokio::task::spawn_blocking(|| {
+            let com = wmi::COMLibrary::new().map_err(|e| format!("{e}"))?;
+            let con = wmi::WMIConnection::new(com).map_err(|e| format!("{e}"))?;
+            let devices: Vec<PnPEntity> = con
+                .raw_query(
+                    "SELECT DeviceID, Name FROM Win32_PnPEntity WHERE DeviceID LIKE 'USB\\\\VID_%'",
+                )
+                .map_err(|e| format!("{e}"))?;
+            Ok::<_, String>(devices)
+        })
+        .await
+        .map_err(|e| format!("{e}"))?
     })
     .await;
 

@@ -73,7 +73,9 @@ async fn download_with_wrong_hash_fails() {
 
     let request = DownloadRequest {
         url: format!("{}/bad-hash.exe", server.uri()),
-        expected_hash: Some("0000000000000000000000000000000000000000000000000000000000000000".into()),
+        expected_hash: Some(
+            "0000000000000000000000000000000000000000000000000000000000000000".into(),
+        ),
         dest_dir: dir.path().to_path_buf(),
         filename: "bad-hash.exe".into(),
         resume: false,

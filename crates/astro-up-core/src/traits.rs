@@ -10,7 +10,6 @@ pub struct InstallOptions {
     pub quiet: bool,
 }
 
-
 /// Checks for the latest version of software from a remote source.
 #[trait_variant::make(ProviderDyn: Send)]
 pub trait Provider {
@@ -65,4 +64,3 @@ pub trait BackupManager {
     async fn list(&self, software_id: &str) -> Result<Vec<BackupEntry>, CoreError>;
     async fn prune(&self, software_id: &str, keep: usize) -> Result<(), CoreError>;
 }
-

@@ -61,17 +61,18 @@ async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
     );
 
     let result = tokio::time::timeout(Duration::from_secs(10), async {
-        let con = tokio::task::spawn_blocking(|| wmi::WMIConnection::new())
-            .await
-            .map_err(|e| format!("spawn failed: {e}"))?
-            .map_err(|e| format!("WMI connection failed: {e}"))?;
-
-        let drivers: Vec<PnPSignedDriver> = con
-            .async_raw_query(&query)
-            .await
-            .map_err(|e| format!("WMI query failed: {e}"))?;
-
-        Ok::<_, String>(drivers)
+        let query = query.clone();
+        tokio::task::spawn_blocking(move || {
+            let com = wmi::COMLibrary::new().map_err(|e| format!("COM init failed: {e}"))?;
+            let con =
+                wmi::WMIConnection::new(com).map_err(|e| format!("WMI connection failed: {e}"))?;
+            let drivers: Vec<PnPSignedDriver> = con
+                .raw_query(&query)
+                .map_err(|e| format!("WMI query failed: {e}"))?;
+            Ok::<_, String>(drivers)
+        })
+        .await
+        .map_err(|e| format!("spawn failed: {e}"))?
     })
     .await;
 

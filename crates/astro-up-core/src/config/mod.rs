@@ -201,9 +201,7 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
             Some(humantime::format_duration(config.network.connect_timeout).to_string())
         }
         "network.user_agent" => Some(config.network.user_agent.clone()),
-        "network.download_speed_limit" => {
-            Some(config.network.download_speed_limit.to_string())
-        }
+        "network.download_speed_limit" => Some(config.network.download_speed_limit.to_string()),
         "updates.auto_check" => Some(config.updates.auto_check.to_string()),
         "updates.check_interval" => {
             Some(humantime::format_duration(config.updates.check_interval).to_string())

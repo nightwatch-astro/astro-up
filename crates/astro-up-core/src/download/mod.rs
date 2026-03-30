@@ -3,8 +3,8 @@ pub(crate) mod purge;
 pub mod stream;
 pub mod types;
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use sha2::Digest;
 use tokio::sync::broadcast;
@@ -93,8 +93,7 @@ impl DownloadManager {
             if let Ok(meta) = tokio::fs::metadata(&dest).await {
                 if let Ok(modified) = meta.modified() {
                     let datetime: chrono::DateTime<chrono::Utc> = modified.into();
-                    req_builder =
-                        req_builder.header("If-Modified-Since", datetime.to_rfc2822());
+                    req_builder = req_builder.header("If-Modified-Since", datetime.to_rfc2822());
                 }
             }
 
@@ -131,9 +130,7 @@ impl DownloadManager {
 
                 // If this was a resumed download, retry once from scratch (CHK012)
                 if result.resumed {
-                    tracing::warn!(
-                        "hash mismatch after resumed download, retrying from scratch"
-                    );
+                    tracing::warn!("hash mismatch after resumed download, retrying from scratch");
                     let retry = stream::stream_download(
                         &self.client,
                         &request.url,
