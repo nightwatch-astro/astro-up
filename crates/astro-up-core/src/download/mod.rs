@@ -78,6 +78,27 @@ impl DownloadManager {
         // Auto-create destination directory (FR-019)
         tokio::fs::create_dir_all(&request.dest_dir).await?;
 
+        // If final file already exists, check with server via conditional request (FR-008)
+        let dest = request.dest_path();
+        if dest.exists() {
+            let mut req_builder = self.client.head(&request.url);
+
+            // Use file modification time for If-Modified-Since
+            if let Ok(meta) = tokio::fs::metadata(&dest).await {
+                if let Ok(modified) = meta.modified() {
+                    let datetime: chrono::DateTime<chrono::Utc> = modified.into();
+                    req_builder =
+                        req_builder.header("If-Modified-Since", datetime.to_rfc2822());
+                }
+            }
+
+            if let Ok(resp) = req_builder.send().await {
+                if resp.status() == reqwest::StatusCode::NOT_MODIFIED {
+                    return Ok(DownloadResult::Cached { path: dest });
+                }
+            }
+        }
+
         let _ = self.event_tx.send(Event::DownloadStarted {
             id: request.filename.clone(),
             url: request.url.clone(),

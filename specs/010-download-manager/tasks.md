@@ -59,9 +59,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Add hash verification to `stream_download` in `crates/astro-up-core/src/download/stream.rs`: after streaming completes, finalize `Sha256` digest, compare hex string against `DownloadRequest.expected_hash`. On mismatch return `CoreError::ChecksumMismatch`. On `None` expected hash, set `hash_verified: false` in result
-- [ ] T013 [US2] Add conditional request support (ETag/Last-Modified) in `crates/astro-up-core/src/download/stream.rs`: before downloading, if final file already exists, send `If-None-Match`/`If-Modified-Since` headers. On 304 response, return `DownloadResult::Cached`
-- [ ] T014 [US2] Integration test for hash verification in `crates/astro-up-core/tests/download_hash.rs`: (a) download with correct expected hash — assert success with `hash_verified: true`, (b) download with wrong expected hash — assert `ChecksumMismatch` error and `.part` file deleted, (c) download with no expected hash — assert success with `hash_verified: false` and warning logged
+- [x] T012 [US2] Add hash verification to `stream_download` in `crates/astro-up-core/src/download/stream.rs`: after streaming completes, finalize `Sha256` digest, compare hex string against `DownloadRequest.expected_hash`. On mismatch return `CoreError::ChecksumMismatch`. On `None` expected hash, set `hash_verified: false` in result
+- [x] T013 [US2] Add conditional request support (ETag/Last-Modified) in `crates/astro-up-core/src/download/stream.rs`: before downloading, if final file already exists, send `If-None-Match`/`If-Modified-Since` headers. On 304 response, return `DownloadResult::Cached`
+- [x] T014 [US2] Integration test for hash verification in `crates/astro-up-core/tests/download_hash.rs`: (a) download with correct expected hash — assert success with `hash_verified: true`, (b) download with wrong expected hash — assert `ChecksumMismatch` error and `.part` file deleted, (c) download with no expected hash — assert success with `hash_verified: false` and warning logged
 
 **Checkpoint**: US2 complete — downloads are integrity-verified
 
