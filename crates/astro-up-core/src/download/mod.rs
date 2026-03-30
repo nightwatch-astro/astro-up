@@ -111,7 +111,8 @@ impl DownloadManager {
             &self.event_tx,
             &request.filename,
             self.network_config.download_speed_limit,
-            cancel_token,
+            cancel_token.clone(),
+            request.resume,
         )
         .await?;
 
@@ -121,10 +122,39 @@ impl DownloadManager {
             if actual != *expected {
                 // Clean up .part file on mismatch
                 let _ = tokio::fs::remove_file(&request.part_path()).await;
-                return Err(CoreError::ChecksumMismatch {
-                    expected: expected.clone(),
-                    actual,
-                });
+
+                // If this was a resumed download, retry once from scratch (CHK012)
+                if result.resumed {
+                    tracing::warn!(
+                        "hash mismatch after resumed download, retrying from scratch"
+                    );
+                    let retry = stream::stream_download(
+                        &self.client,
+                        &request.url,
+                        &request.part_path(),
+                        &self.event_tx,
+                        &request.filename,
+                        self.network_config.download_speed_limit,
+                        cancel_token,
+                        false, // no resume on retry
+                    )
+                    .await?;
+
+                    let retry_actual = format!("{:x}", retry.hasher.finalize());
+                    if retry_actual != *expected {
+                        let _ = tokio::fs::remove_file(&request.part_path()).await;
+                        return Err(CoreError::ChecksumMismatch {
+                            expected: expected.clone(),
+                            actual: retry_actual,
+                        });
+                    }
+                    // Retry succeeded
+                } else {
+                    return Err(CoreError::ChecksumMismatch {
+                        expected: expected.clone(),
+                        actual,
+                    });
+                }
             }
             true
         } else {

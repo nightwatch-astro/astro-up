@@ -75,10 +75,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Implement resume probe in `crates/astro-up-core/src/download/stream.rs`: if `.part` file exists, read its size, send `Range: bytes={size}-` header. If server returns 206: open `.part` in append mode, continue streaming. If server returns 200: delete `.part`, restart from scratch
-- [ ] T016 [US3] Add freshness validation in `crates/astro-up-core/src/download/stream.rs`: before resuming, compare `.part` file mtime against server `Last-Modified` header. If server file is newer, delete `.part` and restart. Validate `.part` file size ≤ server Content-Length (corrupt .part detection per CHK011)
-- [ ] T017 [US3] Handle hash mismatch after resumed download in `crates/astro-up-core/src/download/mod.rs`: if hash verification fails and download was resumed (`resumed: true`), delete `.part` file and retry once from scratch (CHK012). If second attempt also fails, return `ChecksumMismatch` error
-- [ ] T018 [US3] Integration test for resume in `crates/astro-up-core/tests/download_resume.rs`: (a) wiremock serves partial body (e.g., first 512 bytes of 1024), client writes `.part`, second request with Range header — mock uses dynamic response (`|req: &Request|`) to check Range header and return 206 with remaining bytes, assert final file is complete, (b) mock returns 200 on Range request — assert full re-download, (c) mock returns newer Last-Modified — assert `.part` deleted and full download
+- [x] T015 [US3] Implement resume probe in `crates/astro-up-core/src/download/stream.rs`: if `.part` file exists, read its size, send `Range: bytes={size}-` header. If server returns 206: open `.part` in append mode, continue streaming. If server returns 200: delete `.part`, restart from scratch
+- [x] T016 [US3] Add freshness validation in `crates/astro-up-core/src/download/stream.rs`: before resuming, compare `.part` file mtime against server `Last-Modified` header. If server file is newer, delete `.part` and restart. Validate `.part` file size ≤ server Content-Length (corrupt .part detection per CHK011)
+- [x] T017 [US3] Handle hash mismatch after resumed download in `crates/astro-up-core/src/download/mod.rs`: if hash verification fails and download was resumed (`resumed: true`), delete `.part` file and retry once from scratch (CHK012). If second attempt also fails, return `ChecksumMismatch` error
+- [x] T018 [US3] Integration test for resume in `crates/astro-up-core/tests/download_resume.rs`: (a) wiremock serves partial body (e.g., first 512 bytes of 1024), client writes `.part`, second request with Range header — mock uses dynamic response (`|req: &Request|`) to check Range header and return 206 with remaining bytes, assert final file is complete, (b) mock returns 200 on Range request — assert full re-download, (c) mock returns newer Last-Modified — assert `.part` deleted and full download
 
 **Checkpoint**: US3 complete — large downloads survive failures
 
