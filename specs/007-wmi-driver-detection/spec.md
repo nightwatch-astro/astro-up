@@ -2,7 +2,8 @@
 
 **Feature Branch**: `007-wmi-driver-detection`
 **Created**: 2026-03-29
-**Status**: Draft
+**Status**: Deferred
+**Deferred Reason**: Folded into spec 006 (Software and Driver Detection)
 **Project**: Rust Migration
 **Project Number**: 1
 **Input**: Migration plan Spec 006 — detect installed drivers via WMI queries
