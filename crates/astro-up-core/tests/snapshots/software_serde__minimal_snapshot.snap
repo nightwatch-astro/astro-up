@@ -5,7 +5,7 @@ expression: software
 ---
 {
   "id": "test-app",
-  "slug": null,
+  "slug": "",
   "name": "Test App",
   "type": "application",
   "category": "capture",

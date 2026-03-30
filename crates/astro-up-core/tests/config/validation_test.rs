@@ -20,7 +20,10 @@ fn zero_timeout_fails_validation() {
     let result = config.validate();
     assert!(result.is_err());
     let report = result.unwrap_err().to_string();
-    assert!(report.contains("duration must be positive"), "got: {report}");
+    assert!(
+        report.contains("duration must be positive"),
+        "got: {report}"
+    );
 }
 
 #[test]

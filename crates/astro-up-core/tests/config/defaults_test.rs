@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use astro_up_core::config::{load_config, PathsConfig};
+use astro_up_core::config::{PathsConfig, load_config};
 
 #[test]
 fn load_config_with_empty_db_returns_defaults() {
@@ -37,7 +37,12 @@ fn load_config_with_empty_db_returns_defaults() {
     // Snapshot the config shape (excluding platform-dependent paths)
     let mut value = serde_json::to_value(&config).unwrap();
     // Redact platform-dependent paths for stable snapshots
-    for path in ["paths.download_dir", "paths.cache_dir", "paths.data_dir", "logging.log_file"] {
+    for path in [
+        "paths.download_dir",
+        "paths.cache_dir",
+        "paths.data_dir",
+        "logging.log_file",
+    ] {
         let parts: Vec<&str> = path.split('.').collect();
         if let Some(section) = value.get_mut(parts[0]) {
             if let Some(field) = section.get_mut(parts[1]) {

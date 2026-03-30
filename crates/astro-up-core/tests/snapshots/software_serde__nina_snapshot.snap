@@ -5,7 +5,7 @@ expression: software
 ---
 {
   "id": "nina-app",
-  "slug": null,
+  "slug": "",
   "name": "N.I.N.A.",
   "type": "application",
   "category": "capture",

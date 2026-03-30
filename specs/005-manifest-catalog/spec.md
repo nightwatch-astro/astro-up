@@ -24,6 +24,7 @@ A user launches astro-up and sees the full list of available astrophotography so
 3. **Given** a local catalog past its TTL, **When** the application starts, **Then** it sends a conditional request (ETag) and either keeps the current file (304) or downloads the new one
 4. **Given** no network connectivity and a local catalog exists, **When** the application starts, **Then** it uses the local catalog (it's still valid data, just potentially stale)
 5. **Given** no network and no local catalog, **When** the application starts, **Then** it reports "no catalog available — check your network" and exits
+6. **Given** a catalog fetch fails with a transient error (timeout, 5xx), **When** the application retries once after a short backoff, **Then** it either succeeds on retry or falls back to the local catalog
 
 ---
 
@@ -87,21 +88,24 @@ A CLI user runs `astro-up check nina` to look up software by its ID. The ID is t
 - **FR-001**: System MUST fetch the catalog as a signed SQLite database from a configurable source URL
 - **FR-002**: System MUST verify catalog integrity using minisign signature verification with a compile-time embedded public key
 - **FR-003**: System MUST store the catalog locally with a configurable TTL (default: 24 hours)
-- **FR-004**: System MUST use conditional HTTP requests (ETag/If-None-Match) to avoid re-downloading unchanged catalogs
-- **FR-005**: System MUST use the local catalog when network is unavailable (no explicit offline mode — the local file IS the offline catalog)
+- **FR-004**: System MUST use conditional HTTP requests (ETag/If-None-Match) to avoid re-downloading unchanged catalogs. ETag and `fetched_at` timestamp stored in a JSON sidecar file (`catalog.db.meta`). TTL is measured from `fetched_at`.
+- **FR-004a**: System MUST retry failed catalog fetches once with a short backoff (1-2s) before falling back to the local catalog
+- **FR-005**: System MUST use the local catalog when network is unavailable or fetch fails (the local file IS the offline catalog)
 - **FR-006**: System MUST resolve software by exact ID (case-sensitive, canonical identifier)
-- **FR-007**: System MUST search software via FTS5 full-text search across name, aliases, tags, and description
+- **FR-007**: System MUST search software via FTS5 full-text search across name, description, tags, aliases, and publisher
 - **FR-008**: System MUST support filtering software by category and type
-- **FR-009**: System MUST validate package IDs against the regex `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` (lowercase, hyphen-separated, 2-50 chars)
+- **FR-009**: System MUST validate package IDs against the regex `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` (lowercase, hyphen-separated, 2-50 chars). Validation applies at system boundaries (user-supplied CLI input via `PackageId::from_str`) — catalog data is pre-validated by the compiler.
 - **FR-010**: System MUST report catalog fetch/verify errors with actionable messages
-- **FR-011**: System MUST use an apt-style PID lockfile (`{data_dir}/astro-up/astro-up.lock`) for write operations to prevent concurrent modification
+- **FR-011**: System MUST use an apt-style PID lockfile (`{data_dir}/astro-up/astro-up.lock`) for write operations to prevent concurrent modification. On acquisition, check if the PID in the lockfile is still running — if dead, delete stale lock and acquire; if alive, report "another instance is running" and exit.
 - **FR-012**: System MUST bundle manifest metadata and version info in the same catalog (one fetch, one file)
+- **FR-013**: System MUST check the catalog's `schema_version` (integer string, e.g., `"1"`) from the `meta` table on load and reject catalogs where the version does not match the client's `SUPPORTED_SCHEMA` constant, prompting the user to update astro-up
+- **FR-014**: System MUST normalize aliases for FTS5 indexing by stripping punctuation (dots, hyphens) before writing to the search index. Original aliases are preserved in the `aliases` JSON column for display. (Compiler-side change — see astro-up-manifests)
 
 ### Key Entities
 
-- **Catalog**: SQLite database containing packages table (manifest metadata) and versions table (latest version per package). Provides resolve, search, and filter operations via SQL queries.
+- **Catalog**: SQLite database compiled by `astro-up-compiler` with 8 tables. This spec reads only the query tables: `packages` (manifest metadata), `versions` (all discovered versions per package — version, URL, sha256, discovered_at, release_notes_url, pre_release), `meta` (schema_version, compiled_at), and `packages_fts` (FTS5 virtual table). Operational tables (`detection`, `install`, `checkver`, `hardware`, `backup`) are deferred to specs 006+.
 - **PackageId**: Validated string matching `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`. The canonical identifier. Also the manifest filename without `.toml`.
-- **CatalogSource**: URL + TTL from config (spec 004). ETag stored alongside the local catalog file.
+- **CatalogSource**: URL + TTL from config (spec 004). ETag and `fetched_at` stored in a JSON sidecar file (`catalog.db.meta`) alongside the local catalog file.
 
 ## Success Criteria *(mandatory)*
 
@@ -111,6 +115,20 @@ A CLI user runs `astro-up check nina` to look up software by its ID. The ID is t
 - **SC-002**: FTS5 search returns ranked results in under 50ms for any query
 - **SC-003**: Invalid signatures are rejected 100% of the time
 - **SC-004**: ETag conditional requests avoid unnecessary re-downloads
+
+## Clarifications
+
+### Session 2026-03-30
+
+- Q: Should the client read all 8 catalog tables or only query/display tables? → A: Query tables only — `packages`, `versions`, `meta`, `packages_fts`. Operational tables (`detection`, `install`, `checkver`, `hardware`, `backup`) deferred to their respective specs (006+).
+- Q: Which columns should FTS5 index for search? → A: Both `aliases` and `publisher` in addition to `name`, `description`, `tags`. Compiler updated to index all five columns.
+- Q: Should spec 005 keep the `slug` field despite D5 saying "no separate slug"? → A: Yes — `slug` is a display-friendly label (e.g., "N.I.N.A."), not an identifier. Resolution is always by `id`. D5 clarified.
+- Q: What should `catalog.offline` config field do? → A: Remove it. If offline, you can't download software anyway. Implicit offline (FR-005) is sufficient. File cleanup issue for spec 004.
+- Q: How should the client handle catalog schema version mismatches? → A: Exact integer match — client hardcodes `SUPPORTED_SCHEMA = "1"`, rejects anything else with "please update astro-up."
+- Q: Where should ETag and TTL base time be stored? → A: JSON sidecar (`catalog.db.meta`) with `etag` and `fetched_at`. TTL measured from `fetched_at`.
+- Q: What happens when a crashed process leaves a stale lockfile? → A: Check if PID is still running; if dead, delete stale lock and acquire.
+- Q: How should FTS5 handle special characters in aliases (e.g., "n.i.n.a.")? → A: Normalize aliases by stripping punctuation before FTS5 indexing. Originals preserved in `aliases` column for display. Compiler-side change.
+- Q: Should the client retry failed catalog fetches? → A: Yes, one retry with 1-2s backoff before falling back to local catalog.
 
 ## Assumptions
 

@@ -70,7 +70,10 @@ pub enum CoreError {
     ConfigValidation(#[from] garde::Report),
 
     #[error("unknown config key {key:?}, valid keys: {}", valid_keys.join(", "))]
-    ConfigUnknownKey { key: String, valid_keys: Vec<String> },
+    ConfigUnknownKey {
+        key: String,
+        valid_keys: Vec<String>,
+    },
 
     #[error("config parse error for {key:?}: expected {expected}, got {got:?}")]
     ConfigParse {
@@ -81,6 +84,34 @@ pub enum CoreError {
 
     #[error("config store error: {0}")]
     ConfigStore(#[from] rusqlite::Error),
+
+    #[error("catalog fetch failed: {reason}")]
+    CatalogFetchFailed { reason: String },
+
+    #[error(
+        "catalog signature invalid — the downloaded catalog may be tampered with, try again later or report this issue"
+    )]
+    CatalogSignatureInvalid,
+
+    #[error("catalog signature file missing — expected .minisig alongside catalog.db")]
+    CatalogSignatureMissing,
+
+    #[error(
+        "catalog schema version {version} is not supported (expected {expected}) — please update astro-up"
+    )]
+    CatalogSchemaUnsupported { version: String, expected: String },
+
+    #[error("no catalog available — check your network connection and try again")]
+    CatalogNotAvailable,
+
+    #[error("catalog file corrupted — will attempt to re-fetch")]
+    CatalogCorrupted,
+
+    #[error("another instance of astro-up is running (PID {pid})")]
+    CatalogLocked { pid: u32 },
+
+    #[error("invalid package ID {input:?}: {reason}")]
+    InvalidPackageId { input: String, reason: String },
 
     #[error(transparent)]
     Io(#[from] std::io::Error),

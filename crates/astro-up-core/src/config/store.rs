@@ -52,10 +52,8 @@ impl ConfigStore {
 
     /// Remove a stored override, reverting the key to its default.
     pub fn reset(&self, key: &str) -> rusqlite::Result<()> {
-        self.conn.execute(
-            "DELETE FROM config_settings WHERE key = ?1",
-            params![key],
-        )?;
+        self.conn
+            .execute("DELETE FROM config_settings WHERE key = ?1", params![key])?;
         Ok(())
     }
 

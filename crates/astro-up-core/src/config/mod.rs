@@ -57,7 +57,10 @@ fn open_store(db_path: &Path) -> Result<ConfigStore, CoreError> {
     }
 }
 
-fn recover_corrupt(db_path: &Path, original_err: rusqlite::Error) -> Result<ConfigStore, CoreError> {
+fn recover_corrupt(
+    db_path: &Path,
+    original_err: rusqlite::Error,
+) -> Result<ConfigStore, CoreError> {
     let corrupt_path = db_path.with_extension("corrupt");
     tracing::warn!(
         "Config database corrupt ({}), renaming to {} and starting fresh",
@@ -70,7 +73,10 @@ fn recover_corrupt(db_path: &Path, original_err: rusqlite::Error) -> Result<Conf
 }
 
 /// Merge key-value overrides into an AppConfig.
-fn merge_overrides(config: &mut AppConfig, overrides: &[(String, String)]) -> Result<(), CoreError> {
+fn merge_overrides(
+    config: &mut AppConfig,
+    overrides: &[(String, String)],
+) -> Result<(), CoreError> {
     for (key, value) in overrides {
         if !config.is_known_key(key) {
             return Err(CoreError::ConfigUnknownKey {
@@ -94,10 +100,13 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
     match key {
         "catalog.url" => config.catalog.url = value.to_string(),
         "catalog.cache_ttl" => {
-            config.catalog.cache_ttl = parse_duration(value).map_err(|_| parse_err("duration (e.g. 24h, 30s)"))?;
+            config.catalog.cache_ttl =
+                parse_duration(value).map_err(|_| parse_err("duration (e.g. 24h, 30s)"))?;
         }
         "catalog.offline" => {
-            config.catalog.offline = value.parse::<bool>().map_err(|_| parse_err("boolean (true/false)"))?;
+            config.catalog.offline = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
         }
         "paths.download_dir" => config.paths.download_dir = PathBuf::from(value),
         "paths.cache_dir" => config.paths.cache_dir = PathBuf::from(value),
@@ -110,24 +119,33 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
             };
         }
         "network.timeout" => {
-            config.network.timeout = parse_duration(value).map_err(|_| parse_err("duration (e.g. 30s, 1m)"))?;
+            config.network.timeout =
+                parse_duration(value).map_err(|_| parse_err("duration (e.g. 30s, 1m)"))?;
         }
         "network.user_agent" => config.network.user_agent = value.to_string(),
         "updates.auto_check" => {
-            config.updates.auto_check = value.parse::<bool>().map_err(|_| parse_err("boolean (true/false)"))?;
+            config.updates.auto_check = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
         }
         "updates.check_interval" => {
-            config.updates.check_interval = parse_duration(value).map_err(|_| parse_err("duration (e.g. 24h, 6h)"))?;
+            config.updates.check_interval =
+                parse_duration(value).map_err(|_| parse_err("duration (e.g. 24h, 6h)"))?;
         }
         "logging.level" => {
-            config.logging.level = LogLevel::from_str(value).map_err(|_| parse_err("log level (error/warn/info/debug/trace)"))?;
+            config.logging.level = LogLevel::from_str(value)
+                .map_err(|_| parse_err("log level (error/warn/info/debug/trace)"))?;
         }
         "logging.log_to_file" => {
-            config.logging.log_to_file = value.parse::<bool>().map_err(|_| parse_err("boolean (true/false)"))?;
+            config.logging.log_to_file = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
         }
         "logging.log_file" => config.logging.log_file = PathBuf::from(value),
         "telemetry.enabled" => {
-            config.telemetry.enabled = value.parse::<bool>().map_err(|_| parse_err("boolean (true/false)"))?;
+            config.telemetry.enabled = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
         }
         _ => {
             return Err(CoreError::ConfigUnknownKey {
@@ -147,16 +165,26 @@ fn parse_duration(s: &str) -> Result<Duration, humantime::DurationError> {
 pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
     match key {
         "catalog.url" => Some(config.catalog.url.clone()),
-        "catalog.cache_ttl" => Some(humantime::format_duration(config.catalog.cache_ttl).to_string()),
+        "catalog.cache_ttl" => {
+            Some(humantime::format_duration(config.catalog.cache_ttl).to_string())
+        }
         "catalog.offline" => Some(config.catalog.offline.to_string()),
         "paths.download_dir" => Some(config.paths.download_dir.display().to_string()),
         "paths.cache_dir" => Some(config.paths.cache_dir.display().to_string()),
         "paths.data_dir" => Some(config.paths.data_dir.display().to_string()),
-        "network.proxy" => Some(config.network.proxy.clone().unwrap_or_else(|| "none".to_string())),
+        "network.proxy" => Some(
+            config
+                .network
+                .proxy
+                .clone()
+                .unwrap_or_else(|| "none".to_string()),
+        ),
         "network.timeout" => Some(humantime::format_duration(config.network.timeout).to_string()),
         "network.user_agent" => Some(config.network.user_agent.clone()),
         "updates.auto_check" => Some(config.updates.auto_check.to_string()),
-        "updates.check_interval" => Some(humantime::format_duration(config.updates.check_interval).to_string()),
+        "updates.check_interval" => {
+            Some(humantime::format_duration(config.updates.check_interval).to_string())
+        }
         "logging.level" => Some(config.logging.level.to_string()),
         "logging.log_to_file" => Some(config.logging.log_to_file.to_string()),
         "logging.log_file" => Some(config.logging.log_file.display().to_string()),

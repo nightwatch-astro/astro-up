@@ -18,7 +18,11 @@ chrono.workspace = true
 garde.workspace = true
 humantime.workspace = true
 tracing.workspace = true
-rusqlite = { version = "0.35", features = ["bundled"] }
+rusqlite = { version = "0.39", features = ["bundled"] }
+minisign-verify = "0.2"
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+sysinfo = "0.38"
+tokio = { version = "1", features = ["fs", "time"] }
 toml = "0.9"
 
 [dev-dependencies]

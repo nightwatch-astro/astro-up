@@ -44,7 +44,7 @@ pub enum Category {
 pub struct Software {
     pub id: String,
     #[serde(default)]
-    pub slug: Option<String>,
+    pub slug: String,
     pub name: String,
     #[serde(rename = "type")]
     pub software_type: SoftwareType,
