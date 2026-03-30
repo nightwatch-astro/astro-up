@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 
 /// Typed notification from the engine to UI layers.
@@ -28,6 +30,8 @@ pub enum Event {
         bytes_downloaded: u64,
         total_bytes: u64,
         speed: f64,
+        elapsed: Duration,
+        estimated_remaining: Option<Duration>,
     },
     DownloadComplete {
         id: String,
@@ -62,7 +66,7 @@ pub enum Event {
     },
 }
 
-// Compile-time assertion: Event must be Send + 'static (required for flume channels)
+// Compile-time assertion: Event must be Send + 'static (required for broadcast channels)
 fn _assert_event_send() {
     fn _require_send<T: Send + 'static>() {}
     _require_send::<Event>();
@@ -80,6 +84,8 @@ mod tests {
             bytes_downloaded: 1024,
             total_bytes: 2048,
             speed: 512.0,
+            elapsed: Duration::from_secs(2),
+            estimated_remaining: Some(Duration::from_secs(2)),
         };
 
         let json = serde_json::to_value(&event).unwrap();
@@ -107,6 +113,8 @@ mod tests {
                 bytes_downloaded: 768,
                 total_bytes: 1024,
                 speed: 256.0,
+                elapsed: Duration::from_secs(3),
+                estimated_remaining: Some(Duration::from_secs(1)),
             },
             Event::DownloadComplete { id: "test".into() },
             Event::BackupStarted { id: "test".into() },

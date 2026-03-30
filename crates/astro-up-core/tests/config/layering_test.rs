@@ -8,6 +8,7 @@ fn test_paths(dir: &std::path::Path) -> (PathsConfig, PathBuf) {
             download_dir: dir.join("downloads"),
             cache_dir: dir.join("cache"),
             data_dir: dir.join("data"),
+            ..PathsConfig::default()
         },
         dir.join("astro-up.log"),
     )

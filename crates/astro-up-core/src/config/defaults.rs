@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use super::model::{CatalogConfig, LogConfig, LogLevel, NetworkConfig, UpdateConfig};
+use super::model::{CatalogConfig, LogConfig, LogLevel, NetworkConfig, PathsConfig, UpdateConfig};
 
 impl Default for CatalogConfig {
     fn default() -> Self {
@@ -12,14 +12,26 @@ impl Default for CatalogConfig {
     }
 }
 
-// PathsConfig: all fields are PathBuf::default() — use #[derive(Default)] on the struct
+impl Default for PathsConfig {
+    fn default() -> Self {
+        Self {
+            download_dir: PathBuf::default(),
+            cache_dir: PathBuf::default(),
+            data_dir: PathBuf::default(),
+            keep_installers: true,
+            purge_installers_after_days: 30,
+        }
+    }
+}
 
 impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
             proxy: None,
+            connect_timeout: Duration::from_secs(10),
             timeout: Duration::from_secs(30),
             user_agent: format!("astro-up/{}", env!("CARGO_PKG_VERSION")),
+            download_speed_limit: 0,
         }
     }
 }

@@ -106,6 +106,16 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
         "paths.download_dir" => config.paths.download_dir = PathBuf::from(value),
         "paths.cache_dir" => config.paths.cache_dir = PathBuf::from(value),
         "paths.data_dir" => config.paths.data_dir = PathBuf::from(value),
+        "paths.keep_installers" => {
+            config.paths.keep_installers = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "paths.purge_installers_after_days" => {
+            config.paths.purge_installers_after_days = value
+                .parse::<u32>()
+                .map_err(|_| parse_err("integer days (0 = disabled)"))?;
+        }
         "network.proxy" => {
             config.network.proxy = if value.is_empty() || value == "none" {
                 None
@@ -117,7 +127,16 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
             config.network.timeout =
                 parse_duration(value).map_err(|_| parse_err("duration (e.g. 30s, 1m)"))?;
         }
+        "network.connect_timeout" => {
+            config.network.connect_timeout =
+                parse_duration(value).map_err(|_| parse_err("duration (e.g. 10s, 5s)"))?;
+        }
         "network.user_agent" => config.network.user_agent = value.to_string(),
+        "network.download_speed_limit" => {
+            config.network.download_speed_limit = value
+                .parse::<u64>()
+                .map_err(|_| parse_err("integer bytes/sec (0 = unlimited)"))?;
+        }
         "updates.auto_check" => {
             config.updates.auto_check = value
                 .parse::<bool>()
@@ -166,6 +185,10 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         "paths.download_dir" => Some(config.paths.download_dir.display().to_string()),
         "paths.cache_dir" => Some(config.paths.cache_dir.display().to_string()),
         "paths.data_dir" => Some(config.paths.data_dir.display().to_string()),
+        "paths.keep_installers" => Some(config.paths.keep_installers.to_string()),
+        "paths.purge_installers_after_days" => {
+            Some(config.paths.purge_installers_after_days.to_string())
+        }
         "network.proxy" => Some(
             config
                 .network
@@ -174,7 +197,11 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
                 .unwrap_or_else(|| "none".to_string()),
         ),
         "network.timeout" => Some(humantime::format_duration(config.network.timeout).to_string()),
+        "network.connect_timeout" => {
+            Some(humantime::format_duration(config.network.connect_timeout).to_string())
+        }
         "network.user_agent" => Some(config.network.user_agent.clone()),
+        "network.download_speed_limit" => Some(config.network.download_speed_limit.to_string()),
         "updates.auto_check" => Some(config.updates.auto_check.to_string()),
         "updates.check_interval" => {
             Some(humantime::format_duration(config.updates.check_interval).to_string())

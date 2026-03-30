@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use crate::error::CoreError;
 use crate::release::Release;
 use crate::types::{CheckverConfig, InstallConfig, InstallMethod};
@@ -10,16 +8,6 @@ pub struct InstallOptions {
     pub asset_path: String,
     pub config: InstallConfig,
     pub quiet: bool,
-}
-
-/// Callback for download progress: (bytes_downloaded, total_bytes, speed_bytes_per_sec)
-pub type ProgressCallback = Box<dyn Fn(u64, u64, f64) + Send>;
-
-/// Options for a download operation.
-pub struct DownloadOptions {
-    pub on_progress: Option<ProgressCallback>,
-    pub checksum: Option<String>,
-    pub resume: bool,
 }
 
 /// Checks for the latest version of software from a remote source.
@@ -46,10 +34,9 @@ pub trait Installer {
 pub trait Downloader {
     async fn download(
         &self,
-        url: &str,
-        dest: &Path,
-        opts: &DownloadOptions,
-    ) -> Result<(), CoreError>;
+        request: &crate::download::DownloadRequest,
+        cancel_token: tokio_util::sync::CancellationToken,
+    ) -> Result<crate::download::DownloadResult, CoreError>;
 }
 
 /// Backup result from a completed backup operation.
@@ -77,4 +64,3 @@ pub trait BackupManager {
     async fn list(&self, software_id: &str) -> Result<Vec<BackupEntry>, CoreError>;
     async fn prune(&self, software_id: &str, keep: usize) -> Result<(), CoreError>;
 }
-

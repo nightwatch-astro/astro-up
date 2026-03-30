@@ -1,6 +1,5 @@
 ---
 source: crates/astro-up-core/tests/config/defaults_test.rs
-assertion_line: 52
 expression: value
 ---
 {
@@ -17,6 +16,11 @@ expression: value
     "log_to_file": false
   },
   "network": {
+    "connect_timeout": {
+      "nanos": 0,
+      "secs": 10
+    },
+    "download_speed_limit": 0,
     "proxy": null,
     "timeout": {
       "nanos": 0,
@@ -27,7 +31,9 @@ expression: value
   "paths": {
     "cache_dir": "[platform_path]",
     "data_dir": "[platform_path]",
-    "download_dir": "[platform_path]"
+    "download_dir": "[platform_path]",
+    "keep_installers": true,
+    "purge_installers_after_days": 30
   },
   "telemetry": {
     "enabled": false

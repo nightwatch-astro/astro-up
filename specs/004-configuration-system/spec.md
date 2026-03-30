@@ -36,7 +36,7 @@ A user changes settings via the CLI (`astro-up config set network.timeout 60s`) 
 **Acceptance Scenarios**:
 
 1. **Given** a user runs `config set network.timeout 60s`, **When** the application restarts, **Then** `config get network.timeout` returns `60s`
-2. **Given** a user runs `config set catalog.offline true`, **When** the GUI reads config, **Then** the offline toggle shows enabled
+2. **Given** a user runs `config set network.connect_timeout 15s`, **When** the application restarts, **Then** `config get network.connect_timeout` returns `15s`
 3. **Given** a user runs `config set` with an invalid value (e.g., `network.timeout -5s`), **When** validation runs, **Then** it reports a clear error and does NOT persist the invalid value
 4. **Given** a user runs `config list`, **When** output is displayed, **Then** all settings are shown with their current effective values (default or overridden)
 5. **Given** a user runs `config reset network.timeout`, **When** the application reads that setting, **Then** it returns the compiled default
@@ -84,9 +84,9 @@ A user passes `--verbose` to override the logging level for a single invocation.
 ### Key Entities
 
 - **AppConfig**: Top-level configuration struct containing all sections. Validatable via garde. Used as the schema/registry — both CLI and GUI enumerate fields from this struct.
-- **CatalogConfig**: `url` (source URL), `cache_ttl` (hard expiry — re-fetch after TTL, no stale-while-revalidate), `offline` (skip catalog network requests only)
-- **PathsConfig**: `download_dir`, `cache_dir`, `data_dir`
-- **NetworkConfig**: `proxy` (URL with optional embedded credentials), `timeout`, `user_agent`
+- **CatalogConfig**: `url` (source URL), `cache_ttl` (hard expiry — re-fetch after TTL, no stale-while-revalidate). (`offline` removed by spec 005 — if offline, can't download software anyway.)
+- **PathsConfig**: `download_dir`, `cache_dir`, `data_dir`, `keep_installers` (bool), `purge_installers_after_days` (u32). (Last two added by spec 010.)
+- **NetworkConfig**: `proxy` (URL with optional embedded credentials), `connect_timeout`, `timeout`, `user_agent`, `download_speed_limit` (u64 bytes/sec). (`connect_timeout` and `download_speed_limit` added by spec 010.)
 - **UpdateConfig**: `auto_check` (enabled flag), `check_interval` (how often to check for astro-up self-updates — distinct from catalog `cache_ttl`)
 - **LogConfig**: `level` (error/warn/info/debug/trace), `log_to_file`, `log_file`
 - **TelemetryConfig**: `enabled` (opt-in flag)
@@ -110,13 +110,16 @@ Note: The catalog signature verification public key is hardcoded, not configurab
 |---------|-----|---------|
 | catalog | url | `https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db` |
 | catalog | cache_ttl | 24h |
-| catalog | offline | false |
 | paths | download_dir | (platform cache dir)/downloads |
 | paths | cache_dir | (platform cache dir) |
 | paths | data_dir | (platform data dir) |
+| paths | keep_installers | true |
+| paths | purge_installers_after_days | 30 (0 = disabled) |
 | network | proxy | none |
+| network | connect_timeout | 10s |
 | network | timeout | 30s |
 | network | user_agent | astro-up/{version} |
+| network | download_speed_limit | 0 (unlimited, bytes/sec) |
 | updates | auto_check | true |
 | updates | check_interval | 24h |
 | logging | level | info |

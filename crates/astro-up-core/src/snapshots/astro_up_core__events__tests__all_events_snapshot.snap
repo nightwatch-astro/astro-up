@@ -1,6 +1,5 @@
 ---
 source: crates/astro-up-core/src/events.rs
-assertion_line: 88
 expression: events
 ---
 [
@@ -37,7 +36,15 @@ expression: events
       "progress": 0.75,
       "bytes_downloaded": 768,
       "total_bytes": 1024,
-      "speed": 256.0
+      "speed": 256.0,
+      "elapsed": {
+        "secs": 3,
+        "nanos": 0
+      },
+      "estimated_remaining": {
+        "secs": 1,
+        "nanos": 0
+      }
     }
   },
   {

@@ -107,6 +107,30 @@ pub enum CoreError {
     #[error("invalid package ID {input:?}: {reason}")]
     InvalidPackageId { input: String, reason: String },
 
+    #[error("download failed for {url}: HTTP {status} — {reason}")]
+    DownloadFailed {
+        url: String,
+        status: u16,
+        reason: String,
+    },
+
+    #[error("insufficient disk space: need {required} bytes, have {available} bytes")]
+    DiskSpaceInsufficient { required: u64, available: u64 },
+
+    #[error("download already in progress for {url}")]
+    DownloadInProgress { url: String },
+
+    #[error("failed to rename {from} to {to}: {cause}")]
+    RenameFailed {
+        from: String,
+        to: String,
+        #[source]
+        cause: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    #[error("download cancelled")]
+    Cancelled,
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 

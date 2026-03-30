@@ -12,6 +12,7 @@ fn zero_timeout_fails_validation() {
             download_dir: PathBuf::from("/tmp/dl"),
             cache_dir: PathBuf::from("/tmp/cache"),
             data_dir: PathBuf::from("/tmp/data"),
+            ..PathsConfig::default()
         },
         PathBuf::from("/tmp/app.log"),
     );
@@ -33,6 +34,7 @@ fn empty_user_agent_fails_validation() {
             download_dir: PathBuf::from("/tmp/dl"),
             cache_dir: PathBuf::from("/tmp/cache"),
             data_dir: PathBuf::from("/tmp/data"),
+            ..PathsConfig::default()
         },
         PathBuf::from("/tmp/app.log"),
     );
@@ -51,6 +53,7 @@ fn check_interval_under_one_minute_fails() {
             download_dir: PathBuf::from("/tmp/dl"),
             cache_dir: PathBuf::from("/tmp/cache"),
             data_dir: PathBuf::from("/tmp/data"),
+            ..PathsConfig::default()
         },
         PathBuf::from("/tmp/app.log"),
     );
@@ -69,6 +72,7 @@ fn invalid_proxy_url_fails_validation() {
             download_dir: PathBuf::from("/tmp/dl"),
             cache_dir: PathBuf::from("/tmp/cache"),
             data_dir: PathBuf::from("/tmp/data"),
+            ..PathsConfig::default()
         },
         PathBuf::from("/tmp/app.log"),
     );
@@ -87,6 +91,7 @@ fn valid_defaults_pass_validation() {
             download_dir: PathBuf::from("/tmp/dl"),
             cache_dir: PathBuf::from("/tmp/cache"),
             data_dir: PathBuf::from("/tmp/data"),
+            ..PathsConfig::default()
         },
         PathBuf::from("/tmp/app.log"),
     );
