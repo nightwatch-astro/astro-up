@@ -92,8 +92,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Implement bandwidth throttling in `crates/astro-up-core/src/download/stream.rs`: after each chunk write, calculate expected elapsed time at configured rate (`bytes_so_far / max_bytes_per_sec`), if ahead of schedule sleep via `tokio::time::sleep()`. Track speed using `VecDeque<(Instant, u64)>` rolling window (5 seconds). Skip throttle when `download_speed_limit == 0`
-- [ ] T020 [US4] Integration test for throttle in `crates/astro-up-core/tests/download_throttle.rs`: set `download_speed_limit` to 100KB/s, download a 500KB file from wiremock, assert elapsed time is 4.5–5.5 seconds (10% tolerance per SC-005), assert progress events report speed near 100KB/s
+- [x] T019 [US4] Implement bandwidth throttling in `crates/astro-up-core/src/download/stream.rs`: after each chunk write, calculate expected elapsed time at configured rate (`bytes_so_far / max_bytes_per_sec`), if ahead of schedule sleep via `tokio::time::sleep()`. Track speed using `VecDeque<(Instant, u64)>` rolling window (5 seconds). Skip throttle when `download_speed_limit == 0`
+- [x] T020 [US4] Integration test for throttle in `crates/astro-up-core/tests/download_throttle.rs`: set `download_speed_limit` to 100KB/s, download a 500KB file from wiremock, assert elapsed time is 4.5–5.5 seconds (10% tolerance per SC-005), assert progress events report speed near 100KB/s
 
 **Checkpoint**: US4 complete — downloads respect bandwidth limits
 
