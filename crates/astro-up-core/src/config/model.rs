@@ -53,7 +53,7 @@ pub struct CatalogConfig {
     pub offline: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct PathsConfig {
     pub download_dir: PathBuf,
@@ -88,13 +88,13 @@ pub struct LogConfig {
     pub log_file: PathBuf,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct TelemetryConfig {
     pub enabled: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
 pub struct AppConfig {
     #[garde(dive)]
     pub catalog: CatalogConfig,
@@ -124,31 +124,41 @@ impl AppConfig {
 
     /// Create default config with caller-provided platform paths.
     pub fn with_paths(paths: PathsConfig, log_file: PathBuf) -> Self {
-        let mut config = Self::default();
-        config.paths = paths;
-        config.logging.log_file = log_file;
-        config
+        Self {
+            paths,
+            logging: LogConfig {
+                log_file,
+                ..LogConfig::default()
+            },
+            ..Self::default()
+        }
     }
 }
 
 /// Recursively collect dot-path keys from a serde_json::Value.
+/// Duration fields serialize as `{secs, nanos}` objects — treat them as leaf nodes.
 fn collect_keys(value: &serde_json::Value, prefix: &str) -> Vec<String> {
     match value {
-        serde_json::Value::Object(map) => map
-            .iter()
-            .flat_map(|(k, v)| {
-                let key = if prefix.is_empty() {
-                    k.clone()
-                } else {
-                    format!("{prefix}.{k}")
-                };
-                if v.is_object() {
-                    collect_keys(v, &key)
-                } else {
-                    vec![key]
-                }
-            })
-            .collect(),
+        serde_json::Value::Object(map) => {
+            // Detect Duration objects: {secs: N, nanos: N}
+            if map.contains_key("secs") && map.contains_key("nanos") && map.len() == 2 {
+                return vec![prefix.to_string()];
+            }
+            map.iter()
+                .flat_map(|(k, v)| {
+                    let key = if prefix.is_empty() {
+                        k.clone()
+                    } else {
+                        format!("{prefix}.{k}")
+                    };
+                    if v.is_object() {
+                        collect_keys(v, &key)
+                    } else {
+                        vec![key]
+                    }
+                })
+                .collect()
+        }
         _ => vec![prefix.to_string()],
     }
 }

@@ -2,8 +2,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use super::model::{
-    AppConfig, CatalogConfig, LogConfig, LogLevel, NetworkConfig, PathsConfig, TelemetryConfig,
-    UpdateConfig,
+    CatalogConfig, LogConfig, LogLevel, NetworkConfig, UpdateConfig,
 };
 
 impl Default for CatalogConfig {
@@ -16,15 +15,7 @@ impl Default for CatalogConfig {
     }
 }
 
-impl Default for PathsConfig {
-    fn default() -> Self {
-        Self {
-            download_dir: PathBuf::default(),
-            cache_dir: PathBuf::default(),
-            data_dir: PathBuf::default(),
-        }
-    }
-}
+// PathsConfig: all fields are PathBuf::default() — use #[derive(Default)] on the struct
 
 impl Default for NetworkConfig {
     fn default() -> Self {
@@ -55,21 +46,5 @@ impl Default for LogConfig {
     }
 }
 
-impl Default for TelemetryConfig {
-    fn default() -> Self {
-        Self { enabled: false }
-    }
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            catalog: CatalogConfig::default(),
-            paths: PathsConfig::default(),
-            network: NetworkConfig::default(),
-            updates: UpdateConfig::default(),
-            logging: LogConfig::default(),
-            telemetry: TelemetryConfig::default(),
-        }
-    }
-}
+// TelemetryConfig: all fields are false — use #[derive(Default)] on the struct
+// AppConfig: all fields are Default — use #[derive(Default)] on the struct

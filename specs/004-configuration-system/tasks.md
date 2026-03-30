@@ -40,10 +40,10 @@
 
 **Independent Test**: Call `load_config(db_path, &[])` with an empty database. Assert all fields match defaults.
 
-- [ ] T011 [US1] Implement `load_config(db_path: &Path, default_paths: PathsConfig, cli_overrides: &[(&str, &str)]) -> Result<AppConfig>` in `crates/astro-up-core/src/config/mod.rs`: open SQLite connection, create `ConfigStore`, build `AppConfig::with_paths(default_paths)`, merge stored settings from `ConfigStore::list()` via `merge_stored`, merge CLI overrides via `merge_stored`, run `config.validate()`. If SQLite open fails with corruption, log warning, rename to `*.corrupt`, create fresh DB, continue with defaults. Re-export `AppConfig`, `ConfigStore`, `load_config` from mod.rs.
-- [ ] T012 [P] [US1] Implement merge logic: helper function `merge_stored(config: &mut AppConfig, stored: &[(String, String)]) -> Result<()>` that maps dot-path keys to struct fields and parses values. Type-specific parsing: `humantime::parse_duration` for Duration fields, `str::parse::<bool>` for booleans, `FromStr` (strum `EnumString`) for LogLevel, `PathBuf::from` for paths, string as-is for String fields. Error on unknown keys.
-- [ ] T013 [US1] Add integration test in `crates/astro-up-core/tests/config/defaults_test.rs`: create tempfile SQLite DB, call `load_config` with empty DB and no CLI overrides, assert all fields match spec defaults table. Snapshot full config with insta.
-- [ ] T014 [US1] Add integration test in `crates/astro-up-core/tests/config/validation_test.rs`: construct an `AppConfig` with invalid values (zero timeout, empty user_agent, invalid proxy URL), call `validate()`, assert errors contain field paths.
+- [x] T011 [US1] Implement `load_config(db_path: &Path, default_paths: PathsConfig, cli_overrides: &[(&str, &str)]) -> Result<AppConfig>` in `crates/astro-up-core/src/config/mod.rs`: open SQLite connection, create `ConfigStore`, build `AppConfig::with_paths(default_paths)`, merge stored settings from `ConfigStore::list()` via `merge_stored`, merge CLI overrides via `merge_stored`, run `config.validate()`. If SQLite open fails with corruption, log warning, rename to `*.corrupt`, create fresh DB, continue with defaults. Re-export `AppConfig`, `ConfigStore`, `load_config` from mod.rs.
+- [x] T012 [P] [US1] Implement merge logic: helper function `merge_stored(config: &mut AppConfig, stored: &[(String, String)]) -> Result<()>` that maps dot-path keys to struct fields and parses values. Type-specific parsing: `humantime::parse_duration` for Duration fields, `str::parse::<bool>` for booleans, `FromStr` (strum `EnumString`) for LogLevel, `PathBuf::from` for paths, string as-is for String fields. Error on unknown keys.
+- [x] T013 [US1] Add integration test in `crates/astro-up-core/tests/config/defaults_test.rs`: create tempfile SQLite DB, call `load_config` with empty DB and no CLI overrides, assert all fields match spec defaults table. Snapshot full config with insta.
+- [x] T014 [US1] Add integration test in `crates/astro-up-core/tests/config/validation_test.rs`: construct an `AppConfig` with invalid values (zero timeout, empty user_agent, invalid proxy URL), call `validate()`, assert errors contain field paths.
 
 **Checkpoint**: `load_config` returns valid defaults with empty database. SC-001 passes.
 
@@ -55,13 +55,13 @@
 
 **Independent Test**: Call `config_set(store, "network.timeout", "60s")`, then `config_get`, assert `"60s"`.
 
-- [ ] T015 [US2] Implement `config_set(store: &ConfigStore, config: &AppConfig, key: &str, value: &str) -> Result<()>` in `crates/astro-up-core/src/config/api.rs`: validate key exists in `KNOWN_KEYS`, parse value to target type, build temporary AppConfig with the change, run garde validation, persist via `store.set()`.
-- [ ] T016 [P] [US2] Implement `config_get(store: &ConfigStore, config: &AppConfig, key: &str) -> Result<String>` in `crates/astro-up-core/src/config/api.rs`: return stored value if present, otherwise format the default value from AppConfig. Validate key exists in `KNOWN_KEYS`.
-- [ ] T017 [P] [US2] Implement `config_list(config: &AppConfig, stored: &[(String, String)]) -> Vec<(String, String, bool)>` in `crates/astro-up-core/src/config/api.rs`: return all keys with effective values and a flag indicating whether the value is the default or stored override.
-- [ ] T018 [P] [US2] Implement `config_reset(store: &ConfigStore, key: &str) -> Result<()>` in `crates/astro-up-core/src/config/api.rs`: validate key, call `store.reset(key)`. No-op if key was never set.
-- [ ] T019 [US2] Add integration test in `crates/astro-up-core/tests/config/api_test.rs`: set `network.timeout` to `60s`, get it back, assert `60s`. List all settings, assert timeout shows as overridden. Reset timeout, get again, assert default `30s`. (SC-007)
-- [ ] T020 [P] [US2] Add integration test in `crates/astro-up-core/tests/config/store_test.rs`: test ConfigStore CRUD: set a key, get it, list all, reset it, verify deleted. Test auto-create of table on fresh connection. (FR-013, FR-015)
-- [ ] T021 [US2] Add integration test for validation on set: call `config_set` with `network.timeout = "0s"` (zero duration), assert garde validation error. Call with unknown key `"nonexistent.field"`, assert error listing valid keys.
+- [x] T015 [US2] Implement `config_set(store: &ConfigStore, config: &AppConfig, key: &str, value: &str) -> Result<()>` in `crates/astro-up-core/src/config/api.rs`: validate key exists in `KNOWN_KEYS`, parse value to target type, build temporary AppConfig with the change, run garde validation, persist via `store.set()`.
+- [x] T016 [P] [US2] Implement `config_get(store: &ConfigStore, config: &AppConfig, key: &str) -> Result<String>` in `crates/astro-up-core/src/config/api.rs`: return stored value if present, otherwise format the default value from AppConfig. Validate key exists in `KNOWN_KEYS`.
+- [x] T017 [P] [US2] Implement `config_list(config: &AppConfig, stored: &[(String, String)]) -> Vec<(String, String, bool)>` in `crates/astro-up-core/src/config/api.rs`: return all keys with effective values and a flag indicating whether the value is the default or stored override.
+- [x] T018 [P] [US2] Implement `config_reset(store: &ConfigStore, key: &str) -> Result<()>` in `crates/astro-up-core/src/config/api.rs`: validate key, call `store.reset(key)`. No-op if key was never set.
+- [x] T019 [US2] Add integration test in `crates/astro-up-core/tests/config/api_test.rs`: set `network.timeout` to `60s`, get it back, assert `60s`. List all settings, assert timeout shows as overridden. Reset timeout, get again, assert default `30s`. (SC-007)
+- [x] T020 [P] [US2] Add integration test in `crates/astro-up-core/tests/config/store_test.rs`: test ConfigStore CRUD: set a key, get it, list all, reset it, verify deleted. Test auto-create of table on fresh connection. (FR-013, FR-015)
+- [x] T021 [US2] Add integration test for validation on set: call `config_set` with `network.timeout = "0s"` (zero duration), assert garde validation error. Call with unknown key `"nonexistent.field"`, assert error listing valid keys.
 
 **Checkpoint**: Config API works end-to-end with SQLite persistence. SC-004, SC-007 pass.
 
@@ -73,7 +73,7 @@
 
 **Independent Test**: Store `logging.level = warn` in SQLite, call `load_config` with CLI override `("logging.level", "debug")`, assert level is Debug.
 
-- [ ] T022 [US3] Add integration test in `crates/astro-up-core/tests/config/layering_test.rs`: set `logging.level` to `warn` in SQLite, call `load_config` with CLI override `("logging.level", "debug")`, assert Debug wins. Remove CLI override, assert SQLite `warn` wins. Reset SQLite, assert default `info` wins. (SC-006)
+- [x] T022 [US3] Add integration test in `crates/astro-up-core/tests/config/layering_test.rs`: set `logging.level` to `warn` in SQLite, call `load_config` with CLI override `("logging.level", "debug")`, assert Debug wins. Remove CLI override, assert SQLite `warn` wins. Reset SQLite, assert default `info` wins. (SC-006)
 
 **Checkpoint**: 3-layer precedence verified. SC-006 passes.
 
@@ -83,11 +83,11 @@
 
 **Purpose**: Error types, edge cases, final quality checks
 
-- [ ] T023 Add edge case tests in `crates/astro-up-core/tests/config/edge_cases_test.rs`: `config get` on valid key never set → returns default; `config reset` on key never set → no error; `config set` with wrong type (`auto_check = "42"`) → type error; `config list` with no stored settings → all defaults; corrupt SQLite file (write garbage bytes to .db) → `load_config` recovers with defaults, renames corrupt file to `*.corrupt`, creates fresh DB.
-- [ ] T024 [P] Add `config::Error` variants to `crates/astro-up-core/src/error.rs`: `ConfigValidation(garde::Report)`, `ConfigUnknownKey(String)`, `ConfigParse { key: String, expected: String, got: String }`, `ConfigStore(rusqlite::Error)`. Wire into API functions.
-- [ ] T025 Run `cargo clippy -p astro-up-core -- -D warnings` and fix any warnings
-- [ ] T026 Run `cargo test -p astro-up-core` and verify all tests pass
-- [ ] T027 Run `just check` to verify workspace-wide quality gates still pass
+- [x] T023 Add edge case tests in `crates/astro-up-core/tests/config/edge_cases_test.rs`: `config get` on valid key never set → returns default; `config reset` on key never set → no error; `config set` with wrong type (`auto_check = "42"`) → type error; `config list` with no stored settings → all defaults; corrupt SQLite file (write garbage bytes to .db) → `load_config` recovers with defaults, renames corrupt file to `*.corrupt`, creates fresh DB.
+- [x] T024 [P] Add `config::Error` variants to `crates/astro-up-core/src/error.rs`: `ConfigValidation(garde::Report)`, `ConfigUnknownKey(String)`, `ConfigParse { key: String, expected: String, got: String }`, `ConfigStore(rusqlite::Error)`. Wire into API functions.
+- [x] T025 Run `cargo clippy -p astro-up-core -- -D warnings` and fix any warnings
+- [x] T026 Run `cargo test -p astro-up-core` and verify all tests pass
+- [x] T027 Run `just check` to verify workspace-wide quality gates still pass
 
 ---
 
