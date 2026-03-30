@@ -98,6 +98,19 @@ expression: events
     }
   },
   {
+    "type": "install_failed",
+    "data": {
+      "id": "test",
+      "error": "installer exited with code 1"
+    }
+  },
+  {
+    "type": "install_reboot_required",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
     "type": "manual_download_required",
     "data": {
       "id": "test",

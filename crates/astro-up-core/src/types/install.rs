@@ -103,4 +103,7 @@ pub struct InstallConfig {
     pub switches: Option<InstallerSwitches>,
     #[serde(default)]
     pub known_exit_codes: HashMap<String, KnownExitCode>,
+    /// Per-manifest timeout override. Default: 600s (10 min). Valid range: 10s-3600s.
+    #[serde(default)]
+    pub timeout: Option<std::time::Duration>,
 }

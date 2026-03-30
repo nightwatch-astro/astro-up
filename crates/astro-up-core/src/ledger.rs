@@ -25,6 +25,8 @@ pub struct LedgerEntry {
     pub recorded_at: DateTime<Utc>,
     #[serde(default)]
     pub notes: Option<String>,
+    #[serde(default)]
+    pub install_path: Option<std::path::PathBuf>,
 }
 
 #[cfg(test)]
@@ -39,6 +41,7 @@ mod tests {
             source: LedgerSource::Acknowledged,
             recorded_at: Utc::now(),
             notes: Some("User confirmed via USB update tool".into()),
+            install_path: Some(std::path::PathBuf::from("C:\\Program Files\\ZWO")),
         };
 
         let json = serde_json::to_string(&entry).unwrap();

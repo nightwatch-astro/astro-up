@@ -59,6 +59,13 @@ pub enum Event {
     InstallComplete {
         id: String,
     },
+    InstallFailed {
+        id: String,
+        error: String,
+    },
+    InstallRebootRequired {
+        id: String,
+    },
     ManualDownloadRequired {
         id: String,
         url: String,
@@ -139,6 +146,11 @@ mod tests {
             Event::RestoreComplete { id: "test".into() },
             Event::InstallStarted { id: "test".into() },
             Event::InstallComplete { id: "test".into() },
+            Event::InstallFailed {
+                id: "test".into(),
+                error: "installer exited with code 1".into(),
+            },
+            Event::InstallRebootRequired { id: "test".into() },
             Event::ManualDownloadRequired {
                 id: "test".into(),
                 url: "https://example.com".into(),

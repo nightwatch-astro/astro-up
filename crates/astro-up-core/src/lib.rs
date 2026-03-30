@@ -5,6 +5,7 @@ pub mod detect;
 pub mod download;
 pub mod error;
 pub mod events;
+pub mod install;
 pub mod ledger;
 pub mod metrics;
 pub mod release;
