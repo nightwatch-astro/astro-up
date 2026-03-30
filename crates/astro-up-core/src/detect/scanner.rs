@@ -54,7 +54,7 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         let packages = self.packages.list_all()?;
 
         let mut results = Vec::with_capacity(packages.len());
-        let errors = Vec::new();
+        let mut errors = Vec::new();
 
         for pkg in &packages {
             let Some(ref detection_config) = pkg.detection else {
@@ -72,6 +72,15 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
             }
 
             let result = run_chain(detection_config, &self.resolver).await;
+
+            // Report per-package errors for Unavailable results
+            if let DetectionResult::Unavailable { ref reason } = result {
+                errors.push(crate::detect::ScanError {
+                    package_id: pkg.id.clone(),
+                    method: detection_config.method.clone(),
+                    error: reason.clone(),
+                });
+            }
 
             // Cache the result
             self.cache.insert(pkg.id.clone(), result.clone());
