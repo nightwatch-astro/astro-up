@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumIter, EnumString};
+use strum::{Display, EnumIter, EnumString, EnumTable};
 
 use super::backup::BackupConfig;
 use super::checkver::CheckverConfig;
@@ -23,6 +23,7 @@ pub enum SoftwareType {
 
 #[derive(
     Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString, EnumIter,
+    EnumTable,
 )]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
