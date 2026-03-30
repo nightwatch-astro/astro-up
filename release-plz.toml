@@ -1,24 +1,12 @@
 [workspace]
-publish = true
+publish = false
 git_tag_enable = true
 git_release_enable = true
 git_release_draft = false
-publish_timeout = "30m"
 semver_check = false
 features_always_increment_minor = true
 dependencies_update = true
 pr_labels = ["release"]
-
-[[package]]
-name = "astro-up-core"
-
-[[package]]
-name = "astro-up-cli"
-publish = false
-
-[[package]]
-name = "astro-up-gui"
-publish = false
 
 [changelog]
 commit_parsers = [
