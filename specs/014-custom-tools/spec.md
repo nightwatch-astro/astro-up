@@ -2,7 +2,8 @@
 
 **Feature Branch**: `014-custom-tools`
 **Created**: 2026-03-29
-**Status**: Draft
+**Status**: Deferred
+**Deferred Reason**: Deferred. Will include lightweight GitHub provider (absorbing spec 008) when implemented
 **Project**: Rust Migration
 **Project Number**: 1
 **Input**: Migration plan Spec 013 — add/remove user-defined tools from GitHub URLs
