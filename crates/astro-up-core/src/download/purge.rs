@@ -9,7 +9,7 @@ use crate::error::CoreError;
 /// Skips `.part` files (in-progress downloads). Returns the number of files
 /// deleted and bytes reclaimed. When `max_age_days` is 0, purging is disabled
 /// and no files are deleted.
-pub async fn purge(download_dir: &Path, max_age_days: u32) -> Result<PurgeResult, CoreError> {
+pub(crate) async fn purge(download_dir: &Path, max_age_days: u32) -> Result<PurgeResult, CoreError> {
     if max_age_days == 0 {
         return Ok(PurgeResult {
             files_deleted: 0,

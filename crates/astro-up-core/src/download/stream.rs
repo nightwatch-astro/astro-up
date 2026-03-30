@@ -72,7 +72,7 @@ pub(crate) async fn stream_download(
                 // Validate .part size against server Content-Range
                 let server_reports_valid = if let Some(content_range) = probe.headers().get("Content-Range") {
                     // Format: bytes START-END/TOTAL
-                    if let Some(total_str) = content_range.to_str().ok().and_then(|s| s.split('/').last()) {
+                    if let Some(total_str) = content_range.to_str().ok().and_then(|s| s.split('/').next_back()) {
                         if let Ok(total) = total_str.parse::<u64>() {
                             part_size <= total
                         } else {
@@ -301,7 +301,7 @@ fn available_disk_space(path: &Path) -> Option<u64> {
         let mount = disk.mount_point();
         if path.starts_with(mount) {
             let mount_len = mount.as_os_str().len();
-            if best_match.is_none() || mount_len > best_match.unwrap().0 {
+            if best_match.is_none_or(|(len, _)| mount_len > len) {
                 best_match = Some((mount_len, disk.available_space()));
             }
         }

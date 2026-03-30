@@ -1,5 +1,5 @@
 pub mod client;
-pub mod purge;
+pub(crate) mod purge;
 pub mod stream;
 pub mod types;
 
