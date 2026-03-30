@@ -23,8 +23,8 @@ pub async fn detect(config: &DetectionConfig) -> DetectionResult {
 
 #[cfg(windows)]
 fn detect_windows(config: &DetectionConfig) -> DetectionResult {
-    use winreg::enums::*;
     use winreg::RegKey;
+    use winreg::enums::*;
 
     // Check ASCOM Platform is installed and version >= 7
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
@@ -34,7 +34,11 @@ fn detect_windows(config: &DetectionConfig) -> DetectionResult {
     };
 
     if let Ok(version_str) = platform_key.get_value::<String, _>("PlatformVersion") {
-        if let Some(major) = version_str.split('.').next().and_then(|s| s.parse::<u32>().ok()) {
+        if let Some(major) = version_str
+            .split('.')
+            .next()
+            .and_then(|s| s.parse::<u32>().ok())
+        {
             if major < 7 {
                 return DetectionResult::Unavailable {
                     reason: format!("ASCOM Platform {version_str} < 7 (unsupported)"),

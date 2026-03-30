@@ -4,8 +4,8 @@ use chrono::Utc;
 use tracing::debug;
 
 use crate::detect::{
-    run_chain, DetectionCache, DetectionError, DetectionResult, PackageDetection, PathResolver,
-    ScanResult,
+    DetectionCache, DetectionError, DetectionResult, PackageDetection, PathResolver, ScanResult,
+    run_chain,
 };
 use crate::ledger::LedgerEntry;
 use crate::types::{Software, Version};
@@ -22,8 +22,11 @@ pub trait PackageSource {
 /// Will be implemented by the ledger/storage module when available.
 pub trait LedgerStore {
     fn list_acknowledged(&self) -> Result<Vec<LedgerEntry>, DetectionError>;
-    fn upsert_acknowledged(&self, package_id: &str, version: &Version)
-        -> Result<(), DetectionError>;
+    fn upsert_acknowledged(
+        &self,
+        package_id: &str,
+        version: &Version,
+    ) -> Result<(), DetectionError>;
     fn remove_acknowledged(&self, package_id: &str) -> Result<(), DetectionError>;
 }
 
@@ -103,8 +106,7 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         // Upsert installed packages
         for pd in results {
             if let DetectionResult::Installed { ref version, .. } = pd.result {
-                self.ledger
-                    .upsert_acknowledged(&pd.package_id, version)?;
+                self.ledger.upsert_acknowledged(&pd.package_id, version)?;
             }
         }
 
@@ -145,9 +147,7 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
 mod tests {
     use super::*;
     use crate::ledger::LedgerSource;
-    use crate::types::{
-        Category, DetectionConfig, DetectionMethod, SoftwareType,
-    };
+    use crate::types::{Category, DetectionConfig, DetectionMethod, SoftwareType};
 
     struct MockPackages(Vec<Software>);
 

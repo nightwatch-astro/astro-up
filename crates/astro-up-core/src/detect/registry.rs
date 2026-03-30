@@ -23,17 +23,14 @@ pub async fn detect(config: &DetectionConfig) -> DetectionResult {
 
 #[cfg(windows)]
 fn detect_windows(config: &DetectionConfig) -> DetectionResult {
-    use winreg::enums::*;
     use winreg::RegKey;
+    use winreg::enums::*;
 
     let Some(ref key_path) = config.registry_key else {
         return DetectionResult::NotInstalled;
     };
 
-    let value_name = config
-        .registry_value
-        .as_deref()
-        .unwrap_or("DisplayVersion");
+    let value_name = config.registry_value.as_deref().unwrap_or("DisplayVersion");
 
     // Search order: HKLM 64-bit, HKLM 32-bit, HKCU
     let searches = [

@@ -60,10 +60,7 @@ impl PathResolver {
 
         if let Some(dirs) = BaseDirs::new() {
             tokens.insert("user_home", dirs.home_dir().to_string_lossy().into_owned());
-            tokens.insert(
-                "app_data",
-                dirs.config_dir().to_string_lossy().into_owned(),
-            );
+            tokens.insert("app_data", dirs.config_dir().to_string_lossy().into_owned());
             tokens.insert(
                 "local_app_data",
                 dirs.data_local_dir().to_string_lossy().into_owned(),
