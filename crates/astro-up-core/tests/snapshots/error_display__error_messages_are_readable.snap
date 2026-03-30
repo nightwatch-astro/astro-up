@@ -1,9 +1,8 @@
 ---
-source: crates/astro-up-core/src/error.rs
-assertion_line: 138
+source: crates/astro-up-core/tests/error_display.rs
+assertion_line: 69
 expression: "errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(\"\\n\")"
 ---
-software not installed
 checksum mismatch: expected abc123, got def456
 manifest 'nina-app' invalid: missing detection
 installer failed with exit code 1: package_in_use
@@ -14,7 +13,6 @@ installer busy
 package in use by NINA.exe
 already installed: nina-app 3.1.2
 missing dependency: ascom-platform
-unsupported platform
 not found: nonexistent
 version parse failed for 'not-a-version': invalid format
 provider 'github' unavailable: connection refused
