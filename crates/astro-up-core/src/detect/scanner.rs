@@ -63,9 +63,12 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
             };
 
             // Check cache first
-            if let Some(cached) = self.cache.get(&pkg.id) {
+            let id = pkg.id.to_string();
+
+            // Check cache first
+            if let Some(cached) = self.cache.get(&id) {
                 results.push(PackageDetection {
-                    package_id: pkg.id.clone(),
+                    package_id: id,
                     result: cached,
                 });
                 continue;
@@ -76,17 +79,17 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
             // Report per-package errors for Unavailable results
             if let DetectionResult::Unavailable { ref reason } = result {
                 errors.push(crate::detect::ScanError {
-                    package_id: pkg.id.clone(),
+                    package_id: id.clone(),
                     method: detection_config.method.clone(),
                     error: reason.clone(),
                 });
             }
 
             // Cache the result
-            self.cache.insert(pkg.id.clone(), result.clone());
+            self.cache.insert(id.clone(), result.clone());
 
             results.push(PackageDetection {
-                package_id: pkg.id.clone(),
+                package_id: id,
                 result,
             });
         }
@@ -224,8 +227,8 @@ mod tests {
 
     fn test_software(id: &str, detection: Option<DetectionConfig>) -> Software {
         Software {
-            id: id.into(),
-            slug: None,
+            id: id.parse().unwrap(),
+            slug: id.into(),
             name: id.into(),
             software_type: SoftwareType::Application,
             category: Category::Capture,
