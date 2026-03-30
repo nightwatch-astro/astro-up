@@ -77,7 +77,7 @@ A user passes `--verbose` to override the logging level for a single invocation.
 - **FR-009**: System MUST operate with the defaults documented in the Default Values table when no settings have been stored and no CLI flags are provided
 - **FR-011**: System MUST support boolean, integer, string, duration, and path types in config values. Duration input for `config set` MUST accept human-readable strings (e.g., `"24h"`, `"30s"`, `"500ms"`) via `humantime::parse_duration`.
 - **FR-013**: System MUST persist config changes to SQLite via `config_set(key, value)`. Changes MUST survive application restarts. The SQLite database is the same file used by catalog and ledger (single database per app instance).
-- **FR-014**: System MUST provide these core API functions: `config_get(key) -> Result<String>` (returns effective value: stored or default), `config_set(key, value) -> Result<()>` (validates then persists), `config_list() -> Result<Vec<(String, String)>>` (all settings with effective values), `config_reset(key) -> Result<()>` (removes stored override, reverts to default).
+- **FR-014**: System MUST provide these core API functions: `config_get(store, config, key) -> Result<String>` (returns effective value: stored or default), `config_set(store, config, key, value) -> Result<()>` (validates then persists), `config_list(config, stored) -> Vec<(String, String, bool)>` (all settings with effective values and override flag), `config_reset(store, key) -> Result<()>` (removes stored override, reverts to default — no-op if key was never set, accepts any key without validation since reset on unknown key is harmless).
 - **FR-015**: System MUST auto-create the SQLite database and config table on the first `config_set` call. If the database already exists (from catalog/ledger), only create the config table.
 - **FR-016**: Both CLI and GUI MUST use the same core config API (Constitution Principle IV — Thin Tauri Boundary). The config module receives a database path; it does not resolve platform directories itself.
 
@@ -137,8 +137,9 @@ Note: Platform directories are resolved at app startup via `directories::Project
 ## Dependencies
 
 - **Spec 020** (manifest modernization): The default catalog URL (`catalog.db` on GitHub Releases) depends on the manifest repo publishing this artifact.
-- **Specs 010, 013, 016**: Will add config fields to sections defined here. The config system supports this via `#[serde(default)]` on structs.
-- **Specs 015, 016, 017**: CLI and GUI both consume the config API defined here.
+- **Specs 010, 013, 016**: Will add config fields to sections defined here. The config system supports this via `#[serde(default)]` on structs. When those specs are implemented, add fields to `AppConfig` sub-structs — `known_keys()` auto-discovers them.
+- **Specs 015, 016, 017**: CLI and GUI both consume the config API defined here. NOTE: these specs were written against the original TOML-based design and reference `config init`, `config show`, `--config <path>`, and "save to TOML file". They MUST be updated to use `config get/set/list/reset` when implemented.
+- **Path token expansion**: Dropped from this spec during the SQLite pivot. Specs 006 and 013 depend on expanding `{config_dir}`, `{program_dir}`, etc. in manifest paths. This responsibility should move to a shared utility in `astro-up-core` (not config-specific — it's a manifest/detection concern). To be resolved when spec 006 is planned.
 
 ## Iterations
 
