@@ -18,6 +18,9 @@ trait-variant = "0.1"
 semver = { version = "1", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 flume = "0.11"
+garde = { version = "0.22", features = ["derive", "url"] }
+humantime = "2"
+tracing = "0.1"
 astro-up-core = { path = "crates/astro-up-core" }
 insta = { version = "1", features = ["json", "toml"] }
 pretty_assertions = "1"

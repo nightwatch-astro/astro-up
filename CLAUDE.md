@@ -97,6 +97,10 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 ## Active Technologies
 - Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4 (003-core-domain-types)
 - N/A (types only — storage is in catalog/engine specs) (003-core-domain-types)
+- Rust 2024 edition (1.85+) + config 0.15 (layered config), garde 0.22 (validation), humantime-serde 1.1 (durations), directories 6.0 (platform paths), toml 0.9 (raw parsing for unknown key detection — already a dev-dependency) (004-configuration-system)
+- N/A — config is file-based TOML, loaded once at startup (004-configuration-system)
+- Rust 2024 edition (1.85+) + garde 0.22 (validation), humantime 2 (duration parsing), rusqlite (existing — bundled SQLite) (004-configuration-system)
+- SQLite — same database file as catalog and ledger (single .db per app) (004-configuration-system)
 
 ## Recent Changes
 - 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4
