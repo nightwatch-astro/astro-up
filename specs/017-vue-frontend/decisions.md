@@ -1,45 +1,70 @@
 # Decisions Report: 017-vue-frontend
-**Created**: 2026-03-29
-**Mode**: Unattended
+
+**Created**: 2026-03-30
+**Mode**: Unattended, then interactive clarify with user
 
 ## Decisions Made
 
-### D1: No Vue Router — simple ref-based navigation
-**Choice**: `const view = ref<'dashboard' | 'settings' | 'custom'>('dashboard')` with v-if switching.
-**Reasoning**: Three views don't justify a router. No URL-based navigation needed in a desktop app. Simpler state management.
+### D1: PrimeVue 4 as primary component library
+**Choice**: PrimeVue. Best DataTable (virtual scroll, row expansion, selection, context menu). Evaluated Naive UI, Element Plus, Vuetify 3, Quasar, Radix Vue, shadcn-vue — none match PrimeVue's table capabilities.
+**Alternatives rejected**: Quasar (4.5/5 — excellent for desktop but heavier and more opinionated), Naive UI (missing key table features), shadcn-vue (no DataTable at all)
 
-### D2: VueQuery wraps all Tauri calls
-**Choice**: Every Tauri invoke() is wrapped in a VueQuery composable (useQuery/useMutation).
-**Reasoning**: VueQuery handles loading states, error states, caching, and invalidation. Without it, every component would need manual loading/error handling.
+### D2: Pinia from the start
+**Choice**: Use Pinia for client-side state even though the app is simple.
+**Reasoning**: Predictable state management from day one. Avoids refactoring composables into stores later. ~1KB overhead. Stores: FilterState, WizardState, UIPreferences, OperationProgress.
 
-### D3: PrimeVue only — no shadcn-vue or other libraries
-**Choice**: PrimeVue 4 for all UI components.
-**Reasoning**: PrimeVue has DataTable, forms, dialogs, toasts — everything needed. Adding shadcn-vue or Headless UI would create style inconsistencies and increase bundle size.
+### D3: unplugin-icons + Iconify with Lucide primary
+**Choice**: unplugin-icons for tree-shaken icons. Lucide as primary set, mix from others as needed.
+**Reasoning**: Zero base cost, ~200B per icon. Can use Lucide for UI, Phosphor for status, Material for actions — without committing to one set. Superset of standalone icon libraries.
 
-### D4: Status badge colors are semantic, not customizable
-**Choice**: Fixed color mapping — green/blue/orange/red/gray.
-**Reasoning**: Consistent visual language. Users learn the colors once. No need for theme customization in v1.
+## Clarify-Phase Decisions (Interactive)
 
-## Clarify-Phase Decisions
+### C1: Hybrid layout — toolbar filters + separate wizard view
+**Finding**: User discussed Options A (tabs) vs C (toolbar) and preferred a hybrid.
+**Decision**: Main view is a single DataTable with toolbar filter chips (All / Installed / Outdated + Category dropdown + search). No tabs for software states. Setup wizard and settings are separate full-screen views. Toolbar approach keeps everything visible; wizard gets its own space.
 
-### C1: Empty state shows welcome + scan CTA
-**Decision**: Fresh install with no detected software shows a centered welcome message with a prominent "Scan for Software" button. Not an empty table.
+### C2: Two wizard modes — Scan vs Set Up My Rig
+**Finding**: User identified two distinct first-run journeys plus a power user skip.
+**Decision**: First-run welcome screen offers three paths:
+1. "Scan my system" — detect existing software
+2. "Set up my rig" — hardware-based bundle installer (the killer feature)
+3. "Skip" — straight to empty dashboard
 
-### C2: GitHub token input uses password masking
-**Decision**: The Settings form masks the GitHub token by default (dots), with a toggle to reveal. This prevents shoulder-surfing but allows verification.
+"Set up my rig" is also accessible later from the main UI via a "Setup Wizard" menu item.
 
-### C3: No keyboard shortcuts in this spec
-**Decision**: Keyboard shortcuts (Ctrl+U for update, etc.) belong in the Tauri shell spec (016) via tauri-plugin-global-shortcut. The frontend just responds to events.
+### C3: Bundle-based rig setup by use case
+**Finding**: User wanted Ubuntu-style bundle selection (deep sky, planetary, live stacking).
+**Decision**: Wizard flow: select use case → select hardware (multiple per category) → recommended bundle (core apps + ASCOM + hardware drivers) → review → install all. All bundles include ASCOM Platform. Bundle definitions hardcoded in v1 — configurable later.
 
-### C4: Progress overlay, not separate page
-**Decision**: Updates show as an overlay/drawer on top of the dashboard, not a separate view. Users can still see the dashboard while updates run.
+### C4: Multiple hardware per category
+**Finding**: Users control multiple mounts, have separate imaging + guiding cameras.
+**Decision**: Wizard allows adding multiple items per hardware category. Each item maps to its driver package. The bundle includes ALL selected hardware drivers.
+
+### C5: Additional libraries alongside PrimeVue
+**Finding**: User asked about complementary libraries.
+**Decision**: Added to stack:
+- **VueUse** — utility composables (useLocalStorage, useDark, etc.)
+- **@vueuse/motion** — animations for transitions, overlays, list filtering
+- **VeeValidate + Zod** — form validation for settings and wizard
+- **unplugin-icons + Iconify** — tree-shaken icons
+- **Pinia** — client-side state management
+
+### C6: No Vue Router — Pinia-driven view state
+**Decision**: Three views (dashboard, settings, wizard) switched via Pinia store state. No URL routing needed in a desktop app. Simple `v-if` switching.
+
+### C7: Row expansion for package details and actions
+**Decision**: Click a row → expand inline showing: publisher, license, homepage, dependencies, backup status, and action buttons (Install/Update/Backup/Restore/Uninstall). No modal dialogs for package details — keep the list context.
+
+### C8: Bundle recommendations hardcoded in v1
+**Decision**: Use case → bundle mapping is a static data structure in the frontend. Not fetched from the catalog. This is simple and sufficient for ~4 use cases × ~10 core packages. Configurable bundle definitions (community-contributed bundles) deferred.
 
 ## Questions I Would Have Asked
 
-### Q1: Should the dashboard auto-refresh on a timer?
-**My decision**: No auto-refresh. Users click "Check for Updates" explicitly. Background checks (if enabled) update the tray badge, and opening the window triggers a fresh query via VueQuery.
-**Impact if wrong**: Low — VueQuery's staleTime can add auto-refresh later.
+### Q1: Should the wizard remember previous hardware selections?
+**My decision**: Yes — store in Pinia + persist to config. When re-opening the wizard, show previous selections as defaults. Users add new hardware, they shouldn't re-enter everything.
 
-### Q2: Should we support multiple languages (i18n)?
-**My decision**: English only for v1. i18n adds significant complexity (translation files, RTL support). Astro software community is overwhelmingly English-speaking.
-**Impact if wrong**: High if targeting non-English markets. But astrophotography is a niche with English-dominant documentation.
+### Q2: Should the dashboard show a "last scanned" timestamp?
+**My decision**: Yes — subtle text in the toolbar showing "Last scanned: 2 hours ago" with a refresh button. Helps users know how fresh the data is.
+
+### Q3: Should we support drag-and-drop for install order in the wizard?
+**My decision**: No — dependency resolution handles ordering automatically. Users shouldn't need to think about install order. That's the engine's job (spec 012).
