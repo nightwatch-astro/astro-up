@@ -11,89 +11,114 @@
 
 ### User Story 1 - Automated Version Bumps (Priority: P1)
 
-A maintainer merges a PR with conventional commits. release-plz automatically creates a release PR bumping the version in Cargo.toml and updating CHANGELOG.md based on commit history.
+A maintainer merges a PR with conventional commits. release-plz creates a release PR bumping Cargo.toml versions and updating CHANGELOG.md. When the release PR is merged, a GitHub Release is created with the version tag.
 
-**Why this priority**: Automated versioning eliminates manual version management errors.
+**Why this priority**: Automated versioning eliminates manual errors and drives the release pipeline.
 
-**Independent Test**: Merge a `feat:` commit, verify release-plz creates a PR with a minor version bump and changelog entry.
+**Independent Test**: Merge a `feat:` commit, verify release-plz creates a PR with minor bump + changelog.
 
 **Acceptance Scenarios**:
 
-1. **Given** a `feat:` commit is merged, **When** release-plz runs, **Then** a PR is created bumping the minor version
-2. **Given** a `fix:` commit is merged, **When** release-plz runs, **Then** a PR is created bumping the patch version
-3. **Given** the release PR is merged, **When** the release job runs, **Then** a GitHub Release is created with the tag
+1. **Given** a `feat:` commit merged to main, **When** release-plz runs, **Then** a PR is created bumping minor version with changelog
+2. **Given** a `fix:` commit merged, **When** release-plz runs, **Then** patch version bump
+3. **Given** the release PR is merged, **When** the release job runs, **Then** a GitHub Release is created with the version tag
 
 ---
 
 ### User Story 2 - Windows Installer Build (Priority: P2)
 
-When a release is tagged, CI builds the Tauri NSIS installer for Windows, signs the update bundle with Ed25519, and attaches it to the GitHub Release.
+When a release is tagged, CI builds the Tauri NSIS installer for Windows. The installer includes both the GUI app and the CLI binary. The update bundle is signed with Ed25519 for the auto-updater.
 
-**Why this priority**: The installer is the distribution artifact — without it, users can't install.
+**Why this priority**: The installer is the primary distribution artifact.
 
-**Independent Test**: Trigger a release build, verify the NSIS installer is created and attached.
+**Independent Test**: Trigger a release build, verify the NSIS installer is created with both GUI and CLI binaries.
 
 **Acceptance Scenarios**:
 
 1. **Given** a release tag is pushed, **When** CI runs, **Then** a Windows NSIS installer is built via Tauri bundler
-2. **Given** the build completes, **When** signing, **Then** the update bundle is signed with Ed25519 for the auto-updater
-3. **Given** artifacts are ready, **When** publishing, **Then** installer + update bundle + signature are attached to the GitHub Release
+2. **Given** the NSIS installer is built, **When** checking its contents, **Then** both `astro-up.exe` (GUI) and `astro-up-cli.exe` (CLI) are included
+3. **Given** the build completes, **When** signing, **Then** the update bundle is signed with Ed25519
+4. **Given** artifacts are ready, **When** publishing, **Then** installer + update bundle + standalone CLI .exe + Ed25519 signature are attached to the GitHub Release
 
 ---
 
-### User Story 3 - Scoop Bucket Update (Priority: P3)
-
-After a release, the Scoop bucket manifest is automatically updated with the new version, URL, and hash.
-
-**Why this priority**: Scoop users get the update through their package manager.
-
-**Independent Test**: Trigger a release, verify the scoop-bucket repo is updated with correct version and hash.
-
-**Acceptance Scenarios**:
-
-1. **Given** a new release, **When** the bucket update runs, **Then** `astro-up.json` in scoop-bucket is updated with the new version and SHA256
-2. **Given** the bucket update PR is created, **When** CI passes, **Then** it auto-merges
-
----
-
-### User Story 4 - Update Endpoint (Priority: P4)
+### User Story 3 - Update Endpoint (Priority: P3)
 
 A JSON file on GitHub Releases describes the latest version for tauri-plugin-updater. Running apps check this endpoint to discover new versions.
 
-**Why this priority**: The self-update mechanism (spec 016) depends on this endpoint.
+**Why this priority**: The self-update mechanism (spec 016) depends on this.
 
-**Independent Test**: After a release, fetch the update endpoint JSON, verify it contains the correct version and download URL.
+**Independent Test**: After a release, fetch the update endpoint JSON, verify it has correct version and download URL.
 
 **Acceptance Scenarios**:
 
 1. **Given** a new release, **When** the endpoint is published, **Then** it contains version, platform, URL, and Ed25519 signature
 2. **Given** the app checks the endpoint, **When** a newer version exists, **Then** the app offers to update
 
+---
+
+### User Story 4 - Standalone CLI Release (Priority: P4)
+
+The standalone CLI binary is attached to the same GitHub Release for users who want CLI-only (headless servers, scripting, no GUI needed).
+
+**Why this priority**: Power users and CI/CD systems need the CLI without WebView2.
+
+**Independent Test**: Download the standalone CLI .exe from the release, verify it runs without WebView2.
+
+**Acceptance Scenarios**:
+
+1. **Given** a release is published, **When** checking release assets, **Then** `astro-up-cli.exe` is listed separately from the installer
+2. **Given** the CLI .exe is downloaded to a clean machine, **When** run, **Then** it works without WebView2 or Tauri runtime
+
+---
+
+### User Story 5 - crates.io Publish (Priority: P5)
+
+When a release is tagged, the astro-up-core crate is published to crates.io for downstream consumers (nightwatch-esp32, other tools).
+
+**Why this priority**: Other nightwatch-astro projects depend on astro-up-core types.
+
+**Acceptance Scenarios**:
+
+1. **Given** a release tag, **When** the publish job runs, **Then** astro-up-core is published to crates.io via OIDC trusted publishing
+2. **Given** the CLI and GUI crates, **When** publishing, **Then** they are NOT published (application crates, not libraries)
+
 ### Edge Cases
 
-- Build fails for the release tag: The release is created but without artifacts. Re-trigger the build manually.
-- SignPath.io signing fails: Release proceeds without Authenticode (Ed25519 still applied). Log a warning.
-- Scoop bucket update fails: Non-blocking — users can still download directly from GitHub Releases.
+- Build fails for a release tag: Release is created but without artifacts. Re-trigger manually.
+- Ed25519 signing fails: Block the release. Unsigned update bundles must never be published.
+- crates.io publish fails (e.g., version already exists): Non-blocking for the installer release. Log warning.
+- Release-plz creates a PR but CI fails on the PR: Fix the issue before merging the release PR.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: System MUST use release-plz for automated version bumps and changelog generation
-- **FR-002**: System MUST build Windows NSIS installer via Tauri bundler on release tags
-- **FR-003**: System MUST sign update bundles with Ed25519 for tauri-plugin-updater
-- **FR-004**: System MUST publish installer + update bundle + signature to GitHub Releases
-- **FR-005**: System MUST generate a JSON update endpoint for tauri-plugin-updater
-- **FR-006**: System MUST update the Scoop bucket manifest after each release
-- **FR-007**: System MUST publish Rust crates to crates.io via trusted OIDC publishing
-- **FR-008**: System MUST support SignPath.io Authenticode signing (deferred — conditional on SignPath account)
-- **FR-009**: System MUST use GitHub App token (not PAT) for cross-repo operations (Scoop bucket update)
+- **FR-002**: System MUST build a Windows NSIS installer via Tauri bundler on release tags
+- **FR-003**: System MUST bundle both GUI and CLI binaries in the NSIS installer
+- **FR-004**: System MUST sign the update bundle with Ed25519 for tauri-plugin-updater
+- **FR-005**: System MUST publish an update endpoint JSON on the GitHub Release
+- **FR-006**: System MUST attach a standalone CLI binary to the GitHub Release
+- **FR-007**: System MUST publish astro-up-core to crates.io via OIDC trusted publishing
+- **FR-008**: System MUST NOT publish application crates (CLI, GUI) to crates.io
+- **FR-009**: System MUST use the nightwatch-astro GitHub App token for cross-repo operations
+- **FR-010**: System MUST reuse the shared rust-release workflow from nightwatch-astro/.github where applicable
+
+### Release Artifacts
+
+| Artifact | Description |
+|----------|-------------|
+| `astro-up-setup-{version}.exe` | NSIS installer (GUI + CLI) |
+| `astro-up-cli-{version}.exe` | Standalone CLI binary |
+| `astro-up-update-{version}.msi.zip` | Tauri update bundle (for auto-updater) |
+| `astro-up-update-{version}.msi.zip.sig` | Ed25519 signature |
+| `update.json` | Update endpoint for tauri-plugin-updater |
 
 ### Key Entities
 
-- **ReleaseArtifact**: NSIS installer (.exe), update bundle (.msi.zip), Ed25519 signature (.sig)
-- **UpdateEndpoint**: JSON describing latest version per platform, download URL, and signature
-- **ScoopManifest**: JSON in scoop-bucket repo with version, URL, and hash
+- **ReleaseArtifact**: Installer, CLI binary, update bundle, signature
+- **UpdateEndpoint**: JSON with version, platform, download URL, Ed25519 signature
 
 ## Success Criteria *(mandatory)*
 
@@ -101,13 +126,18 @@ A JSON file on GitHub Releases describes the latest version for tauri-plugin-upd
 
 - **SC-001**: Release pipeline from tag to published artifacts completes in under 15 minutes
 - **SC-002**: Update endpoint is available within 5 minutes of release
-- **SC-003**: Scoop bucket is updated within 10 minutes of release
-- **SC-004**: crates.io publish succeeds without manual token management (OIDC)
+- **SC-003**: crates.io publish succeeds without manual token management (OIDC)
+- **SC-004**: NSIS installer contains both GUI and CLI binaries
+
+## Deferred
+
+- **SignPath.io Authenticode signing** — deferred until tool is published. Without it, Windows SmartScreen warns on first install.
+- **Scoop bucket update** — deferred. When implemented, auto-updates `astro-up.json` in scoop-bucket repo.
 
 ## Assumptions
 
-- GitHub Actions is the CI platform for release builds
-- Windows runner required for Tauri NSIS build
-- Ed25519 key pair stored as GitHub Actions secrets
-- SignPath.io integration is deferred (issue #21 in old repo)
-- Depends on: spec 018 (CI infrastructure), spec 016 (Tauri shell for build config)
+- GitHub Actions Windows runner for Tauri NSIS build
+- Ed25519 key pair stored as GitHub Actions secrets (separate from catalog minisign key)
+- release-plz + shared workflow from nightwatch-astro/.github is the foundation
+- Only astro-up-core is published to crates.io (library crate). CLI and GUI are application crates.
+- Depends on: spec 018 (CI infrastructure), spec 016 (Tauri build config)
