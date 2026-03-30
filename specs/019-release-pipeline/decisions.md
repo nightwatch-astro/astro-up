@@ -39,8 +39,9 @@
 **Finding**: User confirmed — waiting until tool is published.
 **Decision**: Without Authenticode, SmartScreen will warn on first install. Acceptable for early adopters. SignPath integration is a future task.
 
-### C5: Only astro-up-core published to crates.io
-**Decision**: Library crate only. CLI and GUI are application crates — not useful as dependencies. Publishing them would just pollute the crates.io namespace.
+### C5: No crates.io publishing — all crates are internal
+**Finding**: User pointed out nobody outside nightwatch-astro would use astro-up-core.
+**Decision**: Drop crates.io publish entirely. All three crates (core, CLI, GUI) are internal to the workspace. Consumers reference via `path =` in the same workspace, not via crates.io. Removes OIDC token setup and publish step.
 
 ## Questions I Would Have Asked
 

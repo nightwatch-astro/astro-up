@@ -100,8 +100,7 @@ When a release is tagged, the astro-up-core crate is published to crates.io for 
 - **FR-004**: System MUST sign the update bundle with Ed25519 for tauri-plugin-updater
 - **FR-005**: System MUST publish an update endpoint JSON on the GitHub Release
 - **FR-006**: System MUST attach a standalone CLI binary to the GitHub Release
-- **FR-007**: System MUST publish astro-up-core to crates.io via OIDC trusted publishing
-- **FR-008**: System MUST NOT publish application crates (CLI, GUI) to crates.io
+- **FR-007**: System MUST NOT publish any crates to crates.io — all crates are internal to the workspace
 - **FR-009**: System MUST use the nightwatch-astro GitHub App token for cross-repo operations
 - **FR-010**: System MUST reuse the shared rust-release workflow from nightwatch-astro/.github where applicable
 
@@ -126,8 +125,7 @@ When a release is tagged, the astro-up-core crate is published to crates.io for 
 
 - **SC-001**: Release pipeline from tag to published artifacts completes in under 15 minutes
 - **SC-002**: Update endpoint is available within 5 minutes of release
-- **SC-003**: crates.io publish succeeds without manual token management (OIDC)
-- **SC-004**: NSIS installer contains both GUI and CLI binaries
+- **SC-003**: NSIS installer contains both GUI and CLI binaries
 
 ## Deferred
 
