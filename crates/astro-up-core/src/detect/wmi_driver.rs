@@ -28,7 +28,7 @@ async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
     use serde::Deserialize;
 
     #[derive(Deserialize, Debug)]
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, dead_code)]
     struct PnPSignedDriver {
         DriverProviderName: Option<String>,
         DeviceClass: Option<String>,
