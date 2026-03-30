@@ -89,7 +89,7 @@ impl SqliteCatalogReader {
              FROM packages WHERE id = ?1",
         )?;
 
-        stmt.query_row(params![id.as_ref()], |row| Ok(row_to_package(row)))
+        stmt.query_row(params![id.as_ref()], row_to_package)
             .map_err(|_| CoreError::NotFound {
                 input: id.to_string(),
             })
@@ -111,7 +111,7 @@ impl SqliteCatalogReader {
             .query_map(params![query], |row| {
                 let rank: f64 = row.get(13)?;
                 Ok(SearchResult {
-                    package: row_to_package_at(row, 0),
+                    package: row_to_package_at(row, 0)?,
                     rank,
                 })
             })?
@@ -146,7 +146,7 @@ impl SqliteCatalogReader {
             .collect();
 
         let results = stmt
-            .query_map(params.as_slice(), |row| Ok(row_to_package(row)))?
+            .query_map(params.as_slice(), row_to_package)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(results)
@@ -168,7 +168,7 @@ impl SqliteCatalogReader {
         )?;
 
         let results = stmt
-            .query_map(params![id.as_ref()], |row| Ok(row_to_version(row)))?
+            .query_map(params![id.as_ref()], row_to_version)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(results)
@@ -186,7 +186,7 @@ impl SqliteCatalogReader {
         )?;
 
         let result = stmt
-            .query_row(params![id.as_ref()], |row| Ok(row_to_version(row)))
+            .query_row(params![id.as_ref()], row_to_version)
             .optional()?;
 
         Ok(result)
@@ -202,59 +202,59 @@ impl SqliteCatalogReader {
 // Row mapping helpers
 // ---------------------------------------------------------------------------
 
-fn row_to_package(row: &rusqlite::Row<'_>) -> PackageSummary {
+fn row_to_package(row: &rusqlite::Row<'_>) -> rusqlite::Result<PackageSummary> {
     row_to_package_at(row, 0)
 }
 
-fn row_to_package_at(row: &rusqlite::Row<'_>, offset: usize) -> PackageSummary {
-    let id_str: String = row.get(offset).unwrap();
-    let category_str: String = row.get(offset + 6).unwrap();
-    let type_str: String = row.get(offset + 7).unwrap();
-    let tags_json: Option<String> = row.get(offset + 10).unwrap();
-    let aliases_json: Option<String> = row.get(offset + 11).unwrap();
-    let deps_json: Option<String> = row.get(offset + 12).unwrap();
+fn row_to_package_at(row: &rusqlite::Row<'_>, offset: usize) -> rusqlite::Result<PackageSummary> {
+    let id_str: String = row.get(offset)?;
+    let category_str: String = row.get(offset + 6)?;
+    let type_str: String = row.get(offset + 7)?;
+    let tags_json: Option<String> = row.get(offset + 10)?;
+    let aliases_json: Option<String> = row.get(offset + 11)?;
+    let deps_json: Option<String> = row.get(offset + 12)?;
 
-    PackageSummary {
+    Ok(PackageSummary {
         id: id_str
             .parse()
             .unwrap_or_else(|_| PackageId::new("unknown").unwrap()),
-        manifest_version: row.get::<_, u32>(offset + 1).unwrap(),
-        name: row.get(offset + 2).unwrap(),
-        description: row.get(offset + 3).unwrap(),
-        publisher: row.get(offset + 4).unwrap(),
-        homepage: row.get(offset + 5).unwrap(),
+        manifest_version: row.get::<_, u32>(offset + 1)?,
+        name: row.get(offset + 2)?,
+        description: row.get(offset + 3)?,
+        publisher: row.get(offset + 4)?,
+        homepage: row.get(offset + 5)?,
         category: category_str
             .parse()
             .unwrap_or(crate::types::Category::Capture),
         software_type: type_str
             .parse()
             .unwrap_or(crate::types::SoftwareType::Application),
-        slug: row.get(offset + 8).unwrap(),
-        license: row.get(offset + 9).unwrap(),
+        slug: row.get(offset + 8)?,
+        license: row.get(offset + 9)?,
         tags: parse_json_vec(&tags_json),
         aliases: parse_json_vec(&aliases_json),
         dependencies: parse_json_vec(&deps_json),
-    }
+    })
 }
 
-fn row_to_version(row: &rusqlite::Row<'_>) -> VersionEntry {
-    let pid_str: String = row.get(0).unwrap();
-    let discovered_str: String = row.get(4).unwrap();
-    let pre: i32 = row.get(6).unwrap();
+fn row_to_version(row: &rusqlite::Row<'_>) -> rusqlite::Result<VersionEntry> {
+    let pid_str: String = row.get(0)?;
+    let discovered_str: String = row.get(4)?;
+    let pre: i32 = row.get(6)?;
 
-    VersionEntry {
+    Ok(VersionEntry {
         package_id: pid_str
             .parse()
             .unwrap_or_else(|_| PackageId::new("unknown").unwrap()),
-        version: row.get(1).unwrap(),
-        url: row.get(2).unwrap(),
-        sha256: row.get(3).unwrap(),
+        version: row.get(1)?,
+        url: row.get(2)?,
+        sha256: row.get(3)?,
         discovered_at: DateTime::parse_from_rfc3339(&discovered_str)
             .map(|dt| dt.with_timezone(&chrono::Utc))
             .unwrap_or_default(),
-        release_notes_url: row.get(5).unwrap(),
+        release_notes_url: row.get(5)?,
         pre_release: pre != 0,
-    }
+    })
 }
 
 fn parse_json_vec(json: &Option<String>) -> Vec<String> {
