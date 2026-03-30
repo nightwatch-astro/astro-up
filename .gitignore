@@ -1,6 +1,8 @@
 # Rust
 /target/
 *.rs.bk
+*.rlib
+*.prof*
 
 # Node
 node_modules/
@@ -9,11 +11,17 @@ frontend/dist/
 # Tauri build artifacts
 crates/astro-up-gui/gen/
 
+# Speckit
+.specify/extensions/.cache/
+.specify/extensions/*/.vscode/
+.specify/extensions/*/.specify/
+
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.iml
 
 # OS
 .DS_Store
@@ -23,5 +31,11 @@ Thumbs.db
 .env*
 !.env.example
 
+# Logs
+*.log
+
 # Serena MCP cache
 .serena/
+
+# Claude Code worktrees
+.claude/worktrees/
