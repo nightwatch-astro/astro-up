@@ -65,7 +65,6 @@ pub async fn discover(
     manifest_patterns: &[(VidPid, String)],
     managed_packages: &std::collections::HashSet<String>,
 ) -> Vec<HardwareMatch> {
-    use serde::Deserialize as _;
     use std::time::Duration;
 
     #[derive(serde::Deserialize, Debug)]
