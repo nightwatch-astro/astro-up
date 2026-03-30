@@ -15,9 +15,9 @@
 
 **Purpose**: Add dependencies and create module skeleton
 
-- [ ] T001 Add `sha2 = "0.10"` and `tokio-util = { version = "0.7", features = ["rt"] }` to `crates/astro-up-core/Cargo.toml`, add `sync` feature to existing `tokio` dependency
-- [ ] T002 Add `wiremock = "0.6"` as dev-dependency to `crates/astro-up-core/Cargo.toml`
-- [ ] T003 Create `crates/astro-up-core/src/download/mod.rs` with `pub mod types; pub mod client; pub mod stream; pub mod purge;` and add `pub mod download;` to `crates/astro-up-core/src/lib.rs`
+- [x] T001 Add `sha2 = "0.10"` and `tokio-util = { version = "0.7", features = ["rt"] }` to `crates/astro-up-core/Cargo.toml`, add `sync` feature to existing `tokio` dependency
+- [x] T002 Add `wiremock = "0.6"` as dev-dependency to `crates/astro-up-core/Cargo.toml`
+- [x] T003 Create `crates/astro-up-core/src/download/mod.rs` with `pub mod types; pub mod client; pub mod stream; pub mod purge;` and add `pub mod download;` to `crates/astro-up-core/src/lib.rs`
 
 ---
 
@@ -25,11 +25,11 @@
 
 **Purpose**: Types, errors, and config changes that all user stories depend on
 
-- [ ] T004 [P] Create download types (`DownloadRequest`, `DownloadResult`, `DownloadProgress`, `PurgeResult`) in `crates/astro-up-core/src/download/types.rs` per data-model.md
-- [ ] T005 [P] Add download error variants to `crates/astro-up-core/src/error.rs`: `DownloadFailed { url, status, reason }`, `DiskSpaceInsufficient { required, available }`, `DownloadInProgress { url }`, `RenameFailed { from, to, cause }`
-- [ ] T006 [P] Add download config fields to `crates/astro-up-core/src/config/model.rs` and `crates/astro-up-core/src/config/defaults.rs`: `connect_timeout: Duration` (default 10s) and `download_speed_limit: u64` (default 0) on `NetworkConfig`, `keep_installers: bool` (default true) and `purge_installers_after_days: u32` (default 30) on `PathsConfig`
-- [ ] T007 Implement `build_client(config: &NetworkConfig) -> reqwest::Client` in `crates/astro-up-core/src/download/client.rs` — configure proxy, connect_timeout, read timeout, redirect policy (10 hops), user-agent, rustls
-- [ ] T008 Implement `DownloadManager` struct with `new(config, event_tx)` constructor and `AtomicBool` sequential download lock in `crates/astro-up-core/src/download/mod.rs`
+- [x] T004 [P] Create download types (`DownloadRequest`, `DownloadResult`, `DownloadProgress`, `PurgeResult`) in `crates/astro-up-core/src/download/types.rs` per data-model.md
+- [x] T005 [P] Add download error variants to `crates/astro-up-core/src/error.rs`: `DownloadFailed { url, status, reason }`, `DiskSpaceInsufficient { required, available }`, `DownloadInProgress { url }`, `RenameFailed { from, to, cause }`
+- [x] T006 [P] Add download config fields to `crates/astro-up-core/src/config/model.rs` and `crates/astro-up-core/src/config/defaults.rs`: `connect_timeout: Duration` (default 10s) and `download_speed_limit: u64` (default 0) on `NetworkConfig`, `keep_installers: bool` (default true) and `purge_installers_after_days: u32` (default 30) on `PathsConfig`
+- [x] T007 Implement `build_client(config: &NetworkConfig) -> reqwest::Client` in `crates/astro-up-core/src/download/client.rs` — configure proxy, connect_timeout, read timeout, redirect policy (10 hops), user-agent, rustls
+- [x] T008 Implement `DownloadManager` struct with `new(config, event_tx)` constructor and `AtomicBool` sequential download lock in `crates/astro-up-core/src/download/mod.rs`
 
 **Checkpoint**: Foundation ready — all types, errors, config, and manager skeleton in place
 
