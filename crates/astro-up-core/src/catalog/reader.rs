@@ -23,11 +23,20 @@ pub struct SqliteCatalogReader {
 
 impl SqliteCatalogReader {
     /// Open a catalog database in read-only mode and verify schema version.
+    #[tracing::instrument(skip_all, fields(catalog = %path.display()))]
     pub fn open(path: &Path) -> Result<Self, CoreError> {
         let conn = Connection::open_with_flags(
             path,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         )?;
+
+        // Check integrity
+        let integrity: String = conn
+            .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+            .map_err(|_| CoreError::CatalogCorrupted)?;
+        if integrity != "ok" {
+            return Err(CoreError::CatalogCorrupted);
+        }
 
         // Check schema version
         let meta = Self::read_meta(&conn)?;
@@ -80,11 +89,10 @@ impl SqliteCatalogReader {
              FROM packages WHERE id = ?1",
         )?;
 
-        Ok(stmt
-            .query_row(params![id.as_ref()], |row| Ok(row_to_package(row)))
+        stmt.query_row(params![id.as_ref()], |row| Ok(row_to_package(row)))
             .map_err(|_| CoreError::NotFound {
                 input: id.to_string(),
-            })?)
+            })
     }
 
     /// Full-text search across name, description, tags, aliases, publisher.

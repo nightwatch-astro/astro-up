@@ -12,6 +12,7 @@ pub const MINISIGN_PUBLIC_KEY: &str =
 ///
 /// Reads both files into memory (catalog is <1MB) and verifies using
 /// the embedded public key.
+#[tracing::instrument(skip_all, fields(catalog = %catalog_path.display()))]
 pub fn verify_catalog(catalog_path: &Path, sig_path: &Path) -> Result<(), CoreError> {
     verify_catalog_with_key(catalog_path, sig_path, MINISIGN_PUBLIC_KEY)
 }

@@ -201,4 +201,14 @@ mod reader_tests {
         let pkg = reader.resolve(&id).unwrap();
         assert_eq!(pkg.dependencies, vec!["ascom-platform"]);
     }
+
+    #[test]
+    fn corrupt_catalog_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let corrupt = dir.path().join("catalog.db");
+        // Write garbage — not a valid SQLite file
+        std::fs::write(&corrupt, b"this is not sqlite").unwrap();
+        let result = SqliteCatalogReader::open(&corrupt);
+        assert!(result.is_err());
+    }
 }

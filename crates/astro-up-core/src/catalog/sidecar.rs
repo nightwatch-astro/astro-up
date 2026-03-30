@@ -18,7 +18,7 @@ impl CatalogSidecar {
         match std::fs::read_to_string(path) {
             Ok(contents) => {
                 let sidecar: Self = serde_json::from_str(&contents).map_err(|e| {
-                    std::io::Error::new(std::io::ErrorKind::InvalidData, e)
+                    std::io::Error::other(e)
                 })?;
                 Ok(Some(sidecar))
             }
@@ -30,7 +30,7 @@ impl CatalogSidecar {
     /// Save sidecar to disk.
     pub fn save(&self, path: &Path) -> Result<(), std::io::Error> {
         let json = serde_json::to_string_pretty(self)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .map_err(std::io::Error::other)?;
         std::fs::write(path, json)
     }
 
