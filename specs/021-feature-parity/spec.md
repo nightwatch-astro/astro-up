@@ -2,7 +2,8 @@
 
 **Feature Branch**: `021-feature-parity`
 **Created**: 2026-03-29
-**Status**: Draft
+**Status**: Dropped
+**Dropped Reason**: No live users to migrate. Go client was never publicly released and is now archived. The Rust version is the first release — parity verification is unnecessary. End-to-end testing coverage is handled by spec 018 (CI Pipeline).
 **Project**: Rust Migration
 **Project Number**: 1
 **Input**: Migration plan Spec 020 — verify Rust matches Go feature parity
