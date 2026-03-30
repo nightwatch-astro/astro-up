@@ -12,10 +12,10 @@
 
 **Purpose**: Add dependencies and create module structure
 
-- [ ] T001 Add workspace dependency to `Cargo.toml`: `garde = { version = "0.22", features = ["derive", "url"] }`, `humantime = "2"`
-- [ ] T002 Add dependencies to `crates/astro-up-core/Cargo.toml`: `garde.workspace = true`, `humantime.workspace = true`. Ensure `rusqlite` is already present.
-- [ ] T003 Create module structure: `crates/astro-up-core/src/config/mod.rs`, `config/model.rs`, `config/defaults.rs`, `config/store.rs`, `config/api.rs` as files with module declarations. Add `pub mod config` to `crates/astro-up-core/src/lib.rs`.
-- [ ] T004 Create test module structure: `crates/astro-up-core/tests/config/mod.rs` with submodule declarations.
+- [x] T001 Add workspace dependency to `Cargo.toml`: `garde = { version = "0.22", features = ["derive", "url"] }`, `humantime = "2"`
+- [x] T002 Add dependencies to `crates/astro-up-core/Cargo.toml`: `garde.workspace = true`, `humantime.workspace = true`. Ensure `rusqlite` is already present.
+- [x] T003 Create module structure: `crates/astro-up-core/src/config/mod.rs`, `config/model.rs`, `config/defaults.rs`, `config/store.rs`, `config/api.rs` as files with module declarations. Add `pub mod config` to `crates/astro-up-core/src/lib.rs`.
+- [x] T004 Create test module structure: `crates/astro-up-core/tests/config/mod.rs` with submodule declarations.
 
 ---
 
