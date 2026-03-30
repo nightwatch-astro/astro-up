@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use astro_up_core::config::{
-    config_get, config_list, config_reset, config_set, load_config, ConfigStore, PathsConfig,
+    ConfigStore, PathsConfig, config_get, config_list, config_reset, config_set, load_config,
 };
 
 fn test_setup() -> (tempfile::TempDir, PathBuf) {
@@ -72,7 +72,10 @@ fn config_list_shows_overrides() {
     let stored = store.list().unwrap();
     let list = config_list(&config, &stored);
 
-    let timeout_entry = list.iter().find(|(k, _, _)| k == "network.timeout").unwrap();
+    let timeout_entry = list
+        .iter()
+        .find(|(k, _, _)| k == "network.timeout")
+        .unwrap();
     assert_eq!(timeout_entry.1, "60s");
     assert!(timeout_entry.2); // is_overridden
 

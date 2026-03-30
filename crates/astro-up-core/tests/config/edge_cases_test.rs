@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use astro_up_core::config::{
-    config_get, config_list, config_reset, config_set, load_config, ConfigStore, PathsConfig,
+    ConfigStore, PathsConfig, config_get, config_list, config_reset, config_set, load_config,
 };
 
 fn test_paths(dir: &std::path::Path) -> (PathsConfig, PathBuf) {

@@ -59,9 +59,12 @@ async fn fetch_catalog_inner(
         req = req.header("If-None-Match", etag_val);
     }
 
-    let response = req.send().await.map_err(|e| CoreError::CatalogFetchFailed {
-        reason: format!("network error: {e}"),
-    })?;
+    let response = req
+        .send()
+        .await
+        .map_err(|e| CoreError::CatalogFetchFailed {
+            reason: format!("network error: {e}"),
+        })?;
 
     match response.status() {
         StatusCode::NOT_MODIFIED => Ok(FetchOutcome::NotModified),
@@ -131,7 +134,11 @@ fn is_transient(err: &CoreError) -> bool {
 }
 
 /// Convenience: save fetched bytes to disk atomically.
-pub fn save_fetched(catalog_path: &Path, catalog_bytes: &[u8], sig_bytes: &[u8]) -> Result<(), CoreError> {
+pub fn save_fetched(
+    catalog_path: &Path,
+    catalog_bytes: &[u8],
+    sig_bytes: &[u8],
+) -> Result<(), CoreError> {
     let sig_path = super::verify::sig_path_for(catalog_path);
 
     // Write to temp files first, then rename for atomicity

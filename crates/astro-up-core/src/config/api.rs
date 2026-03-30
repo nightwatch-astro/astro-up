@@ -7,11 +7,7 @@ use super::store::ConfigStore;
 use super::{get_field_value, set_field};
 
 /// Get the effective value of a config key (stored override or default).
-pub fn config_get(
-    store: &ConfigStore,
-    config: &AppConfig,
-    key: &str,
-) -> Result<String, CoreError> {
+pub fn config_get(store: &ConfigStore, config: &AppConfig, key: &str) -> Result<String, CoreError> {
     if !config.is_known_key(key) {
         return Err(CoreError::ConfigUnknownKey {
             key: key.to_string(),
@@ -53,10 +49,7 @@ pub fn config_set(
 
 /// List all config keys with their effective values.
 /// Returns `(key, value, is_overridden)` tuples.
-pub fn config_list(
-    config: &AppConfig,
-    stored: &[(String, String)],
-) -> Vec<(String, String, bool)> {
+pub fn config_list(config: &AppConfig, stored: &[(String, String)]) -> Vec<(String, String, bool)> {
     let keys = config.known_keys();
     keys.into_iter()
         .map(|key| {

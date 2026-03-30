@@ -140,8 +140,10 @@ impl SqliteCatalogReader {
         sql.push_str(" ORDER BY name");
 
         let mut stmt = self.conn.prepare(&sql)?;
-        let params: Vec<&dyn rusqlite::types::ToSql> =
-            param_values.iter().map(|s| s as &dyn rusqlite::types::ToSql).collect();
+        let params: Vec<&dyn rusqlite::types::ToSql> = param_values
+            .iter()
+            .map(|s| s as &dyn rusqlite::types::ToSql)
+            .collect();
 
         let results = stmt
             .query_map(params.as_slice(), |row| Ok(row_to_package(row)))?
@@ -213,14 +215,20 @@ fn row_to_package_at(row: &rusqlite::Row<'_>, offset: usize) -> PackageSummary {
     let deps_json: Option<String> = row.get(offset + 12).unwrap();
 
     PackageSummary {
-        id: id_str.parse().unwrap_or_else(|_| PackageId::new("unknown").unwrap()),
+        id: id_str
+            .parse()
+            .unwrap_or_else(|_| PackageId::new("unknown").unwrap()),
         manifest_version: row.get::<_, u32>(offset + 1).unwrap(),
         name: row.get(offset + 2).unwrap(),
         description: row.get(offset + 3).unwrap(),
         publisher: row.get(offset + 4).unwrap(),
         homepage: row.get(offset + 5).unwrap(),
-        category: category_str.parse().unwrap_or(crate::types::Category::Capture),
-        software_type: type_str.parse().unwrap_or(crate::types::SoftwareType::Application),
+        category: category_str
+            .parse()
+            .unwrap_or(crate::types::Category::Capture),
+        software_type: type_str
+            .parse()
+            .unwrap_or(crate::types::SoftwareType::Application),
         slug: row.get(offset + 8).unwrap(),
         license: row.get(offset + 9).unwrap(),
         tags: parse_json_vec(&tags_json),
@@ -235,7 +243,9 @@ fn row_to_version(row: &rusqlite::Row<'_>) -> VersionEntry {
     let pre: i32 = row.get(6).unwrap();
 
     VersionEntry {
-        package_id: pid_str.parse().unwrap_or_else(|_| PackageId::new("unknown").unwrap()),
+        package_id: pid_str
+            .parse()
+            .unwrap_or_else(|_| PackageId::new("unknown").unwrap()),
         version: row.get(1).unwrap(),
         url: row.get(2).unwrap(),
         sha256: row.get(3).unwrap(),

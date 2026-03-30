@@ -12,6 +12,5 @@ pub use manager::CatalogManager;
 pub use reader::SqliteCatalogReader;
 pub use sidecar::CatalogSidecar;
 pub use types::{
-    CatalogFilter, CatalogMeta, FetchResult, PackageId, PackageSummary, SearchResult,
-    VersionEntry,
+    CatalogFilter, CatalogMeta, FetchResult, PackageId, PackageSummary, SearchResult, VersionEntry,
 };

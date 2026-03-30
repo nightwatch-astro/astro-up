@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use astro_up_core::config::{load_config, ConfigStore, PathsConfig};
+use astro_up_core::config::{ConfigStore, PathsConfig, load_config};
 
 fn test_paths(dir: &std::path::Path) -> (PathsConfig, PathBuf) {
     (

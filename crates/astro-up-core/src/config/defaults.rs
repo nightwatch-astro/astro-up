@@ -1,9 +1,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use super::model::{
-    CatalogConfig, LogConfig, LogLevel, NetworkConfig, UpdateConfig,
-};
+use super::model::{CatalogConfig, LogConfig, LogLevel, NetworkConfig, UpdateConfig};
 
 impl Default for CatalogConfig {
     fn default() -> Self {

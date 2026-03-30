@@ -195,7 +195,14 @@ mod tests {
 
     #[test]
     fn valid_package_ids() {
-        for id in &["ab", "nina", "phd2", "ascom-platform", "all-sky-plate-solver", "a1"] {
+        for id in &[
+            "ab",
+            "nina",
+            "phd2",
+            "ascom-platform",
+            "all-sky-plate-solver",
+            "a1",
+        ] {
             assert!(PackageId::new(id).is_ok(), "expected valid: {id}");
         }
     }

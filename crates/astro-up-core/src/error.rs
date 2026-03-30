@@ -70,7 +70,10 @@ pub enum CoreError {
     ConfigValidation(#[from] garde::Report),
 
     #[error("unknown config key {key:?}, valid keys: {}", valid_keys.join(", "))]
-    ConfigUnknownKey { key: String, valid_keys: Vec<String> },
+    ConfigUnknownKey {
+        key: String,
+        valid_keys: Vec<String>,
+    },
 
     #[error("config parse error for {key:?}: expected {expected}, got {got:?}")]
     ConfigParse {
@@ -91,7 +94,9 @@ pub enum CoreError {
     #[error("catalog signature file missing — expected .minisig alongside catalog.db")]
     CatalogSignatureMissing,
 
-    #[error("catalog schema version {version} is not supported (expected {expected}) — please update astro-up")]
+    #[error(
+        "catalog schema version {version} is not supported (expected {expected}) — please update astro-up"
+    )]
     CatalogSchemaUnsupported { version: String, expected: String },
 
     #[error("no catalog available — check your network connection and try again")]
