@@ -107,8 +107,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T021 [US5] Implement `DownloadManager::purge()` in `crates/astro-up-core/src/download/purge.rs`: scan `download_dir` for files (not `.part` files), check each file's mtime against `max_age_days`, delete files older than threshold, return `PurgeResult { files_deleted, bytes_reclaimed }`. Skip when `max_age_days == 0` (disabled)
-- [ ] T022 [US5] Integration test for purge in `crates/astro-up-core/tests/download_purge.rs`: (a) create files in tempdir with varied mtimes (using `filetime` crate or `std::fs::File::set_times`), call purge with 30 days, assert old files deleted and recent files kept, (b) call purge with 0 days — assert no files deleted, (c) verify `.part` files are never purged
+- [x] T021 [US5] Implement `DownloadManager::purge()` in `crates/astro-up-core/src/download/purge.rs`: scan `download_dir` for files (not `.part` files), check each file's mtime against `max_age_days`, delete files older than threshold, return `PurgeResult { files_deleted, bytes_reclaimed }`. Skip when `max_age_days == 0` (disabled)
+- [x] T022 [US5] Integration test for purge in `crates/astro-up-core/tests/download_purge.rs`: (a) create files in tempdir with varied mtimes (using `filetime` crate or `std::fs::File::set_times`), call purge with 30 days, assert old files deleted and recent files kept, (b) call purge with 0 days — assert no files deleted, (c) verify `.part` files are never purged
 
 **Checkpoint**: US5 complete — disk space managed automatically
 
