@@ -5,14 +5,14 @@
 
 ## Decisions Made
 
-### D1: figment over config-rs for layered configuration
-**Choice**: figment
-**Reasoning**: figment (by Rocket's author) has first-class support for the exact layering pattern we need (defaults → TOML → env vars → CLI), built-in TOML and env var providers, and clean merge semantics. config-rs is older and less actively maintained. figment also supports custom providers, making it easy to add CLI arg integration.
-**Alternatives considered**: config-rs (less active, more boilerplate), manual layering with serde (more control but more code)
+### D1: config-rs over figment for layered configuration
+**Choice**: config-rs (`config` crate)
+**Reasoning**: config-rs is the most popular Rust config library (~3.5M downloads/month, 4x figment). It has practical advantages for our use case: `try_parsing(true)` auto-coerces env var strings to ints/bools, `.list_separator(",")` parses comma-separated env vars into `Vec`, typed `ConfigError` variants (Type, NotFound, FileParse) with origin tracking aid our FR-005 error format requirement, and `Environment::source(Some(hashmap))` enables clean test mocking without filesystem sandboxes. Both libraries have the same gaps (no unknown key detection, no path token expansion, no clap integration), but config-rs has more batteries included for the common cases.
+**Alternatives considered**: figment (cleaner API, first-class profiles, `Jail` test helper — but profiles not needed, and fewer practical features for env var handling), manual layering with serde (more control but more code)
 
 ### D2: Double underscore for nested env var mapping
 **Choice**: `ASTROUP_CATALOG__URL` maps to `catalog.url`
-**Reasoning**: figment's default env var provider uses `__` for nesting, which is a common convention (also used by Docker, Kubernetes). Single underscore is ambiguous for multi-word field names (e.g., `check_interval` vs nested `check.interval`).
+**Reasoning**: config-rs's `Environment::separator("__")` uses `__` for nesting, which is a common convention (also used by Docker, Kubernetes). Single underscore is ambiguous for multi-word field names (e.g., `check_interval` vs nested `check.interval`).
 **Alternatives considered**: Single underscore with explicit mapping (more fragile), JSON in env var (poor UX)
 
 ### D3: garde over validator for validation
