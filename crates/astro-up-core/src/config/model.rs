@@ -52,12 +52,14 @@ pub struct CatalogConfig {
     pub cache_ttl: Duration,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct PathsConfig {
     pub download_dir: PathBuf,
     pub cache_dir: PathBuf,
     pub data_dir: PathBuf,
+    pub keep_installers: bool,
+    pub purge_installers_after_days: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
@@ -66,9 +68,12 @@ pub struct NetworkConfig {
     #[garde(inner(url))]
     pub proxy: Option<String>,
     #[garde(custom(validate_positive_duration))]
+    pub connect_timeout: Duration,
+    #[garde(custom(validate_positive_duration))]
     pub timeout: Duration,
     #[garde(length(min = 1))]
     pub user_agent: String,
+    pub download_speed_limit: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
