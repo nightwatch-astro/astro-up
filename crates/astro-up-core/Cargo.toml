@@ -25,6 +25,13 @@ reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 sysinfo = "0.38"
 tokio = { version = "1", features = ["fs", "time"] }
 toml = "0.9"
+pelite = "0.10"
+regex = "1"
+directories = "6"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.56"
+wmi = "0.14"
 
 [dev-dependencies]
 insta.workspace = true
