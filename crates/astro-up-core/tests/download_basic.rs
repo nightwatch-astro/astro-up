@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 use wiremock::matchers::{method, path};
@@ -9,7 +7,7 @@ use astro_up_core::config::NetworkConfig;
 use astro_up_core::download::{DownloadManager, DownloadRequest, DownloadResult};
 use astro_up_core::events::Event;
 
-fn test_config(server_uri: &str) -> NetworkConfig {
+fn test_config(_server_uri: &str) -> NetworkConfig {
     NetworkConfig {
         user_agent: format!("astro-up-test/{}", env!("CARGO_PKG_VERSION")),
         ..NetworkConfig::default()

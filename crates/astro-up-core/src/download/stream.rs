@@ -105,7 +105,6 @@ pub(crate) async fn stream_download(
         // Emit progress every 100ms or 64KB
         let since_last = now.duration_since(last_progress);
         if since_last >= Duration::from_millis(100) || chunk.len() >= 65536 {
-            let elapsed = start.elapsed();
             let progress = if total_bytes > 0 {
                 bytes_downloaded as f64 / total_bytes as f64
             } else {
