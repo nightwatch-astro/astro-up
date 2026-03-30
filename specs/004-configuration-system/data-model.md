@@ -3,7 +3,7 @@
 ## Entity Relationships
 
 ```
-AppConfig (top-level)
+AppConfig (top-level, in-memory schema)
 ├── CatalogConfig
 ├── PathsConfig
 ├── NetworkConfig
@@ -11,15 +11,15 @@ AppConfig (top-level)
 ├── LogConfig
 └── TelemetryConfig
 
-TokenResolver (runtime helper, not serialized)
-└── resolves {config_dir}, {cache_dir}, {data_dir}, {home_dir}
+ConfigStore (SQLite persistence)
+└── config_settings table (key-value)
 ```
 
 ## Entities
 
 ### AppConfig
 
-Top-level struct. All fields have defaults via `#[serde(default)]`.
+Top-level struct. All fields have defaults. Acts as the parameter registry — both CLI and GUI enumerate fields from this struct.
 
 | Field | Type | Default | Validation |
 |-------|------|---------|------------|
@@ -34,7 +34,7 @@ Top-level struct. All fields have defaults via `#[serde(default)]`.
 
 | Field | Type | Default | Validation |
 |-------|------|---------|------------|
-| url | String | `https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db` | `#[garde(url)]` |
+| url | String | (see defaults table) | `#[garde(url)]` |
 | cache_ttl | Duration | 24h | custom: positive |
 | offline | bool | false | none |
 
@@ -42,11 +42,11 @@ Top-level struct. All fields have defaults via `#[serde(default)]`.
 
 | Field | Type | Default | Validation |
 |-------|------|---------|------------|
-| download_dir | PathBuf | `{cache_dir}/downloads` | custom: parent exists or creatable |
-| cache_dir | PathBuf | `{cache_dir}` (from directories) | custom: parent exists or creatable |
-| data_dir | PathBuf | `{data_dir}` (from directories) | custom: parent exists or creatable |
+| download_dir | PathBuf | (platform cache dir)/downloads | none (resolved at app init) |
+| cache_dir | PathBuf | (platform cache dir) | none |
+| data_dir | PathBuf | (platform data dir) | none |
 
-Note: Tokens map to `ProjectDirs` methods which already include the app name (e.g., `{cache_dir}` → `~/.cache/astro-up` on Linux). Path defaults use token syntax strings pre-expansion (e.g., `"{cache_dir}/downloads"`). Duration and scalar defaults are concrete values (e.g., `Duration::from_secs(86400)`). After token expansion, all paths are absolute.
+Note: Path defaults are resolved by the caller (app init) and passed to the config module. The config module stores/loads paths as strings in SQLite.
 
 ### NetworkConfig
 
@@ -54,7 +54,7 @@ Note: Tokens map to `ProjectDirs` methods which already include the app name (e.
 |-------|------|---------|------------|
 | proxy | Option\<String\> | None | `#[garde(url)]` when Some |
 | timeout | Duration | 30s | custom: positive |
-| user_agent | String | `astro-up/{version}` | `#[garde(length(min = 1))]` |
+| user_agent | String | astro-up/{version} | `#[garde(length(min = 1))]` |
 
 ### UpdateConfig
 
@@ -67,9 +67,9 @@ Note: Tokens map to `ProjectDirs` methods which already include the app name (e.
 
 | Field | Type | Default | Validation |
 |-------|------|---------|------------|
-| level | LogLevel | info | none (enum) |
+| level | LogLevel | Info | none (enum) |
 | log_to_file | bool | false | none |
-| log_file | PathBuf | `{data_dir}/astro-up.log` | custom: parent exists or creatable |
+| log_file | PathBuf | (platform data dir)/astro-up.log | none |
 
 ### TelemetryConfig
 
@@ -85,41 +85,53 @@ Derives: `Serialize`, `Deserialize`, `Debug`, `Clone`, `PartialEq`, `Display`, `
 
 Maps to `tracing::Level` for runtime use.
 
-### TokenResolver (runtime, not serialized)
+### ConfigStore
 
-| Field | Type | Source |
-|-------|------|--------|
-| config_dir | PathBuf | `ProjectDirs::config_dir()` |
-| cache_dir | PathBuf | `ProjectDirs::cache_dir()` |
-| data_dir | PathBuf | `ProjectDirs::data_dir()` |
-| home_dir | PathBuf | `BaseDirs::home_dir()` |
+Wraps a `rusqlite::Connection`. Provides typed access to the `config_settings` table.
 
-Methods:
-- `new() -> Result<Self>` — resolve all dirs, fail if `$HOME` unresolvable
-- `expand(&self, input: &str) -> Result<PathBuf>` — replace tokens, error on unknown tokens
-- `expand_config(&self, config: &mut AppConfig) -> Result<()>` — walk all path fields
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| new | `(conn: Connection) -> Result<Self>` | Creates table if not exists |
+| get | `(key: &str) -> Result<Option<String>>` | Read stored value |
+| set | `(key: &str, value: &str) -> Result<()>` | Write value |
+| list | `() -> Result<Vec<(String, String)>>` | All stored key-value pairs |
+| reset | `(key: &str) -> Result<()>` | Delete stored override |
+| reset_all | `() -> Result<()>` | Delete all stored overrides |
 
-## Serde Configuration
+## SQLite Schema
 
-All config structs derive `Serialize` + `Deserialize` with:
-- `#[serde(default)]` on each struct for forward-compatibility
-- `#[serde(with = "humantime_serde")]` on Duration fields
-- `#[serde(rename_all = "snake_case")]` (matches TOML convention)
+```sql
+CREATE TABLE IF NOT EXISTS config_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+Values are stored as strings. Type conversion happens at the application layer:
+- Booleans: `"true"` / `"false"`
+- Integers: `"42"`
+- Durations: `"24h"`, `"30s"` (humantime format)
+- Paths: absolute path strings
+- Strings: as-is
 
 ## Config Loading Pipeline
 
 ```
-1. Config::builder()
-2.   .set_default(...)          ← compiled defaults from Default impl
-3.   .add_source(File)          ← config.toml (optional)
-4.   .add_source(Environment)   ← ASTROUP_ env vars
-5.   .set_override(...)         ← CLI args
-6.   .build()?
-7.   .try_deserialize::<AppConfig>()?
-8. ─── unknown key detection (parallel TOML parse + diff) ───
-9. ─── token expansion (TokenResolver::expand_config) ───
-10. ─── validation (AppConfig::validate()) ───
-11. → immutable AppConfig for application lifetime
+1. AppConfig::default()              ← compiled defaults (with resolved platform paths)
+2. ConfigStore::list()               ← read all stored overrides from SQLite
+3. Merge stored values over defaults ← string → typed conversion via serde/humantime
+4. Merge CLI flags over result       ← highest precedence, not persisted
+5. AppConfig::validate()             ← garde validation
+6. → immutable AppConfig for application lifetime
 ```
 
-Step 8 (unknown keys) runs in parallel with steps 7-10 conceptually — it parses the raw TOML file independently and logs warnings. It does not block the main pipeline.
+## Config Set Pipeline
+
+```
+1. Validate key exists in AppConfig field set
+2. Parse value to target type (humantime for Duration, FromStr for others)
+3. Validate the new value (garde on a temporary AppConfig with this change)
+4. ConfigStore::set(key, value_string)
+5. → persisted, effective on next load
+```
