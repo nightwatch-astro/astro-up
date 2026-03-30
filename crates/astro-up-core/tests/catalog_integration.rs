@@ -121,6 +121,15 @@ mod reader_tests {
     }
 
     #[test]
+    fn search_by_alias() {
+        let reader = open_fixture();
+        // "nighttimeimaging" is a normalized alias for N.I.N.A.
+        let results = reader.search("nighttimeimaging").unwrap();
+        assert!(!results.is_empty(), "alias search should find nina");
+        assert_eq!(results[0].package.id.as_ref(), "nina");
+    }
+
+    #[test]
     fn search_empty_result() {
         let reader = open_fixture();
         let results = reader.search("zzzznonexistent").unwrap();

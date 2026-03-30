@@ -18,7 +18,7 @@ impl CatalogSidecar {
         match std::fs::read_to_string(path) {
             Ok(contents) => {
                 let sidecar: Self =
-                    serde_json::from_str(&contents).map_err(|e| std::io::Error::other(e))?;
+                    serde_json::from_str(&contents).map_err(std::io::Error::other)?;
                 Ok(Some(sidecar))
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),

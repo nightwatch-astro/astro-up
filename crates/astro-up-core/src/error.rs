@@ -88,7 +88,7 @@ pub enum CoreError {
     #[error("catalog fetch failed: {reason}")]
     CatalogFetchFailed { reason: String },
 
-    #[error("catalog signature invalid — the downloaded catalog may be tampered with")]
+    #[error("catalog signature invalid — the downloaded catalog may be tampered with, try again later or report this issue")]
     CatalogSignatureInvalid,
 
     #[error("catalog signature file missing — expected .minisig alongside catalog.db")]

@@ -73,14 +73,12 @@ impl CatalogManager {
                 sig_bytes,
                 etag: new_etag,
             }) => {
-                // Save to temp files
-                fetch::save_fetched(&self.catalog_path, &catalog_bytes, &sig_bytes)?;
-
-                // Verify signature
-                let sig_path = verify::sig_path_for(&self.catalog_path);
-                match verify::verify_catalog(&self.catalog_path, &sig_path) {
+                // Verify signature in memory BEFORE writing to disk,
+                // so the previous valid catalog is preserved on failure.
+                match verify::verify_bytes(&catalog_bytes, &sig_bytes) {
                     Ok(()) => {
-                        // Update sidecar
+                        tracing::info!("signature verified, saving catalog");
+                        fetch::save_fetched(&self.catalog_path, &catalog_bytes, &sig_bytes)?;
                         let new_sidecar = CatalogSidecar {
                             etag: new_etag,
                             fetched_at: Utc::now(),
@@ -89,14 +87,12 @@ impl CatalogManager {
                         Ok(FetchResult::Updated)
                     }
                     Err(e) => {
-                        // Signature failed — clean up downloaded files
-                        tracing::error!("signature verification failed: {e}");
-                        let _ = std::fs::remove_file(&self.catalog_path);
-                        let _ = std::fs::remove_file(&sig_path);
+                        tracing::error!("signature verification failed, keeping previous catalog: {e}");
                         if has_local {
-                            // This shouldn't happen since we just overwrote it,
-                            // but handle gracefully
-                            Err(e)
+                            tracing::warn!("falling back to existing local catalog");
+                            Ok(FetchResult::FallbackToLocal {
+                                reason: "signature verification failed on downloaded catalog".into(),
+                            })
                         } else {
                             Err(e)
                         }

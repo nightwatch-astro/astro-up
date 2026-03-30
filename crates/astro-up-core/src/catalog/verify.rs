@@ -49,6 +49,35 @@ pub fn verify_catalog_with_key(
     Ok(())
 }
 
+/// Verify catalog bytes and signature bytes in memory (no disk I/O).
+///
+/// Used by CatalogManager to verify before saving, preserving the previous catalog on failure.
+pub fn verify_bytes(catalog_bytes: &[u8], sig_bytes: &[u8]) -> Result<(), CoreError> {
+    verify_bytes_with_key(catalog_bytes, sig_bytes, MINISIGN_PUBLIC_KEY)
+}
+
+/// Verify catalog bytes and signature bytes using the given public key.
+pub fn verify_bytes_with_key(
+    catalog_bytes: &[u8],
+    sig_bytes: &[u8],
+    public_key_b64: &str,
+) -> Result<(), CoreError> {
+    let pk = minisign_verify::PublicKey::from_base64(public_key_b64).map_err(|e| {
+        CoreError::CatalogFetchFailed {
+            reason: format!("invalid public key: {e}"),
+        }
+    })?;
+
+    let sig_str = std::str::from_utf8(sig_bytes).map_err(|_| CoreError::CatalogSignatureInvalid)?;
+    let sig = minisign_verify::Signature::decode(sig_str)
+        .map_err(|_| CoreError::CatalogSignatureInvalid)?;
+
+    pk.verify(catalog_bytes, &sig, false)
+        .map_err(|_| CoreError::CatalogSignatureInvalid)?;
+
+    Ok(())
+}
+
 /// Build the signature file path from a catalog path (e.g., `catalog.db` → `catalog.db.minisig`).
 pub fn sig_path_for(catalog_path: &Path) -> std::path::PathBuf {
     let mut p = catalog_path.as_os_str().to_owned();
