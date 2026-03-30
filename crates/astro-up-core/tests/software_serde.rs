@@ -69,7 +69,7 @@ category = "capture"
 #[test]
 fn nina_manifest_deserializes() {
     let software: Software = toml::from_str(NINA_TOML).expect("NINA manifest should deserialize");
-    assert_eq!(software.id, "nina-app");
+    assert_eq!(software.id.as_ref(), "nina-app");
     assert_eq!(software.name, "N.I.N.A.");
     assert_eq!(software.category.to_string(), "capture");
     assert_eq!(software.software_type.to_string(), "application");
@@ -104,7 +104,7 @@ fn nina_snapshot() {
 fn minimal_manifest_deserializes() {
     let software: Software =
         toml::from_str(MINIMAL_TOML).expect("minimal manifest should deserialize");
-    assert_eq!(software.id, "test-app");
+    assert_eq!(software.id.as_ref(), "test-app");
     assert!(software.detection.is_none());
     assert!(software.install.is_none());
     assert!(software.checkver.is_none());

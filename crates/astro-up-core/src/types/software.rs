@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString, EnumTable};
 
+use crate::catalog::PackageId;
+
 use super::backup::BackupConfig;
 use super::checkver::CheckverConfig;
 use super::dependency::DependencyConfig;
@@ -43,7 +45,7 @@ pub enum Category {
 /// The central aggregate — a complete software package definition.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Software {
-    pub id: String,
+    pub id: PackageId,
     #[serde(default)]
     pub slug: String,
     pub name: String,
