@@ -5,11 +5,13 @@ pub mod hardware;
 mod path;
 pub mod pe;
 mod registry;
+pub mod scanner;
 mod wmi_driver;
 
 pub use cache::DetectionCache;
 pub use hardware::{HardwareMatch, VidPid};
 pub use path::PathResolver;
+pub use scanner::{LedgerStore, PackageSource, Scanner};
 
 use std::time::Duration;
 
