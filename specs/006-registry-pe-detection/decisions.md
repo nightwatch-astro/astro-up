@@ -19,7 +19,7 @@
 
 ### D4: ASCOM Platform 7 minimum
 **Choice**: Require ASCOM Platform 7+.
-**Reasoning**: Current version, maintains profile registry, supports Alpaca and COM. Older versions EOL.
+**Reasoning**: Current version, maintains profile registry. Older versions EOL.
 
 ## Clarify-Phase Decisions (Interactive)
 
@@ -38,8 +38,8 @@
 ### C4: Default chain with manifest override
 **Decision**: Fixed default: registry → pe_file → file_exists. Manifest overrides for edge cases (ASCOM Profile, WMI, config_file). Most manifests don't need to override.
 
-### C5: ASCOM Profile covers both Alpaca and COM drivers
-**Decision**: ASCOM Platform 7 profile registry has both. Alpaca discovery (spec 009) is complementary, not a replacement. Many devices still use COM drivers.
+### C5: Alpaca dropped — ASCOM detection is registry-only
+**Decision**: ASCOM Alpaca is a device control protocol, not a driver management tool. It tells you what's connected, not what driver version is installed. Spec 009 (Alpaca client) is dropped. ASCOM driver detection uses the Profile registry keys only.
 
 ## Questions I Would Have Asked
 

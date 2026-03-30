@@ -60,7 +60,7 @@ The default detection chain is: registry → pe_file → file_exists. The system
 
 ### User Story 4 - ASCOM Profile Detection (Priority: P4)
 
-The application detects ASCOM drivers by reading the ASCOM Profile registry keys. ASCOM Platform 7+ is the minimum supported version. Both Alpaca-native and legacy COM drivers are detected via the profile registry.
+The application detects ASCOM drivers by reading the ASCOM Profile registry keys. ASCOM Platform 7+ is the minimum supported version.
 
 **Why this priority**: ASCOM drivers use a non-standard registry location that generic uninstall key scanning won't find. Many devices still use COM drivers even with ASCOM Platform 7.
 
@@ -70,7 +70,7 @@ The application detects ASCOM drivers by reading the ASCOM Profile registry keys
 
 1. **Given** an ASCOM camera driver is registered, **When** detection runs with `method = "ascom_profile"`, **Then** the driver name and version are returned
 2. **Given** no ASCOM Platform is installed, **When** ASCOM detection runs, **Then** it returns "not installed" gracefully
-3. **Given** ASCOM Platform 7 with both Alpaca and COM drivers, **When** detection runs, **Then** both types are found via the profile registry
+3. **Given** ASCOM Platform 7 with registered drivers, **When** detection runs, **Then** all registered drivers are found via the profile registry
 
 ---
 
