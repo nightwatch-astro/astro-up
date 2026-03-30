@@ -24,8 +24,8 @@
 **Reasoning**: FTS5 is built into SQLite (bundled via rusqlite), provides ranked results, handles word boundaries ("plate" matches "PlateSolve"), and scales beyond substring matching.
 **Changed from**: Original spec had substring matching. Upgraded per user feedback.
 
-### D5: Package ID = short name (merged with slug)
-**Choice**: A single `id` field that IS the short, human-friendly identifier. No separate slug. Manifest filename = ID + `.toml`.
+### D5: Package ID = short name, slug is display label
+**Choice**: A single `id` field that IS the canonical identifier for resolution. The `slug` field is retained as a display-friendly label (e.g., slug "N.I.N.A." vs id "nina"). Manifest filename = ID + `.toml`.
 **Reasoning**: For a curated catalog of ~100 niche astrophotography packages, name collisions are extremely unlikely. The `{vendor}-{product}` convention was defensive overkill. `nina` is better UX than `nina-app`.
 **ID regex**: `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` (lowercase, hyphen-separated, 2-50 chars)
 **Migration**: One-time rename of existing 96 manifests in astro-up-manifests repo (e.g., `nina-app.toml` → `nina.toml`).
@@ -36,9 +36,10 @@
 **Reasoning**: Simpler than file-level locking on the SQLite file. Matches user expectation from apt/dpkg. Second instance gets "another instance is running" and exits.
 **Changed from**: Original spec had file-level advisory locking on the cache file.
 
-### D7: No explicit offline mode
-**Choice**: No `--offline` flag. If the local catalog exists, it's used. If network is down and TTL expired, the local catalog is still used (it's valid data, just stale). Only error if no local catalog AND no network.
-**Reasoning**: Offline mode is implicit — the local SQLite file IS offline capability. Network is only needed for initial fetch and periodic refresh. Users can't download installers offline anyway.
+### D7: No offline mode — implicit only
+**Choice**: No `--offline` flag, no `catalog.offline` config. Network failure is handled gracefully — stale local catalog is still used. Only error if no local catalog AND no network.
+**Reasoning**: Offline mode is implicit — the local SQLite file IS offline capability. The `catalog.offline` config field from spec 004 is dead config: if you're offline, you can't download software anyway. Filed cleanup issue to remove it from `CatalogConfig`.
+**Changed from**: Initially kept `catalog.offline` for air-gapped setups, then removed as unnecessary.
 
 ### D8: meta.json dropped entirely
 **Choice**: No meta.json for lightweight change detection.
