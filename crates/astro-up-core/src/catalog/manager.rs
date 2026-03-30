@@ -87,11 +87,14 @@ impl CatalogManager {
                         Ok(FetchResult::Updated)
                     }
                     Err(e) => {
-                        tracing::error!("signature verification failed, keeping previous catalog: {e}");
+                        tracing::error!(
+                            "signature verification failed, keeping previous catalog: {e}"
+                        );
                         if has_local {
                             tracing::warn!("falling back to existing local catalog");
                             Ok(FetchResult::FallbackToLocal {
-                                reason: "signature verification failed on downloaded catalog".into(),
+                                reason: "signature verification failed on downloaded catalog"
+                                    .into(),
                             })
                         } else {
                             Err(e)
