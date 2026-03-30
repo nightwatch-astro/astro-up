@@ -39,6 +39,9 @@ expression: software
     "version_regex": null,
     "product_code": null,
     "upgrade_code": null,
+    "inf_provider": null,
+    "device_class": null,
+    "inf_name": null,
     "fallback": {
       "method": "pe_file",
       "registry_key": null,
@@ -47,6 +50,9 @@ expression: software
       "version_regex": null,
       "product_code": null,
       "upgrade_code": null,
+      "inf_provider": null,
+      "device_class": null,
+      "inf_name": null,
       "fallback": null
     }
   },

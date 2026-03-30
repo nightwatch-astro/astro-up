@@ -120,6 +120,9 @@ mod tests {
             version_regex: None,
             product_code: None,
             upgrade_code: None,
+            inf_provider: None,
+            device_class: None,
+            inf_name: None,
             fallback: None,
         };
         let version = detector.detect(&cfg).await.unwrap();

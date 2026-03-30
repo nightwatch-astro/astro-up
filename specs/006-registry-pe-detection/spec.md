@@ -71,7 +71,7 @@ A user has astrophotography hardware connected but hasn't told astro-up about it
 
 1. **Given** a USB device with VID:PID `03C3:120A` is connected, **When** hardware discovery runs, **Then** it matches to the ZWO ASI camera driver package
 2. **Given** an unknown VID:PID, **When** hardware discovery runs, **Then** it is silently skipped (not an error)
-3. **Given** the matched driver is already being tracked, **When** discovery runs, **Then** it's not suggested again
+3. **Given** the matched driver is already detected as installed (managed), **When** discovery runs, **Then** it's not suggested again
 4. **Given** wildcard matching `03C3:*`, **When** any ZWO device is connected, **Then** it matches the ZWO driver package
 
 ---
@@ -111,7 +111,7 @@ Detection results are cached in memory with event-driven invalidation. When astr
 - Registry value exists but is empty: Treat as "installed but version unknown."
 - 32-bit vs 64-bit registry: Check both WOW6432Node and native views.
 - PE file path from ledger but file was moved/deleted: Return "not installed."
-- External install/uninstall: Detected on next explicit `scan` (cache cleared).
+- External install/uninstall: Detected on next explicit `scan` (cache cleared). Externally uninstalled packages (`Acknowledged` ledger entries where scan returns NotInstalled) are removed from the ledger — scan is the source of truth.
 - Multiple WMI matches for same vendor (camera + EFW + focuser): Return all matches, manifest's `device_class` determines relevance.
 - WMI timeout: Default 10 seconds. On timeout, return Unavailable.
 
@@ -119,22 +119,24 @@ Detection results are cached in memory with event-driven invalidation. When astr
 
 ### Functional Requirements
 
-- **FR-001**: System MUST detect installed software by reading Windows uninstall registry keys (HKLM and HKCU)
+- **FR-001**: System MUST detect installed software by scanning ALL catalog packages via Windows uninstall registry keys (HKLM and HKCU)
 - **FR-002**: System MUST extract version strings from configurable registry values (default: `DisplayVersion`)
 - **FR-003**: System MUST detect software versions from PE file headers (VS_FIXEDFILEINFO)
-- **FR-004**: System MUST support a default detection chain: registry → pe_file → file_exists
+- **FR-004**: System MUST support a default detection chain: registry → pe_file → file_exists. Chain stops at the first method that returns Installed or InstalledUnknownVersion — remaining methods are not attempted.
 - **FR-005**: System MUST allow manifests to override the default chain with explicit `[detection]` config
 - **FR-006**: System MUST detect ASCOM drivers via ASCOM Profile registry keys (ASCOM Platform 7+ minimum)
 - **FR-007**: System MUST resolve PE file paths from the manifest config OR the install ledger
+- **FR-020**: System MUST provide a shared path token resolver that expands platform tokens (e.g., `{program_files}`, `{app_data}`, `{local_app_data}`) to actual filesystem paths
 - **FR-008**: System MUST parse extracted version strings into the Version type from spec 003
 - **FR-009**: System MUST check both 32-bit and 64-bit registry views on 64-bit Windows
-- **FR-010**: System MUST handle missing registry keys, missing files, and permission errors gracefully
-- **FR-011**: System MUST support `file_exists` and `config_file` detection methods
+- **FR-010**: System MUST handle missing registry keys, missing files, and permission errors gracefully — per-package errors MUST NOT abort the scan; successful results are returned alongside per-package error reports
+- **FR-011**: System MUST support `file_exists` (checks path presence, returns InstalledUnknownVersion or NotInstalled) and `config_file` (reads file as text, applies `version_regex` capture group 1 as version string) detection methods
 - **FR-012**: System MUST detect driver versions via WMI `Win32_PnPSignedDriver` queries
 - **FR-013**: System MUST filter WMI results by `DriverProviderName`, `DeviceClass`, and `InfName`
 - **FR-014**: System MUST match connected USB devices by VID:PID pattern against manifest `[hardware]` sections for brownfield discovery
 - **FR-015**: System MUST support wildcard VID:PID matching (e.g., `03C3:*` for all products under a vendor ID)
 - **FR-016**: System MUST cache detection results in memory with event-driven invalidation
+- **FR-019**: System MUST persist detected installed packages as LedgerEntry records with `source = Acknowledged` — same update-tracking behavior as astro-up-installed packages, but distinguished by source for lifecycle operations (e.g., uninstall eligibility)
 - **FR-017**: System MUST compile on all platforms — Windows-only APIs behind `cfg(windows)`
 - **FR-018**: System MUST enforce a 10-second timeout on WMI queries
 
@@ -154,9 +156,17 @@ Detection results are cached in memory with event-driven invalidation. When astr
 
 - **SC-001**: Full detection scan (registry + PE + WMI) completes for all ~95 packages in under 5 seconds
 - **SC-002**: Cached detection lookups return in under 1ms
-- **SC-003**: PE file detection works identically on Windows and in Linux CI (via pelite)
+- **SC-003**: PE file detection works identically on Windows and Linux (cross-platform)
 - **SC-004**: VID:PID matching correctly identifies all known astrophotography hardware in the test set
 - **SC-005**: WMI detection returns correct driver versions for USB serial and camera driver packages
+
+## Clarifications
+
+### Session 2026-03-30
+
+- Q: Does detection scan all catalog packages or only user-tracked packages? → A: Scan all catalog packages. Any package detected as installed is automatically added as managed by astro-up. The user can then decide per package whether to update it or not. No manual opt-in to start tracking.
+- Q: How should partial failures be handled when scanning ~95 packages? → A: Continue scan, report per-package errors alongside successful results. A single failure must not block the rest of the scan.
+- Q: What happens when VID:PID discovery finds hardware for a package already detected as installed? → A: Skip suggesting it — it's already managed. Discovery only suggests packages where matching hardware is connected but the driver/software was NOT detected as installed.
 
 ## Assumptions
 
@@ -166,4 +176,5 @@ Detection results are cached in memory with event-driven invalidation. When astr
 - The install ledger (spec 003 LedgerEntry) provides paths for astro-up-installed packages
 - Detection cache is per-session (in-memory), not persisted to disk
 - VID:PID matching is for brownfield discovery (suggesting packages), not for version detection. Device connection notifications (hotplug) are deferred.
-- Depends on: spec 003 (Version type, DetectionConfig, LedgerEntry), spec 004 (path token expansion)
+- Depends on: spec 003 (Version type, DetectionConfig, LedgerEntry)
+- Path token expansion (originally spec 004, dropped during SQLite pivot) will be built as a shared utility in astro-up-core within this spec — detection is the first consumer
