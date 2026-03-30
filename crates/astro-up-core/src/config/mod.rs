@@ -3,4 +3,8 @@ mod defaults;
 mod model;
 mod store;
 
-// Re-exports populated as modules are implemented
+pub use model::{
+    AppConfig, CatalogConfig, LogConfig, LogLevel, NetworkConfig, PathsConfig, TelemetryConfig,
+    UpdateConfig,
+};
+pub use store::ConfigStore;
