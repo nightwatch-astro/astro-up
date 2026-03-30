@@ -14,6 +14,7 @@ pub(crate) struct StreamResult {
     pub bytes_downloaded: u64,
     pub hasher: Sha256,
     pub resumed: bool,
+    pub etag: Option<String>,
 }
 
 /// Stream a URL to a `.part` file, emitting progress events.
@@ -98,9 +99,10 @@ pub(crate) async fn stream_download(
                     drop(existing_file);
 
                     // Stream remaining bytes from the probe response
+                    // Resume doesn't capture a new ETag (use existing one)
                     return stream_response(
                         probe, part_path, true, &mut hasher, part_size,
-                        event_tx, id, throttle_bytes_per_sec, cancel_token, true,
+                        event_tx, id, throttle_bytes_per_sec, cancel_token, true, None,
                     )
                     .await;
                 }
@@ -127,6 +129,13 @@ pub(crate) async fn stream_download(
         });
     }
 
+    // Capture ETag for conditional requests (FR-008)
+    let etag = response
+        .headers()
+        .get("ETag")
+        .and_then(|v| v.to_str().ok())
+        .map(String::from);
+
     // Disk space check (FR-017): require 2x file size, skip if unknown
     if let Some(content_length) = response.content_length() {
         let required = content_length * 2;
@@ -139,7 +148,7 @@ pub(crate) async fn stream_download(
 
     stream_response(
         response, part_path, false, &mut hasher, 0,
-        event_tx, id, throttle_bytes_per_sec, cancel_token, false,
+        event_tx, id, throttle_bytes_per_sec, cancel_token, false, etag,
     )
     .await
 }
@@ -168,6 +177,7 @@ async fn stream_response(
     throttle_bytes_per_sec: u64,
     cancel_token: CancellationToken,
     resumed: bool,
+    etag: Option<String>,
 ) -> Result<StreamResult, CoreError> {
     let total_bytes = if let Some(content_length) = response.content_length() {
         initial_bytes + content_length
@@ -241,12 +251,22 @@ async fn stream_response(
                 0.0
             };
 
+            let elapsed = start.elapsed();
+            let estimated_remaining = if total_bytes > 0 && speed > 0.0 {
+                let remaining_bytes = total_bytes.saturating_sub(bytes_downloaded);
+                Some(Duration::from_secs_f64(remaining_bytes as f64 / speed))
+            } else {
+                None
+            };
+
             let _ = event_tx.send(Event::DownloadProgress {
                 id: id.to_owned(),
                 progress,
                 bytes_downloaded,
                 total_bytes,
                 speed,
+                elapsed,
+                estimated_remaining,
             });
             last_progress = now;
         }
@@ -268,6 +288,7 @@ async fn stream_response(
         bytes_downloaded,
         hasher: hasher.clone(),
         resumed,
+        etag,
     })
 }
 

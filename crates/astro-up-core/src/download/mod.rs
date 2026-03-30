@@ -80,8 +80,14 @@ impl DownloadManager {
 
         // If final file already exists, check with server via conditional request (FR-008)
         let dest = request.dest_path();
+        let etag_path = request.dest_dir.join(format!("{}.etag", request.filename));
         if dest.exists() {
             let mut req_builder = self.client.head(&request.url);
+
+            // Send If-None-Match if we have a stored ETag
+            if let Ok(etag) = tokio::fs::read_to_string(&etag_path).await {
+                req_builder = req_builder.header("If-None-Match", etag.trim());
+            }
 
             // Use file modification time for If-Modified-Since
             if let Ok(meta) = tokio::fs::metadata(&dest).await {
@@ -187,6 +193,11 @@ impl DownloadManager {
             });
         }
 
+        // Store ETag for future conditional requests (FR-008)
+        if let Some(etag) = &result.etag {
+            let _ = tokio::fs::write(&etag_path, etag).await;
+        }
+
         let _ = self.event_tx.send(Event::DownloadComplete {
             id: request.filename.clone(),
         });
@@ -209,5 +220,15 @@ impl DownloadManager {
         max_age_days: u32,
     ) -> Result<PurgeResult, CoreError> {
         purge::purge(download_dir, max_age_days).await
+    }
+}
+
+impl crate::traits::Downloader for DownloadManager {
+    async fn download(
+        &self,
+        request: &DownloadRequest,
+        cancel_token: CancellationToken,
+    ) -> Result<DownloadResult, CoreError> {
+        self.download(request, cancel_token).await
     }
 }
