@@ -224,3 +224,99 @@ async fn download_creates_dest_dir() {
         _ => panic!("expected Success"),
     }
 }
+
+#[tokio::test]
+async fn download_follows_redirect_chain() {
+    let server = MockServer::start().await;
+
+    // /redirect1 -> /redirect2 -> /final.exe
+    Mock::given(method("GET"))
+        .and(path("/redirect1"))
+        .respond_with(
+            ResponseTemplate::new(302).insert_header("Location", "/redirect2"),
+        )
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/redirect2"))
+        .respond_with(
+            ResponseTemplate::new(302).insert_header("Location", "/final.exe"),
+        )
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/final.exe"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(b"redirected content".to_vec()))
+        .mount(&server)
+        .await;
+
+    let (event_tx, _rx) = broadcast::channel(64);
+    let config = test_config(&server.uri());
+    let manager = DownloadManager::new(&config, event_tx).unwrap();
+
+    let dir = tempfile::tempdir().unwrap();
+    let request = DownloadRequest {
+        url: format!("{}/redirect1", server.uri()),
+        expected_hash: None,
+        dest_dir: dir.path().to_path_buf(),
+        filename: "final.exe".into(),
+        resume: false,
+    };
+
+    let result = manager
+        .download(&request, CancellationToken::new())
+        .await
+        .unwrap();
+
+    match result {
+        DownloadResult::Success {
+            path,
+            bytes_downloaded,
+            ..
+        } => {
+            assert!(path.exists());
+            let contents = tokio::fs::read(&path).await.unwrap();
+            assert_eq!(contents, b"redirected content");
+            assert_eq!(bytes_downloaded, b"redirected content".len() as u64);
+        }
+        _ => panic!("expected Success"),
+    }
+}
+
+#[tokio::test]
+async fn download_fails_on_too_many_redirects() {
+    let server = MockServer::start().await;
+
+    // Create a redirect loop: /loop -> /loop (reqwest will follow up to 10 then error)
+    Mock::given(method("GET"))
+        .and(path("/loop"))
+        .respond_with(ResponseTemplate::new(302).insert_header("Location", "/loop"))
+        .mount(&server)
+        .await;
+
+    let (event_tx, _rx) = broadcast::channel(64);
+    let config = test_config(&server.uri());
+    let manager = DownloadManager::new(&config, event_tx).unwrap();
+
+    let dir = tempfile::tempdir().unwrap();
+    let request = DownloadRequest {
+        url: format!("{}/loop", server.uri()),
+        expected_hash: None,
+        dest_dir: dir.path().to_path_buf(),
+        filename: "loop.exe".into(),
+        resume: false,
+    };
+
+    let err = manager
+        .download(&request, CancellationToken::new())
+        .await
+        .unwrap_err();
+
+    let msg = err.to_string();
+    assert!(
+        msg.contains("redirect") || msg.contains("too many"),
+        "expected redirect error: {msg}"
+    );
+}

@@ -1,7 +1,4 @@
 use std::path::PathBuf;
-use std::time::Duration;
-
-use serde::{Deserialize, Serialize};
 
 /// Input to a download operation.
 #[derive(Debug, Clone)]
@@ -37,16 +34,6 @@ pub enum DownloadResult {
     },
     /// File already exists and matches — skipped download.
     Cached { path: PathBuf },
-}
-
-/// Progress snapshot emitted during download.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DownloadProgress {
-    pub bytes_downloaded: u64,
-    pub total_bytes: u64,
-    pub speed_bytes_per_sec: f64,
-    pub elapsed: Duration,
-    pub estimated_remaining: Option<Duration>,
 }
 
 /// Result of a purge operation.

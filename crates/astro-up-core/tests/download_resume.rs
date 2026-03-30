@@ -179,3 +179,66 @@ async fn resume_disabled_ignores_part_file() {
         _ => panic!("expected Success"),
     }
 }
+
+#[tokio::test]
+async fn resume_restarts_when_server_file_is_newer() {
+    let server = MockServer::start().await;
+    let full_body = b"updated file content";
+
+    // Server responds to Range request with 206 but a newer Last-Modified
+    Mock::given(method("GET"))
+        .and(path("/newer.exe"))
+        .respond_with(|req: &Request| {
+            if req.headers.get("Range").is_some() {
+                ResponseTemplate::new(206)
+                    .set_body_bytes(b"partial".to_vec())
+                    .insert_header("Last-Modified", "Sun, 01 Jan 2090 00:00:00 GMT")
+                    .insert_header("Content-Range", "bytes 5-19/20")
+            } else {
+                ResponseTemplate::new(200).set_body_bytes(b"updated file content".to_vec())
+            }
+        })
+        .mount(&server)
+        .await;
+
+    let (tx, _rx) = broadcast::channel(64);
+    let manager = DownloadManager::new(&test_config(), tx).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+
+    // Create a .part file with old content, backdated
+    let part_path = dir.path().join("newer.exe.part");
+    tokio::fs::write(&part_path, b"old p").await.unwrap();
+    let past = std::time::SystemTime::now() - std::time::Duration::from_secs(365 * 86400);
+    let file = std::fs::File::options().write(true).open(&part_path).unwrap();
+    file.set_times(std::fs::FileTimes::new().set_modified(past))
+        .unwrap();
+    drop(file);
+
+    let request = DownloadRequest {
+        url: format!("{}/newer.exe", server.uri()),
+        expected_hash: None,
+        dest_dir: dir.path().to_path_buf(),
+        filename: "newer.exe".into(),
+        resume: true,
+    };
+
+    let result = manager
+        .download(&request, CancellationToken::new())
+        .await
+        .unwrap();
+
+    match result {
+        DownloadResult::Success {
+            path,
+            resumed,
+            bytes_downloaded,
+            ..
+        } => {
+            assert!(!resumed, "should NOT be resumed when server file is newer");
+            assert_eq!(bytes_downloaded, full_body.len() as u64);
+            let contents = tokio::fs::read(&path).await.unwrap();
+            assert_eq!(contents, full_body);
+        }
+        _ => panic!("expected Success"),
+    }
+}

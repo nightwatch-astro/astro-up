@@ -14,7 +14,7 @@ use crate::config::NetworkConfig;
 use crate::error::CoreError;
 use crate::events::Event;
 
-pub use types::{DownloadProgress, DownloadRequest, DownloadResult, PurgeResult};
+pub use types::{DownloadRequest, DownloadResult, PurgeResult};
 
 /// Download manager — owns the HTTP client and enforces sequential downloads.
 pub struct DownloadManager {
@@ -197,5 +197,17 @@ impl DownloadManager {
             bytes_downloaded: result.bytes_downloaded,
             resumed: result.resumed,
         })
+    }
+
+    /// Purge installers older than `max_age_days` from `download_dir`.
+    ///
+    /// Called by the background service (spec 016), not on a timer here.
+    /// Returns the number of files deleted and total bytes reclaimed.
+    pub async fn purge(
+        &self,
+        download_dir: &std::path::Path,
+        max_age_days: u32,
+    ) -> Result<PurgeResult, CoreError> {
+        purge::purge(download_dir, max_age_days).await
     }
 }
