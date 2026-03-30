@@ -1,11 +1,11 @@
-# Feature Specification: Windows Registry and PE Detection
+# Feature Specification: Software and Driver Detection
 
 **Feature Branch**: `006-registry-pe-detection`
 **Created**: 2026-03-29
 **Status**: Draft
 **Project**: Rust Migration
 **Project Number**: 1
-**Input**: Migration plan Spec 005 — detect installed software via Windows registry and PE file version info
+**Input**: Migration plan Specs 005+006 — detect installed software via registry, PE, WMI, ASCOM Profile; brownfield hardware-to-driver mapping via VID:PID
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -35,34 +35,52 @@ When registry detection fails or isn't configured, the application falls back to
 
 **Acceptance Scenarios**:
 
-1. **Given** a manifest with `detection.fallback.method = "pe_file"` and a configured path, **When** the primary registry detection fails, **Then** the PE file version is extracted
+1. **Given** a manifest with PE fallback and a configured path, **When** registry detection fails, **Then** the PE file version is extracted
 2. **Given** a package installed by astro-up (path in ledger) but no registry entry (portable app), **When** detection runs, **Then** PE detection uses the ledger path to find the executable
-3. **Given** a portable app that self-updated from 3.1.0 to 3.2.0, **When** PE detection runs on the ledger path, **Then** the current version 3.2.0 is returned (not the version astro-up installed)
+3. **Given** a portable app that self-updated from 3.1.0 to 3.2.0, **When** PE detection runs on the ledger path, **Then** the current version 3.2.0 is returned
 4. **Given** the PE file doesn't exist at the configured path, **When** fallback runs, **Then** it returns "not installed"
 
 ---
 
-### User Story 3 - Fallback Chain (Priority: P3)
+### User Story 3 - Detect Drivers via WMI (Priority: P3)
 
-The default detection chain is: registry → pe_file → file_exists. The system tries each method in order until one succeeds or all fail. Manifests can override the chain with an explicit `[detection]` section.
+For driver packages (USB cameras, serial adapters, filter wheels), the application queries WMI `Win32_PnPSignedDriver` to detect installed driver versions. This is the only reliable method for USB serial drivers (FTDI, CP210x) that don't register uninstall keys.
 
-**Why this priority**: Robust detection requires fallbacks — registry keys can be missing after portable installs.
+**Why this priority**: Drivers are critical for astrophotography hardware. WMI is the only way to detect some driver types.
 
-**Independent Test**: Configure registry → PE fallback. Ensure PE is tried when registry fails.
+**Independent Test**: With a ZWO camera driver installed, run WMI detection with `inf_provider = "ZWO"`, verify the driver version is returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** a manifest with no explicit `[detection]` section, **When** detection runs, **Then** the default chain (registry → pe_file → file_exists) is used
-2. **Given** a manifest with explicit `[detection]` overriding the chain, **When** detection runs, **Then** only the configured methods are tried in the specified order
-3. **Given** all detection methods fail, **When** the chain completes, **Then** "not installed" is returned
+1. **Given** a ZWO camera driver is installed, **When** WMI detection runs with `inf_provider = "ZWO"`, **Then** the driver version is returned
+2. **Given** a USB serial driver (FTDI) is installed, **When** WMI detection runs with `method = "driver_store"`, **Then** the driver version is returned
+3. **Given** no matching driver is installed, **When** WMI detection runs, **Then** "not installed" is returned
+4. **Given** WMI service is unavailable, **When** detection runs, **Then** it returns Unavailable with a diagnostic message
 
 ---
 
-### User Story 4 - ASCOM Profile Detection (Priority: P4)
+### User Story 4 - Brownfield Hardware Discovery via VID:PID (Priority: P4)
+
+A user has astrophotography hardware connected but hasn't told astro-up about it. The application scans connected USB devices, matches VID:PID patterns against the manifest `[hardware]` section, and suggests relevant driver packages the user might want to track.
+
+**Why this priority**: Brownfield onboarding — users switching to astro-up already have hardware and drivers. VID:PID matching bootstraps the relationship between hardware and packages.
+
+**Independent Test**: With a ZWO camera connected (VID:PID `03C3:*`), run hardware discovery, verify it suggests the `zwo-asi-camera` package.
+
+**Acceptance Scenarios**:
+
+1. **Given** a USB device with VID:PID `03C3:120A` is connected, **When** hardware discovery runs, **Then** it matches to the ZWO ASI camera driver package
+2. **Given** an unknown VID:PID, **When** hardware discovery runs, **Then** it is silently skipped (not an error)
+3. **Given** the matched driver is already being tracked, **When** discovery runs, **Then** it's not suggested again
+4. **Given** wildcard matching `03C3:*`, **When** any ZWO device is connected, **Then** it matches the ZWO driver package
+
+---
+
+### User Story 5 - ASCOM Profile Detection (Priority: P5)
 
 The application detects ASCOM drivers by reading the ASCOM Profile registry keys. ASCOM Platform 7+ is the minimum supported version.
 
-**Why this priority**: ASCOM drivers use a non-standard registry location that generic uninstall key scanning won't find. Many devices still use COM drivers even with ASCOM Platform 7.
+**Why this priority**: ASCOM drivers use a non-standard registry location that generic uninstall key scanning won't find.
 
 **Independent Test**: With an ASCOM driver installed, verify detection finds it via the ASCOM Profile keys.
 
@@ -70,31 +88,32 @@ The application detects ASCOM drivers by reading the ASCOM Profile registry keys
 
 1. **Given** an ASCOM camera driver is registered, **When** detection runs with `method = "ascom_profile"`, **Then** the driver name and version are returned
 2. **Given** no ASCOM Platform is installed, **When** ASCOM detection runs, **Then** it returns "not installed" gracefully
-3. **Given** ASCOM Platform 7 with registered drivers, **When** detection runs, **Then** all registered drivers are found via the profile registry
 
 ---
 
-### User Story 5 - Detection Result Caching (Priority: P5)
+### User Story 6 - Detection Result Caching (Priority: P6)
 
-Detection results are cached in memory with event-driven invalidation. When astro-up installs or updates a package, that package's cached result is invalidated. An explicit `scan` command invalidates the entire cache. This prevents redundant scans during a single session (dashboard refresh, pre-update check, post-install verify).
+Detection results are cached in memory with event-driven invalidation. When astro-up installs or updates a package, that package's cached result is invalidated. An explicit `scan` command invalidates the entire cache.
 
-**Why this priority**: Avoids redundant registry/PE scans during a session while staying accurate for astro-up's own operations.
+**Why this priority**: Avoids redundant registry/PE/WMI scans during a session.
 
-**Independent Test**: Run detection twice in a session — second call returns cached result. Install a package — its cache entry is invalidated.
+**Independent Test**: Run detection twice — second call returns cached result. Install a package — its cache entry is invalidated.
 
 **Acceptance Scenarios**:
 
-1. **Given** a detection scan was run 10 seconds ago, **When** the dashboard refreshes, **Then** cached results are returned without re-scanning
-2. **Given** astro-up installs a package, **When** post-install verification runs, **Then** that package is re-detected (cache invalidated) but others use cache
-3. **Given** the user runs `astro-up scan`, **When** the scan starts, **Then** the entire cache is cleared and all packages are re-detected
+1. **Given** a detection scan was run 10 seconds ago, **When** the dashboard refreshes, **Then** cached results are returned
+2. **Given** astro-up installs a package, **When** post-install verification runs, **Then** that package is re-detected (cache invalidated)
+3. **Given** the user runs `astro-up scan`, **When** the scan starts, **Then** the entire cache is cleared
 
 ### Edge Cases
 
-- Non-Windows platforms (CI): Registry detection returns "unavailable." PE detection via pelite works cross-platform.
+- Non-Windows platforms (CI): Registry and WMI return "unavailable." PE detection via pelite works cross-platform.
 - Registry value exists but is empty: Treat as "installed but version unknown."
-- 32-bit vs 64-bit registry: Check both WOW6432Node and native views on 64-bit Windows.
-- PE file path from ledger but file was moved/deleted: Return "not installed" — the app was uninstalled outside astro-up.
-- External install/uninstall (user does it manually): Detected on next explicit `scan` (cache cleared). Not detected between scans.
+- 32-bit vs 64-bit registry: Check both WOW6432Node and native views.
+- PE file path from ledger but file was moved/deleted: Return "not installed."
+- External install/uninstall: Detected on next explicit `scan` (cache cleared).
+- Multiple WMI matches for same vendor (camera + EFW + focuser): Return all matches, manifest's `device_class` determines relevance.
+- WMI timeout: Default 10 seconds. On timeout, return Unavailable.
 
 ## Requirements *(mandatory)*
 
@@ -106,36 +125,45 @@ Detection results are cached in memory with event-driven invalidation. When astr
 - **FR-004**: System MUST support a default detection chain: registry → pe_file → file_exists
 - **FR-005**: System MUST allow manifests to override the default chain with explicit `[detection]` config
 - **FR-006**: System MUST detect ASCOM drivers via ASCOM Profile registry keys (ASCOM Platform 7+ minimum)
-- **FR-007**: System MUST resolve PE file paths from the manifest config OR the install ledger (for astro-up-installed packages)
-- **FR-008**: System MUST parse extracted version strings into the Version type from spec 003 (strip 4th component, pad missing)
+- **FR-007**: System MUST resolve PE file paths from the manifest config OR the install ledger
+- **FR-008**: System MUST parse extracted version strings into the Version type from spec 003
 - **FR-009**: System MUST check both 32-bit and 64-bit registry views on 64-bit Windows
 - **FR-010**: System MUST handle missing registry keys, missing files, and permission errors gracefully
-- **FR-011**: System MUST support `file_exists` detection method (presence check without version)
-- **FR-012**: System MUST support `config_file` detection method (regex extraction from config files)
-- **FR-013**: System MUST cache detection results in memory with event-driven invalidation (per-package on install/update, full on explicit scan)
-- **FR-014**: System MUST compile on all platforms — Windows-only APIs behind `cfg(windows)`, returns Unavailable on other platforms
+- **FR-011**: System MUST support `file_exists` and `config_file` detection methods
+- **FR-012**: System MUST detect driver versions via WMI `Win32_PnPSignedDriver` queries
+- **FR-013**: System MUST filter WMI results by `DriverProviderName`, `DeviceClass`, and `InfName`
+- **FR-014**: System MUST match connected USB devices by VID:PID pattern against manifest `[hardware]` sections for brownfield discovery
+- **FR-015**: System MUST support wildcard VID:PID matching (e.g., `03C3:*` for all products under a vendor ID)
+- **FR-016**: System MUST cache detection results in memory with event-driven invalidation
+- **FR-017**: System MUST compile on all platforms — Windows-only APIs behind `cfg(windows)`
+- **FR-018**: System MUST enforce a 10-second timeout on WMI queries
 
 ### Key Entities
 
 - **DetectionResult**: Enum of Installed(Version), InstalledUnknownVersion, NotInstalled, or Unavailable(reason)
 - **DetectionChain**: Ordered list of detection methods. Default: registry → pe_file → file_exists. Overridable per manifest.
-- **DetectionCache**: In-memory cache of DetectionResult per package ID. Invalidated per-package by install/update events, fully by scan command.
+- **DetectionCache**: In-memory cache of DetectionResult per package ID with event-driven invalidation.
 - **PathResolver**: Resolves PE file paths from manifest config tokens OR install ledger entries.
+- **WmiDriver**: Provider name, device class, INF name, driver version, device ID from Win32_PnPSignedDriver.
+- **VidPidMatch**: Maps a VID:PID pattern from manifest `[hardware]` to a package ID. Used for brownfield discovery.
+- **HardwareDiscovery**: Scans connected USB devices, matches VID:PID, suggests untracked packages.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: Full detection scan completes for all ~95 packages in under 5 seconds
+- **SC-001**: Full detection scan (registry + PE + WMI) completes for all ~95 packages in under 5 seconds
 - **SC-002**: Cached detection lookups return in under 1ms
 - **SC-003**: PE file detection works identically on Windows and in Linux CI (via pelite)
-- **SC-004**: Self-updated apps (version changed outside astro-up) are detected correctly via PE on next scan
+- **SC-004**: VID:PID matching correctly identifies all known astrophotography hardware in the test set
+- **SC-005**: WMI detection returns correct driver versions for USB serial and camera driver packages
 
 ## Assumptions
 
 - Windows is the primary detection platform; macOS/Linux returns Unavailable for registry/WMI methods
-- PE detection via pelite works cross-platform (reads PE headers without executing)
-- ASCOM Platform 7 is the minimum supported version (maintains profile registry for backward compat)
+- PE detection via pelite works cross-platform
+- ASCOM Platform 7 is the minimum supported version
 - The install ledger (spec 003 LedgerEntry) provides paths for astro-up-installed packages
 - Detection cache is per-session (in-memory), not persisted to disk
+- VID:PID matching is for brownfield discovery (suggesting packages), not for version detection. Device connection notifications (hotplug) are deferred.
 - Depends on: spec 003 (Version type, DetectionConfig, LedgerEntry), spec 004 (path token expansion)
