@@ -103,6 +103,8 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - SQLite — same database file as catalog and ledger (single .db per app) (004-configuration-system)
 - Rust 2024 edition (1.85+) + rusqlite 0.35 (bundled, existing), minisign-verify 0.2, reqwest 0.12 (rustls-tls), serde/serde_json (existing), chrono (existing) (005-manifest-catalog)
 - SQLite — read-only access to pre-compiled catalog.db from GitHub Releases (005-manifest-catalog)
+- Rust 2024 edition (1.85+) + pelite 0.10 (PE), winreg 0.56 (registry), wmi 0.14 (WMI/hardware), directories 6.0 (platform paths) (006-registry-pe-detection)
+- SQLite (existing — ledger entries for Acknowledged packages) (006-registry-pe-detection)
 
 ## Recent Changes
 - 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4
