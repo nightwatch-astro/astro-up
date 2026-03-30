@@ -2,7 +2,8 @@
 
 **Feature Branch**: `009-alpaca-client`
 **Created**: 2026-03-29
-**Status**: Draft
+**Status**: Deferred
+**Deferred Reason**: Alpaca is device control, not driver management. Not needed for astro-up
 **Project**: Rust Migration
 **Project Number**: 1
 **Input**: Migration plan Spec 008 — query ASCOM devices via Alpaca HTTP/JSON API
