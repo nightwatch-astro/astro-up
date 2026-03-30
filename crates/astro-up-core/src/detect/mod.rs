@@ -1,13 +1,14 @@
 mod ascom;
 mod cache;
 mod file;
-mod hardware;
+pub mod hardware;
 mod path;
 pub mod pe;
 mod registry;
 mod wmi_driver;
 
 pub use cache::DetectionCache;
+pub use hardware::{HardwareMatch, VidPid};
 pub use path::PathResolver;
 
 use std::time::Duration;

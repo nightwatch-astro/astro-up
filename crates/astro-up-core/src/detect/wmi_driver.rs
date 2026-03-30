@@ -1,14 +1,98 @@
 use crate::detect::DetectionResult;
-use crate::types::DetectionConfig;
+use crate::types::{DetectionConfig, DetectionMethod, Version};
 
-#[cfg(windows)]
-pub async fn detect(_config: &DetectionConfig) -> DetectionResult {
-    todo!("T018: implement WMI driver detection")
+/// Detect driver versions via WMI Win32_PnPSignedDriver queries.
+///
+/// Filters by DriverProviderName, DeviceClass, and InfName (AND logic).
+/// 10-second timeout enforced via tokio::time::timeout.
+pub async fn detect(config: &DetectionConfig) -> DetectionResult {
+    #[cfg(windows)]
+    {
+        detect_windows(config).await
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = config;
+        DetectionResult::Unavailable {
+            reason: "WMI detection requires Windows".into(),
+        }
+    }
 }
 
-#[cfg(not(windows))]
-pub async fn detect(_config: &DetectionConfig) -> DetectionResult {
-    DetectionResult::Unavailable {
-        reason: "WMI detection requires Windows".into(),
+#[cfg(windows)]
+async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
+    use std::time::Duration;
+
+    use serde::Deserialize;
+
+    #[derive(Deserialize, Debug)]
+    #[allow(non_snake_case)]
+    struct PnPSignedDriver {
+        DriverProviderName: Option<String>,
+        DeviceClass: Option<String>,
+        InfName: Option<String>,
+        DriverVersion: Option<String>,
+    }
+
+    // Build WHERE clause from config filters (AND logic)
+    let mut conditions = Vec::new();
+    if let Some(ref provider) = config.inf_provider {
+        conditions.push(format!("DriverProviderName = '{provider}'"));
+    }
+    if let Some(ref class) = config.device_class {
+        conditions.push(format!("DeviceClass = '{class}'"));
+    }
+    if let Some(ref inf) = config.inf_name {
+        conditions.push(format!("InfName = '{inf}'"));
+    }
+
+    if conditions.is_empty() {
+        return DetectionResult::Unavailable {
+            reason: "WMI detection requires at least one filter (inf_provider, device_class, or inf_name)".into(),
+        };
+    }
+
+    let query = format!(
+        "SELECT DriverProviderName, DeviceClass, InfName, DriverVersion FROM Win32_PnPSignedDriver WHERE {}",
+        conditions.join(" AND ")
+    );
+
+    let result = tokio::time::timeout(Duration::from_secs(10), async {
+        let con = tokio::task::spawn_blocking(|| wmi::WMIConnection::new())
+            .await
+            .map_err(|e| format!("spawn failed: {e}"))?
+            .map_err(|e| format!("WMI connection failed: {e}"))?;
+
+        let drivers: Vec<PnPSignedDriver> = con
+            .async_raw_query(&query)
+            .await
+            .map_err(|e| format!("WMI query failed: {e}"))?;
+
+        Ok::<_, String>(drivers)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(drivers)) => {
+            if let Some(driver) = drivers.first() {
+                if let Some(ref ver) = driver.DriverVersion {
+                    if !ver.trim().is_empty() {
+                        return DetectionResult::Installed {
+                            version: Version::parse(ver.trim()),
+                            method: DetectionMethod::Wmi,
+                        };
+                    }
+                }
+                DetectionResult::InstalledUnknownVersion {
+                    method: DetectionMethod::Wmi,
+                }
+            } else {
+                DetectionResult::NotInstalled
+            }
+        }
+        Ok(Err(e)) => DetectionResult::Unavailable { reason: e },
+        Err(_) => DetectionResult::Unavailable {
+            reason: "WMI query timed out (10s)".into(),
+        },
     }
 }
