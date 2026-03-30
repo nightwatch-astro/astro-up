@@ -7,6 +7,7 @@ use crate::detect::DetectionResult;
 
 struct CacheEntry {
     result: DetectionResult,
+    #[allow(dead_code)] // retained for future TTL support
     scanned_at: DateTime<Utc>,
 }
 

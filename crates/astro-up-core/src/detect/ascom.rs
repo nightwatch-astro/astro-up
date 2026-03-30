@@ -1,5 +1,7 @@
 use crate::detect::DetectionResult;
-use crate::types::{DetectionConfig, DetectionMethod, Version};
+use crate::types::DetectionConfig;
+#[cfg(windows)]
+use crate::types::{DetectionMethod, Version};
 
 /// Detect ASCOM drivers via ASCOM Profile registry keys.
 ///

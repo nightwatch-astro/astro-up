@@ -1,14 +1,14 @@
 use std::time::Instant;
 
 use chrono::Utc;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::detect::{
     run_chain, DetectionCache, DetectionError, DetectionResult, PackageDetection, PathResolver,
     ScanResult,
 };
-use crate::ledger::{LedgerEntry, LedgerSource};
-use crate::types::{DetectionConfig, Software, Version};
+use crate::ledger::LedgerEntry;
+use crate::types::{Software, Version};
 
 /// Minimal interface for getting the list of packages to scan.
 ///
@@ -51,7 +51,7 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         let packages = self.packages.list_all()?;
 
         let mut results = Vec::with_capacity(packages.len());
-        let mut errors = Vec::new();
+        let errors = Vec::new();
 
         for pkg in &packages {
             let Some(ref detection_config) = pkg.detection else {
@@ -144,8 +144,9 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ledger::LedgerSource;
     use crate::types::{
-        Category, DetectionMethod, SoftwareType,
+        Category, DetectionConfig, DetectionMethod, SoftwareType,
     };
 
     struct MockPackages(Vec<Software>);

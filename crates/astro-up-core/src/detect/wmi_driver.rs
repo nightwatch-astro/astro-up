@@ -1,5 +1,7 @@
 use crate::detect::DetectionResult;
-use crate::types::{DetectionConfig, DetectionMethod, Version};
+use crate::types::DetectionConfig;
+#[cfg(windows)]
+use crate::types::{DetectionMethod, Version};
 
 /// Detect driver versions via WMI Win32_PnPSignedDriver queries.
 ///

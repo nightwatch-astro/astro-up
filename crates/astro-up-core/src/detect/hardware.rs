@@ -131,6 +131,7 @@ pub async fn discover(
 }
 
 /// Parse VID:PID from a Windows DeviceID string like "USB\VID_03C3&PID_120A\..."
+#[cfg(any(windows, test))]
 fn parse_device_id_vidpid(device_id: &str) -> Option<VidPid> {
     let upper = device_id.to_uppercase();
     let vid_pos = upper.find("VID_")?;
