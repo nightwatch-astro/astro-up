@@ -43,16 +43,16 @@ A power user creates a `config.toml` file at `{config_dir}/astro-up/config.toml`
 
 ### User Story 3 - Environment Variable Overrides (Priority: P3)
 
-A CI/CD system or Docker container runs astro-up with configuration injected via environment variables. The `ASTROUP_` prefix maps to config fields: `ASTROUP_GITHUB_TOKEN` sets the GitHub API token, `ASTROUP_CATALOG__URL` sets the catalog source URL (double underscore for nesting). Environment variables take highest precedence after CLI arguments.
+A CI/CD system or Docker container runs astro-up with configuration injected via environment variables. The `ASTROUP_` prefix maps to config fields: `ASTROUP_CATALOG__URL` sets the catalog source URL (double underscore for nesting). Environment variables take highest precedence after CLI arguments.
 
-**Why this priority**: Environment variables enable headless/automated operation and secret injection without config files on disk.
+**Why this priority**: Environment variables enable headless/automated operation and configuration injection without config files on disk.
 
-**Independent Test**: Set `ASTROUP_GITHUB_TOKEN=ghp_test123`, launch the application, verify the token is used for GitHub API requests.
+**Independent Test**: Set `ASTROUP_CATALOG__URL=https://custom.example.com/catalog.db`, launch the application, verify the custom catalog URL is used.
 
 **Acceptance Scenarios**:
 
-1. **Given** `ASTROUP_GITHUB_TOKEN=ghp_xxx` is set, **When** the application loads config, **Then** the GitHub token is `ghp_xxx` regardless of what the TOML file says
-2. **Given** `ASTROUP_CATALOG__URL=https://custom.example.com/catalog.db` is set, **When** the application loads config, **Then** the catalog URL points to the custom location
+1. **Given** `ASTROUP_CATALOG__URL=https://custom.example.com/catalog.db` is set, **When** the application loads config, **Then** the catalog URL points to the custom location regardless of what the TOML file says
+2. **Given** `ASTROUP_LOGGING__LEVEL=debug` is set, **When** the application starts, **Then** logging is at debug level
 3. **Given** an env var with an invalid name like `ASTROUP_NONEXISTENT_FIELD`, **When** the application loads config, **Then** the unknown variable is silently ignored
 
 ---
@@ -102,7 +102,7 @@ A user passes `--config /path/to/custom.toml` to use an alternate config file, o
 - **AppConfig**: Top-level configuration struct containing all sections. Serializable to/from TOML. Validatable.
 - **CatalogConfig**: Catalog source URL, signature verification public key, cache TTL, offline mode flag
 - **PathsConfig**: Download directory, cache directory, data directory, log file path
-- **NetworkConfig**: HTTP proxy URL, request timeout, GitHub API token, user agent string
+- **NetworkConfig**: HTTP proxy URL, request timeout, user agent string
 - **UpdateConfig**: Auto-check enabled, check interval, allowed update channels
 - **LogConfig**: Log level (error/warn/info/debug/trace), log to file flag, log file path
 - **TelemetryConfig**: Opt-in flag, anonymous usage metrics endpoint
@@ -129,7 +129,6 @@ A user passes `--config /path/to/custom.toml` to use an alternate config file, o
 | paths | data_dir | `{data_dir}/astro-up` |
 | network | proxy | none |
 | network | timeout | 30 seconds |
-| network | github_token | none |
 | updates | auto_check | true |
 | updates | check_interval | 24 hours |
 | logging | level | info |
@@ -141,6 +140,6 @@ A user passes `--config /path/to/custom.toml` to use an alternate config file, o
 
 - The application runs on Windows as the primary platform, with macOS/Linux used for development and CI
 - The `directories` crate (or equivalent) provides reliable platform-aware path resolution on all supported platforms
-- GitHub tokens are the only secret stored in config; proxy auth credentials are embedded in the proxy URL
+- No secrets stored in config for v1; proxy auth credentials are embedded in the proxy URL. GitHub API token deferred as optional feature for custom tools (spec 014).
 - Config file is human-edited TOML — no GUI config editor in this spec (that's part of the frontend spec)
 - Telemetry is opt-in by default (disabled unless explicitly enabled)

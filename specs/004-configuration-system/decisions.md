@@ -49,9 +49,9 @@
 **Finding**: No explicit config version field needed. Serde's `#[serde(default)]` handles missing fields (new fields get defaults on old configs). Unknown fields get a warning (FR-010). This handles both upgrades and downgrades gracefully.
 **Decision**: No migration system. No version field. Rely on serde defaults + warn-on-unknown.
 
-### C3: GitHub token in plaintext is acceptable for v1
-**Finding**: The only secret in config is the GitHub API token. Storing it in TOML is plaintext on disk. Alternatives (keychain, 1Password CLI) add OS-specific complexity.
-**Decision**: Accept plaintext for v1. Users who want secure storage use `ASTROUP_GITHUB_TOKEN` env var. Document this in `config init` output.
+### C3: GitHub token removed from config — deferred to custom tools
+**Finding**: The GitHub token was for rate-limited API calls during version checking. But official packages get their versions from the catalog (one HTTP request, no API). Only custom tools (spec 014) would need per-repo GitHub API calls, and most users will have <5 custom tools (well within the 60/hour unauthenticated limit).
+**Decision**: Remove github_token from NetworkConfig entirely. If needed later, add as an optional field in spec 014 (custom tools). No secrets in config for v1.
 
 ### C4: Default values explicitly documented
 **Finding**: Spec said "sensible defaults" without listing them. Added a defaults table to the spec covering all sections (catalog URL, TTL, paths, network, updates, logging, telemetry).
