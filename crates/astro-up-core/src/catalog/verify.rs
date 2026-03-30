@@ -1,0 +1,1 @@
+//! Minisign signature verification.
