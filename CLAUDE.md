@@ -107,8 +107,8 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - SQLite (existing — ledger entries for Acknowledged packages) (006-registry-pe-detection)
 - Rust 2024 edition (1.85+) + reqwest 0.13 (existing), sha2 0.10 (new), tokio-util 0.7 (new — CancellationToken) (010-download-manager)
 - N/A (file-based — `.part` files and final installers on disk) (010-download-manager)
-- Rust 2024 edition (1.85+) + zip 2 (existing from spec 011), walkdir 2 (new), sha2 0.10 (existing), chrono (existing), tokio (existing) (013-backup-restore)
-- Filesystem (ZIP archives in `{data_dir}/astro-up/backups/{package_id}/`) (013-backup-restore)
+- Rust 2024 edition (1.85+) + okio 1 (+ process feature), zip 2, windows 0.62 (cfg(windows)), tokio-util 0.7 (CancellationToken, existing) (011-installer-execution)
+- SQLite (existing, ledger entries via rusqlite) (011-installer-execution)
 
 ## Recent Changes
 - 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4
