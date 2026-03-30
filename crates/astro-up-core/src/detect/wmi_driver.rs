@@ -34,6 +34,7 @@ async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
         DeviceClass: Option<String>,
         InfName: Option<String>,
         DriverVersion: Option<String>,
+        DeviceID: Option<String>,
     }
 
     // Build WHERE clause from config filters (AND logic)
@@ -55,7 +56,7 @@ async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
     }
 
     let query = format!(
-        "SELECT DriverProviderName, DeviceClass, InfName, DriverVersion FROM Win32_PnPSignedDriver WHERE {}",
+        "SELECT DriverProviderName, DeviceClass, InfName, DriverVersion, DeviceID FROM Win32_PnPSignedDriver WHERE {}",
         conditions.join(" AND ")
     );
 

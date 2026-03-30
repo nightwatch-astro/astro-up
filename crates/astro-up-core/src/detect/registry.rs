@@ -49,26 +49,34 @@ fn detect_windows(config: &DetectionConfig) -> DetectionResult {
             key_path
         );
 
-        if let Ok(subkey) = root.open_subkey_with_flags(&uninstall_path, flags) {
-            match subkey.get_value::<String, _>(value_name) {
-                Ok(version_str) if !version_str.trim().is_empty() => {
-                    return DetectionResult::Installed {
-                        version: Version::parse(version_str.trim()),
-                        method: DetectionMethod::Registry,
-                    };
-                }
-                Ok(_) => {
-                    // Value exists but is empty
-                    return DetectionResult::InstalledUnknownVersion {
-                        method: DetectionMethod::Registry,
-                    };
-                }
-                Err(_) => {
-                    // Key exists but value missing — still installed
-                    return DetectionResult::InstalledUnknownVersion {
-                        method: DetectionMethod::Registry,
-                    };
-                }
+        let subkey = match root.open_subkey_with_flags(&uninstall_path, flags) {
+            Ok(k) => k,
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                return DetectionResult::Unavailable {
+                    reason: format!("permission denied reading registry key: {uninstall_path}"),
+                };
+            }
+            Err(_) => continue, // key not found, try next search
+        };
+
+        match subkey.get_value::<String, _>(value_name) {
+            Ok(version_str) if !version_str.trim().is_empty() => {
+                return DetectionResult::Installed {
+                    version: Version::parse(version_str.trim()),
+                    method: DetectionMethod::Registry,
+                };
+            }
+            Ok(_) => {
+                // Value exists but is empty
+                return DetectionResult::InstalledUnknownVersion {
+                    method: DetectionMethod::Registry,
+                };
+            }
+            Err(_) => {
+                // Key exists but value missing — still installed
+                return DetectionResult::InstalledUnknownVersion {
+                    method: DetectionMethod::Registry,
+                };
             }
         }
     }

@@ -377,4 +377,31 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].package_id, "test-app");
     }
+
+    #[tokio::test]
+    async fn ledger_sync_preserves_astroup_entries() {
+        let ledger = MockLedger::new();
+        // Pre-populate with an AstroUp-sourced entry (user installed it)
+        {
+            let mut entries = ledger.entries.lock().unwrap();
+            entries.push(LedgerEntry {
+                package_id: "user-installed-app".into(),
+                version: Version::parse("2.0.0"),
+                source: LedgerSource::AstroUp,
+                recorded_at: Utc::now(),
+                notes: None,
+            });
+        }
+
+        // Scan finds nothing (no packages in catalog)
+        let packages = MockPackages(vec![]);
+        let scanner = Scanner::new(packages, ledger);
+        scanner.scan().await.unwrap();
+
+        // AstroUp entry must NOT be removed (only Acknowledged entries are auto-removed)
+        let all_entries = scanner.ledger.entries.lock().unwrap();
+        assert_eq!(all_entries.len(), 1);
+        assert_eq!(all_entries[0].package_id, "user-installed-app");
+        assert_eq!(all_entries[0].source, LedgerSource::AstroUp);
+    }
 }
