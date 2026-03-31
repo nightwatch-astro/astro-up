@@ -90,7 +90,7 @@ pub async fn spawn_with_job_object(
 
     // Create job object
     let job = unsafe { CreateJobObjectW(None, None) }
-        .map_err(|e| CoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
 
     // Configure: kill all processes when job handle closes
     let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
@@ -103,7 +103,7 @@ pub async fn spawn_with_job_object(
             mem::size_of_val(&info) as u32,
         )
     }
-    .map_err(|e| CoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+    .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
 
     // Create process suspended
     let mut si = STARTUPINFOW::default();
@@ -124,7 +124,7 @@ pub async fn spawn_with_job_object(
             &mut pi,
         )
     }
-    .map_err(|e| CoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+    .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
 
     let process_handle = pi.hProcess;
     let thread_handle = pi.hThread;
@@ -139,8 +139,7 @@ pub async fn spawn_with_job_object(
             CloseHandle(process_handle).ok();
             CloseHandle(job).ok();
         }
-        return Err(CoreError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        return Err(CoreError::Io(std::io::Error::other(
             "failed to assign process to job object",
         )));
     }

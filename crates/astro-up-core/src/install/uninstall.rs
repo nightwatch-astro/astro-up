@@ -104,10 +104,9 @@ pub async fn run_uninstall(command: &str, quiet: bool) -> Result<(), CoreError> 
         Ok(())
     } else {
         let code = status.code().unwrap_or(-1);
-        Err(CoreError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("uninstall command failed with exit code {code}"),
-        )))
+        Err(CoreError::Io(std::io::Error::other(format!(
+            "uninstall command failed with exit code {code}"
+        ))))
     }
 }
 
