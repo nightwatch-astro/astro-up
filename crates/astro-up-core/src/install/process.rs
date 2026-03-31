@@ -150,42 +150,44 @@ pub async fn spawn_with_job_object(
         CloseHandle(thread_handle).ok();
     }
 
-    // Wait with timeout and cancellation
+    // Extract raw handles as isize for Send safety across spawn_blocking
+    let raw_process = process_handle.0 as isize;
+    let raw_job = job.0 as isize;
     let timeout_ms = timeout.as_millis() as u32;
+    let timeout_secs = timeout.as_secs();
 
     let result = tokio::select! {
         exit_code = async {
             tokio::task::spawn_blocking(move || {
-                let wait = unsafe {
-                    WaitForSingleObject(process_handle, timeout_ms)
-                };
-                let code = if wait.0 == 0 {
+                use windows::Win32::Foundation::HANDLE;
+
+                let proc_h = HANDLE(raw_process as *mut std::ffi::c_void);
+                let job_h = HANDLE(raw_job as *mut std::ffi::c_void);
+
+                let wait = unsafe { WaitForSingleObject(proc_h, timeout_ms) };
+                let code: Result<i32, u64> = if wait.0 == 0 {
                     // WAIT_OBJECT_0 = 0
                     let mut exit_code: u32 = 0;
                     unsafe {
-                        windows::Win32::System::Threading::GetExitCodeProcess(
-                            process_handle,
-                            &mut exit_code,
-                        ).ok();
+                        GetExitCodeProcess(proc_h, &mut exit_code).ok();
                     }
                     Ok(exit_code as i32)
                 } else {
-                    Err(timeout)
+                    Err(timeout_secs)
                 };
                 unsafe {
-                    CloseHandle(process_handle).ok();
-                    CloseHandle(job).ok();
+                    CloseHandle(proc_h).ok();
+                    CloseHandle(job_h).ok();
                 }
                 code
-            }).await.map_err(|e| CoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?
+            }).await.map_err(|e| CoreError::Io(std::io::Error::other(e)))?
         } => {
             match exit_code {
                 Ok(code) => Ok(code),
-                Err(t) => Err(CoreError::InstallerTimeout { timeout_secs: t.as_secs() }),
+                Err(secs) => Err(CoreError::InstallerTimeout { timeout_secs: secs }),
             }
         }
         () = cancel_token.cancelled() => {
-            // Job handle drop will kill process tree
             Err(CoreError::Cancelled)
         }
     };

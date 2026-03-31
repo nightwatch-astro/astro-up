@@ -241,36 +241,8 @@ impl InstallerService {
     ) -> Result<InstallResult, CoreError> {
         #[cfg(windows)]
         if let Some(parent) = installer_path.parent() {
-            let parent = parent.to_path_buf();
-            tokio::task::spawn_blocking(move || {
-                use std::ffi::OsStr;
-                use std::os::windows::ffi::OsStrExt;
-
-                use windows::Win32::Foundation::HWND;
-                use windows::Win32::UI::Shell::ShellExecuteW;
-                use windows::core::PCWSTR;
-
-                let verb: Vec<u16> = OsStr::new("open")
-                    .encode_wide()
-                    .chain(std::iter::once(0))
-                    .collect();
-                let dir: Vec<u16> = OsStr::new(&parent)
-                    .encode_wide()
-                    .chain(std::iter::once(0))
-                    .collect();
-                unsafe {
-                    ShellExecuteW(
-                        HWND::default(),
-                        PCWSTR(verb.as_ptr()),
-                        PCWSTR(dir.as_ptr()),
-                        None,
-                        None,
-                        windows::Win32::UI::WindowsAndMessaging::SW_SHOW.0,
-                    );
-                }
-            })
-            .await
-            .map_err(|e| CoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            // Open the containing folder in Explorer
+            std::process::Command::new("explorer").arg(parent).spawn()?;
         }
         Ok(InstallResult::Success { path: None })
     }

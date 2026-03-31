@@ -90,15 +90,19 @@ pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
         let success = unsafe { ShellExecuteExW(&mut sei) };
         if success.is_ok() {
             if !sei.hProcess.is_invalid() {
+                // Extract raw handle as isize so it's Send-safe across spawn_blocking
+                let raw_handle = sei.hProcess.0 as isize;
                 tokio::task::spawn_blocking(move || unsafe {
+                    use windows::Win32::Foundation::HANDLE;
+                    let handle = HANDLE(raw_handle as *mut std::ffi::c_void);
                     windows::Win32::System::Threading::WaitForSingleObject(
-                        sei.hProcess,
+                        handle,
                         windows::Win32::System::Threading::INFINITE,
                     );
-                    windows::Win32::Foundation::CloseHandle(sei.hProcess).ok();
+                    windows::Win32::Foundation::CloseHandle(handle).ok();
                 })
                 .await
-                .map_err(|e| CoreError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
             }
             Ok(())
         } else {
