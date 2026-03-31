@@ -24,7 +24,7 @@ minisign-verify = "0.2"
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 sha2 = "0.10"
 sysinfo = "0.38"
-tokio = { version = "1", features = ["fs", "time", "sync", "process"] }
+tokio = { version = "1", features = ["fs", "time", "sync", "process", "macros"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 toml = "0.9"
 zip = "2"
