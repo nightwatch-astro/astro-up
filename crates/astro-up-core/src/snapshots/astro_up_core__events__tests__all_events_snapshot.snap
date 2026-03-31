@@ -60,7 +60,27 @@ expression: events
     }
   },
   {
+    "type": "backup_progress",
+    "data": {
+      "id": "test",
+      "files_processed": 5,
+      "total_files": 10
+    }
+  },
+  {
     "type": "backup_complete",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "restore_started",
+    "data": {
+      "id": "test"
+    }
+  },
+  {
+    "type": "restore_complete",
     "data": {
       "id": "test"
     }

@@ -67,11 +67,9 @@ fn count_files(paths: &[PathBuf]) -> u32 {
     let mut count = 0u32;
     for path in paths {
         if path.exists() {
-            for entry in WalkDir::new(path).follow_links(true) {
-                if let Ok(e) = entry {
-                    if e.file_type().is_file() {
-                        count += 1;
-                    }
+            for entry in WalkDir::new(path).follow_links(true).into_iter().flatten() {
+                if entry.file_type().is_file() {
+                    count += 1;
                 }
             }
         }
