@@ -5,7 +5,7 @@ pub mod types;
 
 use std::path::{Path, PathBuf};
 
-use tracing::{info, instrument};
+use tracing::{info, instrument, warn};
 
 use crate::error::CoreError;
 use crate::events::Event;
@@ -61,6 +61,19 @@ impl BackupService {
 
     #[instrument(skip_all, fields(archive = %request.archive_path.display()))]
     pub async fn restore(&self, request: &RestoreRequest) -> Result<(), CoreError> {
+        // FR-009: Warn on version mismatch
+        if let Some(current_version) = &request.current_version {
+            if let Ok(metadata) = archive::read_metadata(&request.archive_path).await {
+                if metadata.version != *current_version {
+                    warn!(
+                        backup_version = %metadata.version.raw,
+                        current_version = %current_version.raw,
+                        "restoring backup from a different version"
+                    );
+                }
+            }
+        }
+
         let _ = request.event_tx.send(Event::RestoreStarted {
             id: request.archive_path.display().to_string(),
         });

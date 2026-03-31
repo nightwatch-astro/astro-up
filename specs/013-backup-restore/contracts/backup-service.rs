@@ -83,8 +83,9 @@ pub trait BackupManager: Send {
 /// Facade for backup operations. Implements BackupManager trait.
 pub struct BackupService {
     backup_dir: PathBuf, // {data_dir}/astro-up/backups/
+    retention: usize,    // auto-prune after backup (0 = unlimited)
 }
 
 impl BackupService {
-    pub fn new(backup_dir: PathBuf) -> Self;
+    pub fn new(backup_dir: PathBuf, retention: usize) -> Self;
 }
