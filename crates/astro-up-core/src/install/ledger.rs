@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use chrono::Utc;
 
@@ -11,7 +11,7 @@ use crate::types::Version;
 pub fn record_install(
     package_id: &str,
     version: &Version,
-    install_path: Option<&PathBuf>,
+    install_path: Option<&Path>,
 ) -> LedgerEntry {
     LedgerEntry {
         package_id: package_id.to_string(),
@@ -19,7 +19,7 @@ pub fn record_install(
         source: LedgerSource::AstroUp,
         recorded_at: Utc::now(),
         notes: None,
-        install_path: install_path.cloned(),
+        install_path: install_path.map(Path::to_path_buf),
     }
 }
 
@@ -30,13 +30,13 @@ mod tests {
     #[test]
     fn record_install_basic() {
         let version = Version::parse("3.1.2");
-        let path = PathBuf::from("C:\\Programs\\NINA");
-        let entry = record_install("nina-app", &version, Some(&path));
+        let path = std::path::Path::new("C:\\Programs\\NINA");
+        let entry = record_install("nina-app", &version, Some(path));
 
         assert_eq!(entry.package_id, "nina-app");
         assert_eq!(entry.version, version);
         assert_eq!(entry.source, LedgerSource::AstroUp);
-        assert_eq!(entry.install_path, Some(path));
+        assert_eq!(entry.install_path, Some(path.to_path_buf()));
         assert!(entry.notes.is_none());
     }
 

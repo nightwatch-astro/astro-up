@@ -110,6 +110,24 @@ pub struct InstallConfig {
     pub timeout: Option<Duration>,
 }
 
+impl Default for InstallConfig {
+    fn default() -> Self {
+        Self {
+            method: InstallMethod::Exe,
+            scope: None,
+            elevation: None,
+            upgrade_behavior: None,
+            install_modes: vec![],
+            success_codes: vec![],
+            pre_install: vec![],
+            post_install: vec![],
+            switches: None,
+            known_exit_codes: HashMap::new(),
+            timeout: None,
+        }
+    }
+}
+
 impl InstallConfig {
     /// Validates timeout is within the allowed range (10s–3600s).
     /// Returns an error message if invalid, None if valid or absent.

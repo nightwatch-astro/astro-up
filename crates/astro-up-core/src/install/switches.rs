@@ -95,16 +95,7 @@ mod tests {
     fn config_for(method: InstallMethod) -> InstallConfig {
         InstallConfig {
             method,
-            scope: None,
-            elevation: None,
-            upgrade_behavior: None,
-            install_modes: vec![],
-            success_codes: vec![],
-            pre_install: vec![],
-            post_install: vec![],
-            switches: None,
-            known_exit_codes: Default::default(),
-            timeout: None,
+            ..Default::default()
         }
     }
 

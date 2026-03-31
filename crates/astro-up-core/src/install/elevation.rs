@@ -55,23 +55,12 @@ pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
             Err(CoreError::ElevationRequired)
         }
     } else {
-        // ShellExecuteExW runas path
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
+        use super::wide::to_wide_null;
 
         let args_str = args.join(" ");
-        let exe_wide: Vec<u16> = OsStr::new(&current_exe)
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect();
-        let args_wide: Vec<u16> = OsStr::new(&args_str)
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect();
-        let verb_wide: Vec<u16> = OsStr::new("runas")
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect();
+        let exe_wide = to_wide_null(&current_exe.to_string_lossy());
+        let args_wide = to_wide_null(&args_str);
+        let verb_wide = to_wide_null("runas");
 
         use windows::Win32::UI::Shell::*;
         use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
