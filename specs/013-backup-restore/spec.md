@@ -35,7 +35,7 @@ A user runs `astro-up backup nina` before making risky config changes (tweaking 
 
 **Acceptance Scenarios**:
 
-1. **Given** the user runs `astro-up backup nina`, **When** backup completes, **Then** an archive is created at `{data_dir}/astro-up/backups/nina/`
+1. **Given** the user runs `astro-up backup nina`, **When** backup completes, **Then** an archive is created at `{data_dir}/astro-up/backups/{package_id}/` (e.g., `backups/nina-app/`)
 2. **Given** the package has no `[backup]` section in its manifest, **When** manual backup runs, **Then** an error reports "no backup paths configured for this package"
 3. **Given** NINA is currently running and has locked config files, **When** backup runs, **Then** locked files are skipped with a warning listing which files were excluded
 
@@ -101,8 +101,8 @@ A user runs `astro-up backup list nina` to see all backups. Old backups are auto
 
 - **FR-001**: System MUST backup all manifest-defined `[backup].config_paths` into a single timestamped ZIP archive
 - **FR-002**: System MUST support multiple config paths per package (different directories, different drives)
-- **FR-003**: System MUST expand path tokens (`{config_dir}`, `{home_dir}`, etc.) in backup paths
-- **FR-004**: System MUST include backup metadata in the archive (package_id, version, timestamp, original paths)
+- **FR-003**: Backup paths MUST be expanded before reaching the backup module. The caller (orchestration engine or CLI) expands path tokens (`{config_dir}`, `{home_dir}`, etc.) using the config module's `directories`-based path resolution (spec 004). `BackupRequest.config_paths` contains absolute, already-expanded paths.
+- **FR-004**: System MUST include `metadata.json` in the archive with: `package_id`, `version`, `created_at`, `paths` (original config_paths), `file_count`, `total_size` (bytes), `excluded_files` (skipped/locked), `file_hashes` (relative_path -> SHA-256 for restore preview)
 - **FR-005**: System MUST support manual on-demand backup via CLI and GUI
 - **FR-006**: System MUST support automatic backup triggered by the orchestration engine before install/update
 - **FR-007**: System MUST restore backup archives to the original file paths
@@ -113,22 +113,31 @@ A user runs `astro-up backup list nina` to see all backups. Old backups are auto
 - **FR-012**: System MUST prune old backups beyond configurable retention count (default: 5) after each new backup
 - **FR-013**: System MUST skip locked files during backup with a warning listing excluded files
 - **FR-014**: System MUST store backups at `{data_dir}/astro-up/backups/{package_id}/`
-- **FR-015**: System MUST name archives `{package_id}_{version}_{YYYYMMDD_HHMMSS}.zip`
-- **FR-016**: System MUST preserve relative directory structure within the archive (paths relative to each config_path root)
+- **FR-015**: System MUST name archives `{package_id}_{version}_{YYYYMMDD_HHMMSS}.zip` where `version` is the currently installed version at backup time (not the version being updated to)
+- **FR-016**: System MUST preserve relative directory structure within the archive. Each config_path gets a top-level directory named after its last path component (e.g., `Profiles/`, `Settings/`). If two config_paths share the same last component, disambiguate with a numeric suffix (e.g., `Settings/`, `Settings_2/`).
+- **FR-017**: System MUST emit events: `BackupStarted` (existing), `BackupProgress { id, files_processed, total_files }` (new), `BackupComplete` (existing), `RestoreStarted { id }` (new), `RestoreComplete { id }` (new). Cross-spec change to spec 003 Event enum.
 
 ### Key Entities
 
 - **BackupArchive**: ZIP file containing config files from all configured paths + metadata.json
-- **BackupMetadata**: package_id, version, created_at, paths (list of original config_paths), file_count, total_size, excluded_files (locked)
+- **BackupMetadata**: package_id: String, version: Version, created_at: DateTime\<Utc\>, paths: Vec\<PathBuf\> (original config_paths), file_count: u32, total_size: u64 (bytes), excluded_files: Vec\<String\> (locked/skipped). Replaces the minimal `BackupResult` struct in `traits.rs` (cross-spec change to spec 003).
 - **FileChangeSummary**: Per-file status for restore preview: overwrite (file differs), unchanged (identical), new (doesn't exist locally)
-- **BackupConfig**: `config_paths` list from the software manifest's `[backup]` section
+- **BackupConfig**: `config_paths` list from the software manifest's `[backup]` section. Contains only paths — retention count is a global app config setting (`backup.retention_count`, spec 004), not per-package.
+
+## Clarifications
+
+### Session 2026-03-31
+
+- Q: Should backup module implement its own path token expansion or reuse config system? → A: Reuse config module's `directories`-based path resolution (spec 004). DRY — tokens already handled there.
+- Q: Should BackupManager trait be kept minimal or evolved to match spec? → A: Evolve the trait to match spec requirements — add `restore_selective`, richer return types (`FileChangeSummary`), metadata-aware operations. Cross-spec change to spec 003 trait definition.
+- Q: Should backup/restore emit events for progress tracking? → A: Add `BackupProgress { id, files_processed, total_files }`, `RestoreStarted { id }`, `RestoreComplete { id }` event variants. Covers GUI progress for large config directories.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
 - **SC-001**: Backup completes in under 10 seconds for typical config sizes (<100MB)
-- **SC-002**: Restore accurately recreates all backed-up files at their original paths
+- **SC-002**: Restore recreates all backed-up files at their original paths — byte-identical content, original directory structure preserved. File permissions and timestamps are not guaranteed (ZIP limitations).
 - **SC-003**: Pruning correctly retains only the configured number of most recent backups
 - **SC-004**: File change summary correctly identifies overwritten vs unchanged files before restore
 
