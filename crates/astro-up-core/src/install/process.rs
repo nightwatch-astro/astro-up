@@ -106,8 +106,10 @@ pub async fn spawn_with_job_object(
     .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
 
     // Create process suspended
-    let mut si = STARTUPINFOW::default();
-    si.cb = mem::size_of::<STARTUPINFOW>() as u32;
+    let si = STARTUPINFOW {
+        cb: mem::size_of::<STARTUPINFOW>() as u32,
+        ..Default::default()
+    };
     let mut pi = PROCESS_INFORMATION::default();
 
     unsafe {
