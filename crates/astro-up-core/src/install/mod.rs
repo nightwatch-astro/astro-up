@@ -123,11 +123,7 @@ impl InstallerService {
                 | Ok(InstallResult::SuccessRebootRequired { path }) => path.as_ref(),
                 _ => None,
             };
-            let entry = ledger::record_install(
-                &request.package_id,
-                &request.version,
-                install_path,
-            );
+            let entry = ledger::record_install(&request.package_id, &request.version, install_path);
             info!(package = %entry.package_id, "recorded install in ledger");
         }
 

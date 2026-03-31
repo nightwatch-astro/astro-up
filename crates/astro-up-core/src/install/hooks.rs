@@ -38,9 +38,9 @@ pub async fn run_hook(command: &str, _elevated: bool) -> Result<(), CoreError> {
                 Ok(())
             } else {
                 let code = output.status.code().unwrap_or(-1);
-                Err(CoreError::Io(std::io::Error::other(
-                    format!("hook {command:?} failed with exit code {code}"),
-                )))
+                Err(CoreError::Io(std::io::Error::other(format!(
+                    "hook {command:?} failed with exit code {code}"
+                ))))
             }
         }
         Ok(Err(e)) => Err(CoreError::Io(e)),
@@ -67,9 +67,9 @@ pub async fn run_hook(command: &str, _elevated: bool) -> Result<(), CoreError> {
                 Ok(())
             } else {
                 let code = output.status.code().unwrap_or(-1);
-                Err(CoreError::Io(std::io::Error::other(
-                    format!("hook {command:?} failed with exit code {code}"),
-                )))
+                Err(CoreError::Io(std::io::Error::other(format!(
+                    "hook {command:?} failed with exit code {code}"
+                ))))
             }
         }
         Ok(Err(e)) => Err(CoreError::Io(e)),

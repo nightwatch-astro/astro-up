@@ -104,7 +104,7 @@ mod tests {
             post_install: vec![],
             switches: None,
             known_exit_codes: Default::default(),
-            timeout: None,
+            timeout_secs: None,
         }
     }
 
@@ -227,5 +227,22 @@ mod tests {
         let dir = Path::new("C:\\Programs\\PHD2");
         let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir));
         assert!(args.contains(&"/D=C:\\Programs\\PHD2".to_string()));
+    }
+
+    #[test]
+    fn msi_with_dir_override() {
+        let config = config_for(InstallMethod::Msi);
+        let dir = Path::new("C:\\Programs\\ASCOM");
+        let (exe, args) = build_args(&config, Path::new("driver.msi"), Some(dir));
+        assert_eq!(exe, "msiexec");
+        assert!(args.contains(&"INSTALLDIR=C:\\Programs\\ASCOM".to_string()));
+    }
+
+    #[test]
+    fn wix_with_dir_override() {
+        let config = config_for(InstallMethod::Wix);
+        let dir = Path::new("C:\\Programs\\SharpCap");
+        let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir));
+        assert!(args.contains(&"INSTALLDIR=C:\\Programs\\SharpCap".to_string()));
     }
 }

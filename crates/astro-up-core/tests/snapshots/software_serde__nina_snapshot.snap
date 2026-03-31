@@ -88,7 +88,7 @@ expression: software
       "custom": []
     },
     "known_exit_codes": {},
-    "timeout": null
+    "timeout_secs": null
   },
   "checkver": {
     "provider": null,
