@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod catalog;
 pub mod config;
 pub mod detect;

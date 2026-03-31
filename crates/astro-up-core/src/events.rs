@@ -39,7 +39,18 @@ pub enum Event {
     BackupStarted {
         id: String,
     },
+    BackupProgress {
+        id: String,
+        files_processed: u32,
+        total_files: u32,
+    },
     BackupComplete {
+        id: String,
+    },
+    RestoreStarted {
+        id: String,
+    },
+    RestoreComplete {
         id: String,
     },
     InstallStarted {
@@ -118,7 +129,14 @@ mod tests {
             },
             Event::DownloadComplete { id: "test".into() },
             Event::BackupStarted { id: "test".into() },
+            Event::BackupProgress {
+                id: "test".into(),
+                files_processed: 5,
+                total_files: 10,
+            },
             Event::BackupComplete { id: "test".into() },
+            Event::RestoreStarted { id: "test".into() },
+            Event::RestoreComplete { id: "test".into() },
             Event::InstallStarted { id: "test".into() },
             Event::InstallComplete { id: "test".into() },
             Event::ManualDownloadRequired {

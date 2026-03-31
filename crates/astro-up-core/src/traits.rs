@@ -39,28 +39,25 @@ pub trait Downloader {
     ) -> Result<crate::download::DownloadResult, CoreError>;
 }
 
-/// Backup result from a completed backup operation.
-#[derive(Debug, Clone)]
-pub struct BackupResult {
-    pub software_id: String,
-    pub timestamp: String,
-    pub path: String,
-    pub size: u64,
-}
-
-/// Entry in a backup list.
-#[derive(Debug, Clone)]
-pub struct BackupEntry {
-    pub timestamp: String,
-    pub path: String,
-    pub size: u64,
-}
-
 /// Backs up and restores software configuration files.
+/// (Updated by spec 013 — richer signatures with BackupMetadata, FileChangeSummary, etc.)
 #[trait_variant::make(BackupManagerDyn: Send)]
 pub trait BackupManager {
-    async fn backup(&self, software_id: &str, paths: &[String]) -> Result<BackupResult, CoreError>;
-    async fn restore(&self, software_id: &str, timestamp: &str) -> Result<(), CoreError>;
-    async fn list(&self, software_id: &str) -> Result<Vec<BackupEntry>, CoreError>;
-    async fn prune(&self, software_id: &str, keep: usize) -> Result<(), CoreError>;
+    async fn backup(
+        &self,
+        request: &crate::backup::types::BackupRequest,
+    ) -> Result<crate::backup::types::BackupMetadata, CoreError>;
+    async fn restore(
+        &self,
+        request: &crate::backup::types::RestoreRequest,
+    ) -> Result<(), CoreError>;
+    async fn restore_preview(
+        &self,
+        archive_path: &std::path::Path,
+    ) -> Result<crate::backup::types::FileChangeSummary, CoreError>;
+    async fn list(
+        &self,
+        package_id: &str,
+    ) -> Result<Vec<crate::backup::types::BackupListEntry>, CoreError>;
+    async fn prune(&self, package_id: &str, keep: usize) -> Result<u32, CoreError>;
 }
