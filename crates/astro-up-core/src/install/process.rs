@@ -72,7 +72,7 @@ pub async fn spawn_with_job_object(
     use std::mem;
     use std::os::windows::ffi::OsStrExt;
 
-    use windows::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0};
+    use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::JobObjects::*;
     use windows::Win32::System::Threading::*;
     use windows::core::PWSTR;
@@ -113,7 +113,7 @@ pub async fn spawn_with_job_object(
     unsafe {
         CreateProcessW(
             None,
-            PWSTR(cmd_wide.as_mut_ptr()),
+            Some(PWSTR(cmd_wide.as_mut_ptr())),
             None,
             None,
             false,
@@ -159,7 +159,8 @@ pub async fn spawn_with_job_object(
                 let wait = unsafe {
                     WaitForSingleObject(process_handle, timeout_ms)
                 };
-                let code = if wait == WAIT_OBJECT_0 {
+                let code = if wait.0 == 0 {
+                    // WAIT_OBJECT_0 = 0
                     let mut exit_code: u32 = 0;
                     unsafe {
                         windows::Win32::System::Threading::GetExitCodeProcess(
