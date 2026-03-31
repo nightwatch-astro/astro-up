@@ -109,6 +109,8 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - N/A (file-based — `.part` files and final installers on disk) (010-download-manager)
 - Rust 2024 edition (1.85+) + okio 1 (+ process feature), zip 2, windows 0.62 (cfg(windows)), tokio-util 0.7 (CancellationToken, existing) (011-installer-execution)
 - SQLite (existing, ledger entries via rusqlite) (011-installer-execution)
+- Rust 2024 edition (1.85+) + semver (existing), chrono (existing), sysinfo (existing from spec 005), regex (new — custom version format), rusqlite (existing — operations table), tokio (existing — async runtime), tokio-util (existing from spec 010/011 — CancellationToken) (012-install-orchestration)
+- SQLite — operations table in existing app database (012-install-orchestration)
 
 ## Recent Changes
 - 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4

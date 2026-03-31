@@ -23,6 +23,8 @@ A user runs `astro-up update nina`. The engine orchestrates: compare catalog ver
 2. **Given** `--dry-run` flag, **When** update runs, **Then** each step is logged but no changes are made
 3. **Given** the download fails, **When** the engine detects the failure, **Then** it stops the pipeline (no install attempt)
 4. **Given** installed version equals catalog version, **When** update runs, **Then** "already up to date" is reported
+5. **Given** NINA is running, **When** `update nina` starts, **Then** the engine blocks before backup and reports the running process
+6. **Given** install fails after backup, **When** the engine detects failure, **Then** it logs the backup path for manual restore
 
 ---
 
@@ -107,7 +109,8 @@ Every install, update, and uninstall operation is logged to the local SQLite dat
 
 ### Edge Cases
 
-- Package in use during update: Report the process name, suggest closing it.
+- Package in use during update: Block the pipeline before backup, report the process name and PID, prompt the user to close it. Do not proceed until the process is no longer running.
+- Install or verification failure after backup: Log the failure and available backup path. No automatic rollback — user restores manually via `astro-up restore`.
 - Disk space insufficient: Check before downloading, report required vs available.
 - Downgrade request: Reject unless `--allow-downgrade` is explicitly passed.
 - Version format mismatch (catalog says semver, detection returns date): Fall back to raw string comparison with a warning.
@@ -119,7 +122,7 @@ Every install, update, and uninstall operation is logged to the local SQLite dat
 
 - **FR-001**: System MUST orchestrate the pipeline: compare versions → download → backup → install → verify
 - **FR-002**: System MUST resolve dependencies and install in topological order
-- **FR-003**: System MUST enforce update policies (minor-only, major-allowed, manual, none) globally and per-package
+- **FR-003**: System MUST enforce update policies (minor-only, major-allowed, manual, none) globally and per-package. Minor/major filtering applies only to semver-formatted packages; date and custom-format packages always update (policy "none" and "manual" still apply)
 - **FR-004**: System MUST support `--dry-run` that reports the plan without making changes
 - **FR-005**: System MUST support `--allow-major` to override minor-only policy for a single invocation
 - **FR-006**: System MUST emit events for each pipeline step
@@ -129,11 +132,14 @@ Every install, update, and uninstall operation is logged to the local SQLite dat
 - **FR-010**: System MUST support cancellation at any point
 - **FR-011**: System MUST check available disk space before downloading
 - **FR-012**: System MUST prevent downgrades unless explicitly requested
-- **FR-013**: System MUST compare versions using format-aware parsing: semver, date, custom regex (ported from manifests repo `ParsedVersion`)
+- **FR-013**: System MUST compare versions using format-aware parsing: semver, date, custom regex
 - **FR-014**: System MUST detect "newer than catalog" status (installed > latest) and report it distinctly from "up to date"
 - **FR-015**: System MUST log every operation to the local SQLite operations table (package, from/to version, status, duration, error, timestamp)
 - **FR-016**: System MUST use the `version_format` field from the catalog to select the correct version parser
 - **FR-017**: System MUST default to lenient semver when no version format is specified
+- **FR-018**: System MUST check if the target software is running before the backup→install phase and block until the process is no longer active
+- **FR-019**: On install or verification failure, the system MUST log the failure and the path to the most recent backup — no automatic rollback
+- **FR-020**: System MUST acquire a global lock file before starting orchestration and release it on completion or crash — a second concurrent run MUST fail cleanly with a message identifying the holding process
 
 ### Key Entities
 
@@ -163,7 +169,14 @@ Every install, update, and uninstall operation is logged to the local SQLite dat
 | Custom | `version_format = "<regex>"` | `3.1 HF2` with `(\d+)\.(\d+) HF(\d+)` | Captured group comparison |
 | 4-part | Coerced to semver | `3.1.2.3001` → `3.1.2` | Semver after stripping 4th |
 
-Implementation: Port `ParsedVersion` enum from `nightwatch-astro/astro-up-manifests/crates/shared/src/version.rs` into `astro-up-core`. Replace `lenient_semver` (unmaintained) with the ported lenient parser.
+## Clarifications
+
+### Session 2026-03-31
+
+- Q: Should the engine auto-restore from backup on install/verification failure? → A: No — log the failure and backup path, user restores manually via `astro-up restore`
+- Q: Should the engine check if target software is running before backup→install? → A: Yes — block the pipeline, report process name and PID, wait until closed
+- Q: Can multiple orchestration runs execute concurrently? → A: No — global lock file, second run fails cleanly identifying the holding process
+- Q: How do minor/major update policies apply to non-semver formats? → A: They don't — minor/major filtering is semver-only; date and custom formats always update (manual/none policies still apply)
 
 ## Assumptions
 
