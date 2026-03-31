@@ -6,7 +6,7 @@ use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 
 use crate::events::Event;
-use crate::types::install::{InstallConfig, InstallMethod, KnownExitCode};
+use crate::types::{InstallConfig, InstallMethod, KnownExitCode};
 
 /// Success outcomes from an install operation. Failures are `CoreError`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

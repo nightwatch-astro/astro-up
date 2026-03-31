@@ -9,34 +9,29 @@ pub mod uninstall;
 pub mod zip;
 
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use tracing::{info, instrument, warn};
 
 use crate::error::CoreError;
 use crate::events::Event;
-use crate::types::install::{Elevation, InstallMethod, UpgradeBehavior};
+use crate::types::{Elevation, InstallMethod, UpgradeBehavior};
 
 use self::exit_codes::interpret_exit_code;
 use self::switches::build_args;
 use self::types::{ExitCodeOutcome, InstallRequest, InstallResult, UninstallRequest};
 
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(600);
 const DEFAULT_INSTALL_SUBDIR: &str = "packages";
 
 /// Facade for installer execution. Handles the full lifecycle:
 /// pre-hooks -> elevation -> spawn -> exit code interpretation -> post-hooks -> ledger.
 pub struct InstallerService {
-    default_timeout: Duration,
     data_dir: PathBuf,
 }
 
 impl InstallerService {
     pub fn new(data_dir: PathBuf) -> Self {
-        Self {
-            default_timeout: DEFAULT_TIMEOUT,
-            data_dir,
-        }
+        Self { data_dir }
     }
 
     fn default_install_dir(&self, package_id: &str) -> PathBuf {
@@ -86,7 +81,10 @@ impl InstallerService {
         }
 
         // upgrade_behavior = uninstall_previous
-        if matches!(config.upgrade_behavior, Some(UpgradeBehavior::UninstallPrevious)) {
+        if matches!(
+            config.upgrade_behavior,
+            Some(UpgradeBehavior::UninstallPrevious)
+        ) {
             info!("upgrade_behavior=uninstall_previous, uninstalling current version");
             let uninstall_cmd = uninstall::find_uninstall_command(&request.package_id);
             if let Some(cmd) = uninstall_cmd {
@@ -161,8 +159,11 @@ impl InstallerService {
         request: &InstallRequest,
     ) -> Result<InstallResult, CoreError> {
         let config = &request.install_config;
-        let (exe, args) =
-            build_args(config, &request.installer_path, request.install_dir.as_deref());
+        let (exe, args) = build_args(
+            config,
+            &request.installer_path,
+            request.install_dir.as_deref(),
+        );
 
         let exit_code = if matches!(config.method, InstallMethod::Burn) {
             process::spawn_with_job_object(
@@ -202,10 +203,9 @@ impl InstallerService {
                         response: known,
                     })
                 } else {
-                    Err(CoreError::Io(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("installer failed with exit code {code}"),
-                    )))
+                    Err(CoreError::Io(std::io::Error::other(format!(
+                        "installer failed with exit code {code}"
+                    ))))
                 }
             }
         }
@@ -232,10 +232,7 @@ impl InstallerService {
             .clone()
             .unwrap_or_else(|| self.default_install_dir(&request.package_id));
         tokio::fs::create_dir_all(&dest).await?;
-        let filename = request
-            .installer_path
-            .file_name()
-            .unwrap_or_default();
+        let filename = request.installer_path.file_name().unwrap_or_default();
         tokio::fs::copy(&request.installer_path, dest.join(filename)).await?;
         Ok(InstallResult::Success { path: Some(dest) })
     }
@@ -285,21 +282,25 @@ impl InstallerService {
     pub async fn uninstall(&self, request: &UninstallRequest) -> Result<(), CoreError> {
         match request.method {
             InstallMethod::Zip | InstallMethod::ZipWrap | InstallMethod::Portable => {
-                let dir = request.install_dir.as_ref().ok_or_else(|| CoreError::NotFound {
-                    input: format!(
-                        "no install directory known for {} - uninstall not supported",
-                        request.package_id
-                    ),
-                })?;
+                let dir = request
+                    .install_dir
+                    .as_ref()
+                    .ok_or_else(|| CoreError::NotFound {
+                        input: format!(
+                            "no install directory known for {} - uninstall not supported",
+                            request.package_id
+                        ),
+                    })?;
                 uninstall::remove_directory(dir, request.confirm).await
             }
             _ => {
-                let cmd = request
-                    .uninstall_command
-                    .as_deref()
-                    .ok_or_else(|| CoreError::NotFound {
-                        input: format!("no uninstall command found for {}", request.package_id),
-                    })?;
+                let cmd =
+                    request
+                        .uninstall_command
+                        .as_deref()
+                        .ok_or_else(|| CoreError::NotFound {
+                            input: format!("no uninstall command found for {}", request.package_id),
+                        })?;
                 uninstall::run_uninstall(cmd, request.quiet).await
             }
         }
@@ -307,9 +308,10 @@ impl InstallerService {
 
     fn record_metrics(&self, package_id: &str, start: Instant) {
         let duration = start.elapsed();
-        metrics::gauge!(crate::metrics::INSTALL_DURATION_SECONDS).set(duration.as_secs_f64());
         info!(
             package = %package_id,
+            metric = crate::metrics::INSTALL_DURATION_SECONDS,
+            duration_secs = duration.as_secs_f64(),
             duration_ms = duration.as_millis() as u64,
             "install completed"
         );

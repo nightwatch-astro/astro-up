@@ -19,10 +19,7 @@ pub async fn spawn_simple(
 ) -> Result<i32, CoreError> {
     use tokio::process::Command;
 
-    let mut child = Command::new(exe)
-        .args(args)
-        .kill_on_drop(true)
-        .spawn()?;
+    let mut child = Command::new(exe).args(args).kill_on_drop(true).spawn()?;
 
     tokio::select! {
         result = child.wait() => {

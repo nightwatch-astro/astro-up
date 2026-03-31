@@ -19,13 +19,7 @@ pub async fn run_hook(command: &str, _elevated: bool) -> Result<(), CoreError> {
     let (program, args) = if command.ends_with(".ps1") {
         (
             "powershell.exe",
-            vec![
-                "-ExecutionPolicy",
-                "Bypass",
-                "-NoProfile",
-                "-File",
-                command,
-            ],
+            vec!["-ExecutionPolicy", "Bypass", "-NoProfile", "-File", command],
         )
     } else {
         ("cmd", vec!["/c", command])
@@ -44,8 +38,7 @@ pub async fn run_hook(command: &str, _elevated: bool) -> Result<(), CoreError> {
                 Ok(())
             } else {
                 let code = output.status.code().unwrap_or(-1);
-                Err(CoreError::Io(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                Err(CoreError::Io(std::io::Error::other(
                     format!("hook {command:?} failed with exit code {code}"),
                 )))
             }
@@ -74,8 +67,7 @@ pub async fn run_hook(command: &str, _elevated: bool) -> Result<(), CoreError> {
                 Ok(())
             } else {
                 let code = output.status.code().unwrap_or(-1);
-                Err(CoreError::Io(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                Err(CoreError::Io(std::io::Error::other(
                     format!("hook {command:?} failed with exit code {code}"),
                 )))
             }

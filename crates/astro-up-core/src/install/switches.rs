@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::types::install::{InstallConfig, InstallMethod};
+use crate::types::{InstallConfig, InstallMethod};
 
 /// Returns the default silent switches for an installer type.
 fn default_silent_switches(method: &InstallMethod) -> Vec<String> {
@@ -90,7 +90,7 @@ pub fn build_args(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::install::{InstallConfig, InstallMethod, InstallerSwitches};
+    use crate::types::{InstallConfig, InstallMethod, InstallerSwitches};
 
     fn config_for(method: InstallMethod) -> InstallConfig {
         InstallConfig {

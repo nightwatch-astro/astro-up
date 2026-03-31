@@ -8,13 +8,22 @@ use crate::error::CoreError;
 /// `QuietUninstallString` over `UninstallString`.
 #[cfg(windows)]
 pub fn find_uninstall_command(package_id: &str) -> Option<String> {
-    use winreg::enums::*;
     use winreg::RegKey;
+    use winreg::enums::*;
 
     let search_paths = [
-        (HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
-        (HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
-        (HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
+        (
+            HKEY_LOCAL_MACHINE,
+            r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        ),
+        (
+            HKEY_LOCAL_MACHINE,
+            r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+        ),
+        (
+            HKEY_CURRENT_USER,
+            r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        ),
     ];
 
     for (hive, path) in &search_paths {
@@ -27,7 +36,10 @@ pub fn find_uninstall_command(package_id: &str) -> Option<String> {
             };
             // Match by display name (case-insensitive contains)
             let display_name: String = subkey.get_value("DisplayName").unwrap_or_default();
-            if !display_name.to_lowercase().contains(&package_id.to_lowercase()) {
+            if !display_name
+                .to_lowercase()
+                .contains(&package_id.to_lowercase())
+            {
                 continue;
             }
             // Prefer QuietUninstallString
@@ -129,7 +141,8 @@ pub async fn remove_directory(install_dir: &Path, confirm: bool) -> Result<(), C
 }
 
 /// Simple command-line splitting that handles quoted strings.
-fn shell_words_split(input: &str) -> Vec<String> {
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn shell_words_split(input: &str) -> Vec<String> {
     let mut result = Vec::new();
     let mut current = String::new();
     let mut in_quote = false;
@@ -171,10 +184,7 @@ mod tests {
     #[test]
     fn shell_words_quoted_path() {
         let parts = shell_words_split(r#""C:\Program Files\app\uninstall.exe" /S"#);
-        assert_eq!(
-            parts,
-            vec![r"C:\Program Files\app\uninstall.exe", "/S"]
-        );
+        assert_eq!(parts, vec![r"C:\Program Files\app\uninstall.exe", "/S"]);
     }
 
     #[tokio::test]

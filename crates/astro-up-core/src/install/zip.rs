@@ -22,7 +22,7 @@ pub async fn extract_zip(archive_path: &Path, dest_dir: &Path) -> Result<PathBuf
 
     tokio::task::spawn_blocking(move || extract_zip_sync(&archive_path, &dest_dir))
         .await
-        .map_err(|e| CoreError::Io(io::Error::new(io::ErrorKind::Other, e)))?
+        .map_err(|e| CoreError::Io(io::Error::other(e)))?
 }
 
 fn extract_zip_sync(archive_path: &Path, dest_dir: &Path) -> Result<PathBuf, CoreError> {
@@ -30,7 +30,7 @@ fn extract_zip_sync(archive_path: &Path, dest_dir: &Path) -> Result<PathBuf, Cor
     let mut archive = zip::ZipArchive::new(file)
         .map_err(|e| CoreError::Io(io::Error::new(io::ErrorKind::InvalidData, e)))?;
 
-    if archive.len() == 0 {
+    if archive.is_empty() {
         fs::create_dir_all(dest_dir)?;
         return Ok(dest_dir.to_path_buf());
     }
@@ -60,7 +60,7 @@ fn extract_zip_sync(archive_path: &Path, dest_dir: &Path) -> Result<PathBuf, Cor
         let relative = if let Some(prefix) = &strip_prefix {
             safe_path
                 .strip_prefix(prefix)
-                .unwrap_or(safe_path)
+                .unwrap_or(&safe_path)
                 .to_path_buf()
         } else {
             safe_path.to_path_buf()
@@ -108,20 +108,17 @@ fn detect_single_root(
 
         // Get the first component
         let mut components = safe_path.components();
-        match components.next() {
-            Some(Component::Normal(first)) => {
-                if components.next().is_some() {
-                    // Has at least two components — record the root
-                    roots.insert(first.to_os_string());
-                } else if !entry.is_dir() {
-                    // File at the root level — no single root
-                    has_root_files = true;
-                } else {
-                    // Directory at root level
-                    roots.insert(first.to_os_string());
-                }
+        if let Some(Component::Normal(first)) = components.next() {
+            if components.next().is_some() {
+                // Has at least two components — record the root
+                roots.insert(first.to_os_string());
+            } else if !entry.is_dir() {
+                // File at the root level — no single root
+                has_root_files = true;
+            } else {
+                // Directory at root level
+                roots.insert(first.to_os_string());
             }
-            _ => {}
         }
     }
 
@@ -158,10 +155,8 @@ mod tests {
 
     #[tokio::test]
     async fn extract_normal_archive() {
-        let zip_file = create_test_zip(&[
-            ("readme.txt", b"hello"),
-            ("src/main.rs", b"fn main() {}"),
-        ]);
+        let zip_file =
+            create_test_zip(&[("readme.txt", b"hello"), ("src/main.rs", b"fn main() {}")]);
         let dest = tempfile::tempdir().unwrap();
 
         let result = extract_zip(zip_file.path(), dest.path()).await;
@@ -236,10 +231,7 @@ mod tests {
 
     #[tokio::test]
     async fn files_only_no_dirs_no_flattening() {
-        let zip_file = create_test_zip(&[
-            ("file1.txt", b"one"),
-            ("file2.txt", b"two"),
-        ]);
+        let zip_file = create_test_zip(&[("file1.txt", b"one"), ("file2.txt", b"two")]);
         let dest = tempfile::tempdir().unwrap();
 
         let result = extract_zip(zip_file.path(), dest.path()).await;

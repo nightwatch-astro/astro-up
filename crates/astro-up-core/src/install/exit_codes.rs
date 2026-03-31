@@ -1,5 +1,5 @@
 use crate::install::types::ExitCodeOutcome;
-use crate::types::install::{InstallConfig, KnownExitCode};
+use crate::types::{InstallConfig, KnownExitCode};
 
 /// Well-known Windows exit codes with universal meaning.
 const EXIT_CODE_SUCCESS: i32 = 0;
@@ -32,9 +32,9 @@ pub fn interpret_exit_code(code: i32, config: &InstallConfig) -> ExitCodeOutcome
             KnownExitCode::RebootRequired | KnownExitCode::SuccessRebootInitiated => {
                 ExitCodeOutcome::SuccessRebootRequired
             }
-            _ => ExitCodeOutcome::Failed {
+            other => ExitCodeOutcome::Failed {
                 code,
-                semantic: Some(known.clone()),
+                semantic: Some(other.clone()),
             },
         };
     }
@@ -59,7 +59,7 @@ mod tests {
 
     fn base_config() -> InstallConfig {
         InstallConfig {
-            method: crate::types::install::InstallMethod::Exe,
+            method: crate::types::InstallMethod::Exe,
             scope: None,
             elevation: None,
             upgrade_behavior: None,
@@ -75,7 +75,10 @@ mod tests {
 
     #[test]
     fn zero_is_success() {
-        assert_eq!(interpret_exit_code(0, &base_config()), ExitCodeOutcome::Success);
+        assert_eq!(
+            interpret_exit_code(0, &base_config()),
+            ExitCodeOutcome::Success
+        );
     }
 
     #[test]
