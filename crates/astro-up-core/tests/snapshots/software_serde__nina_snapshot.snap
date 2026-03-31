@@ -1,6 +1,5 @@
 ---
 source: crates/astro-up-core/tests/software_serde.rs
-assertion_line: 100
 expression: software
 ---
 {
@@ -88,7 +87,8 @@ expression: software
       "log": "/LOG=<LOGPATH>",
       "custom": []
     },
-    "known_exit_codes": {}
+    "known_exit_codes": {},
+    "timeout_secs": null
   },
   "checkver": {
     "provider": null,

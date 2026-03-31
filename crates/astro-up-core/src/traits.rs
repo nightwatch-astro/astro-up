@@ -1,14 +1,7 @@
 use crate::error::CoreError;
+use crate::install::types::{InstallRequest, InstallResult, UninstallRequest};
 use crate::release::Release;
-use crate::types::{CheckverConfig, InstallConfig, InstallMethod};
-
-/// Options for an install operation.
-#[derive(Debug, Clone)]
-pub struct InstallOptions {
-    pub asset_path: String,
-    pub config: InstallConfig,
-    pub quiet: bool,
-}
+use crate::types::{CheckverConfig, InstallMethod};
 
 /// Checks for the latest version of software from a remote source.
 #[trait_variant::make(ProviderDyn: Send)]
@@ -25,7 +18,8 @@ pub trait Provider {
 /// Installs or updates software on the local system.
 #[trait_variant::make(InstallerDyn: Send)]
 pub trait Installer {
-    async fn install(&self, opts: &InstallOptions) -> Result<(), CoreError>;
+    async fn install(&self, request: &InstallRequest) -> Result<InstallResult, CoreError>;
+    async fn uninstall(&self, request: &UninstallRequest) -> Result<(), CoreError>;
     fn supports(&self, method: &InstallMethod) -> bool;
 }
 

@@ -55,6 +55,7 @@ When an installer requires admin privileges, the system detects this and trigger
 1. **Given** a manifest with `elevation = "required"`, **When** the installer starts, **Then** it runs with admin privileges
 2. **Given** a manifest with `elevation = "self"`, **When** the installer starts, **Then** the installer handles its own elevation
 3. **Given** an installer that fails with exit code 740, **When** detected, **Then** the system retries with elevation
+4. **Given** a CLI invocation without admin rights needing elevation, **When** elevation is required, **Then** the system detects `sudo.exe` on PATH and re-execs via `sudo`; if `sudo` unavailable, re-execs via `ShellExecuteW runas`
 
 ---
 
@@ -119,44 +120,55 @@ A user configures a custom install directory. The system passes this to the inst
 ### Functional Requirements
 
 - **FR-001**: System MUST execute installers silently using type-appropriate default switches
-- **FR-002**: Manifest `[install.switches]` MUST fully replace (not merge with) default switches when present
-- **FR-003**: System MUST interpret exit codes using per-manifest `known_exit_codes` mapping
+- **FR-002**: Manifest `[install.switches]` MUST fully replace (not merge with) default switches when present. An explicitly empty `switches.silent = []` means "no silent switches" (run installer with no arguments). A missing `[install.switches]` section means "use type defaults".
+- **FR-003**: System MUST interpret exit codes using per-manifest `known_exit_codes` mapping. Precedence: `success_codes` takes priority — if an exit code appears in both `success_codes` and `known_exit_codes`, treat it as success (the semantic meaning is informational only).
 - **FR-004**: System MUST map exit codes to semantic types (PackageInUse, RebootRequired, ElevationRequired, AlreadyInstalled, etc.)
 - **FR-005**: System MUST support admin elevation (proactive from manifest, reactive from exit code 740)
 - **FR-006**: System MUST present reboot-required as a user choice, never auto-reboot
 - **FR-007**: System MUST support custom install directory via per-type switches (`/DIR=`, `INSTALLDIR=`, `/D=`)
 - **FR-008**: System MUST extract ZIP packages with mandatory zip-slip protection
 - **FR-009**: System MUST detect single-root-dir ZIPs and extract contents without double nesting
-- **FR-010**: System MUST enforce configurable per-installer timeout (default: 10 min, overridable via manifest `[install].timeout`)
-- **FR-011**: System MUST support pre_install and post_install command hooks from manifest
-- **FR-012**: System MUST emit install events (started, progress, completed, failed, reboot_required)
+- **FR-010**: System MUST enforce configurable per-installer timeout. Default: 600 seconds (10 min). Overridable via manifest `[install].timeout` field (`Option<Duration>`, parsed with `humantime-serde`). Timeout covers the entire process tree (parent + children). Validation: must be 10s–3600s.
+- **FR-011**: System MUST support pre_install and post_install command hooks from manifest. Hooks execute arbitrary commands (`.ps1` → PowerShell, else `cmd /c`). 60-second timeout. Hooks inherit the installer's elevation level. **Security note**: hooks are trusted — they come from signed manifests authored by the project maintainer, not user input. This is an accepted risk equivalent to running the installer itself.
+- **FR-012**: System MUST emit install events: `InstallStarted` (existing), `InstallComplete` (existing), `InstallFailed { id, error }` (new), `InstallRebootRequired { id }` (new). No progress events — installers are opaque processes.
 - **FR-013**: System MUST support these installer types: exe, msi, innosetup, nullsoft, wix, burn, zip, zipwrap, portable, download_only
 - **FR-014**: System MUST support cancellation — terminate installer process on user cancel
 - **FR-015**: System MUST wait for the entire process tree (Job Objects) for bootstrapper-style installers
 - **FR-016**: System MUST support uninstall for packages with a registered uninstall string in the registry
-- **FR-017**: System MUST support uninstall for ZIP/portable packages by deleting the install directory (with confirmation)
+- **FR-017**: System MUST support uninstall for ZIP/portable packages by deleting the install directory. Confirmation is the caller's responsibility — `UninstallRequest` includes a `confirm: bool` field that the CLI/GUI sets after prompting the user. Core library requires `confirm = true` to proceed with deletion; returns `CoreError` if false.
 - **FR-018**: System MUST support `upgrade_behavior = "uninstall_previous"` — uninstall current before installing new
 - **FR-019**: Installer type MUST be explicitly specified in the manifest — no auto-detection
-- **FR-020**: System MUST record successful installs in the install ledger (spec 003 LedgerEntry) with path and version
+- **FR-020**: System MUST record successful installs in the install ledger (spec 003 `LedgerEntry`) with version and `install_path: Option<PathBuf>` (cross-spec change to spec 003). Unblocks deferred issue #215 (PE detection from ledger paths).
 
 ### Default Silent Switches
 
 | Installer Type | Default Switches |
 |---------------|-----------------|
+| Exe | No default switches — run as-is (fallback for unlabeled executables) |
 | InnoSetup | `/VERYSILENT /NORESTART /SUPPRESSMSGBOXES` |
 | MSI | `msiexec /i <file> /qn /norestart` |
 | NSIS (Nullsoft) | `/S` |
 | WiX/Burn | `/quiet /norestart` |
-| ZIP/ZipWrap | Extract to target directory |
-| Portable | Copy to target directory |
+| ZIP/ZipWrap | Extract to `{paths.data_dir}/{package_id}` (or custom override) |
+| Portable | Copy to `{paths.data_dir}/{package_id}` (or custom override) |
 | DownloadOnly | No execution — open containing folder |
 
 ### Key Entities
 
 - **InstallRequest**: Package info, installer path, install directory, quiet flag, elevation requirement, timeout override
-- **InstallResult**: Success, SuccessRebootRequired, Failed(SemanticError), Cancelled, Timeout
+- **InstallResult**: Dedicated enum — `Success`, `SuccessRebootRequired`, `Cancelled`. Trait signature: `Result<InstallResult, CoreError>`. Reboot is a success state (installed but needs reboot), not an error. Timeout and failures remain as `CoreError` variants.
 - **UninstallRequest**: Package info, uninstall command from registry or directory path
-- **SemanticExitCode**: PackageInUse, RebootRequired, ElevationRequired, AlreadyInstalled, MissingDependency, CancelledByUser, etc.
+- **ExitCodeOutcome**: Success, SuccessRebootRequired, ElevationRequired, Failed { code, semantic: Option\<KnownExitCode\> }. Maps raw exit codes to actionable outcomes via the precedence chain (success_codes > known_exit_codes > defaults).
+
+## Clarifications
+
+### Session 2026-03-30
+
+- Q: How should InstallResult be modeled — dedicated enum or error variants? → A: New `InstallResult` enum (Success, SuccessRebootRequired, Cancelled) — trait returns `Result<InstallResult, CoreError>`. Reboot is a success state, not an error.
+- Q: How to record install path in ledger (FR-020, #215)? → A: Add `install_path: Option<PathBuf>` to `LedgerEntry` (spec 003 cross-spec change). Option handles unknown paths (e.g., MSI default location).
+- Q: CLI elevation mechanism when installer needs admin? → A: Detect `sudo.exe` on PATH (Windows 11 24H2+) — if found, re-exec via `sudo`; if not, re-exec via `ShellExecuteW runas`. Both paths auto-elevate without requiring the user to manually restart.
+- Q: Default install directory for ZIP/Portable when no override? → A: `{paths.data_dir}/{package_id}` (e.g., `%LOCALAPPDATA%/astro-up/packages/nina`).
+- Q: Which install event variants to add? → A: Add `InstallFailed { id, error }` and `InstallRebootRequired { id }` only. No progress events — installers are opaque black-box processes.
 
 ## Success Criteria *(mandatory)*
 
@@ -177,3 +189,4 @@ A user configures a custom install directory. The system passes this to the inst
 - Installer type is always specified in the manifest — never auto-detected
 - WebView2 bootstrapping is the Tauri installer's job (spec 019), not this spec
 - Depends on: spec 003 (types, LedgerEntry), spec 004 (config for timeouts/paths), spec 010 (download provides the installer file)
+- **Cross-spec changes to spec 003**: (1) `Installer` trait return type changes from `Result<(), CoreError>` to `Result<InstallResult, CoreError>` — breaking change, no downstream consumers yet. (2) `LedgerEntry` gains `install_path: Option<PathBuf>` field — additive, backward compatible. (3) `InstallConfig` gains `timeout: Option<Duration>` field — additive, backward compatible.

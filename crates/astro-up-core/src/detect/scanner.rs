@@ -211,6 +211,7 @@ mod tests {
                     source: LedgerSource::Acknowledged,
                     recorded_at: Utc::now(),
                     notes: None,
+                    install_path: None,
                 });
             }
             Ok(())
@@ -402,6 +403,7 @@ mod tests {
                 source: LedgerSource::AstroUp,
                 recorded_at: Utc::now(),
                 notes: None,
+                install_path: None,
             });
         }
 
