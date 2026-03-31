@@ -15,6 +15,7 @@ use tracing::{info, instrument, warn};
 
 use crate::error::CoreError;
 use crate::events::Event;
+use crate::traits::Installer;
 use crate::types::{Elevation, InstallMethod, UpgradeBehavior};
 
 use self::exit_codes::interpret_exit_code;
@@ -124,7 +125,7 @@ impl InstallerService {
             };
             let entry = ledger::record_install(
                 &request.package_id,
-                &crate::types::Version::parse("0.0.0"),
+                &request.version,
                 install_path,
             );
             info!(package = %entry.package_id, "recorded install in ledger");
@@ -315,5 +316,32 @@ impl InstallerService {
             duration_ms = duration.as_millis() as u64,
             "install completed"
         );
+    }
+}
+
+impl Installer for InstallerService {
+    async fn install(&self, request: &InstallRequest) -> Result<InstallResult, CoreError> {
+        self.install(request).await
+    }
+
+    async fn uninstall(&self, request: &UninstallRequest) -> Result<(), CoreError> {
+        self.uninstall(request).await
+    }
+
+    fn supports(&self, method: &InstallMethod) -> bool {
+        // All 10 installer types are supported
+        matches!(
+            method,
+            InstallMethod::Exe
+                | InstallMethod::Msi
+                | InstallMethod::InnoSetup
+                | InstallMethod::Nullsoft
+                | InstallMethod::Wix
+                | InstallMethod::Burn
+                | InstallMethod::Zip
+                | InstallMethod::ZipWrap
+                | InstallMethod::Portable
+                | InstallMethod::DownloadOnly
+        )
     }
 }

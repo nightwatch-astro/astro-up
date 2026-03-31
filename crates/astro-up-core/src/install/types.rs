@@ -34,6 +34,7 @@ pub enum ExitCodeOutcome {
 pub struct InstallRequest {
     pub package_id: String,
     pub package_name: String,
+    pub version: crate::types::Version,
     pub installer_path: PathBuf,
     pub install_dir: Option<PathBuf>,
     pub install_config: InstallConfig,
