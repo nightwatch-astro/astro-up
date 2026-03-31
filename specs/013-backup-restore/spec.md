@@ -129,7 +129,7 @@ A user runs `astro-up backup list nina` to see all backups. Old backups are auto
 ### Session 2026-03-31
 
 - Q: Should backup module implement its own path token expansion or reuse config system? → A: Reuse config module's `directories`-based path resolution (spec 004). DRY — tokens already handled there.
-- Q: Should BackupManager trait be kept minimal or evolved to match spec? → A: Evolve the trait to match spec requirements — add `restore_selective`, richer return types (`FileChangeSummary`), metadata-aware operations. Cross-spec change to spec 003 trait definition.
+- Q: Should BackupManager trait be kept minimal or evolved to match spec? → A: Evolve the trait to match spec requirements — add `restore_preview()`, richer return types (`FileChangeSummary`), metadata-aware operations. Cross-spec change to spec 003 trait definition.
 - Q: Should backup/restore emit events for progress tracking? → A: Add `BackupProgress { id, files_processed, total_files }`, `RestoreStarted { id }`, `RestoreComplete { id }` event variants. Covers GUI progress for large config directories.
 
 ## Success Criteria *(mandatory)*
