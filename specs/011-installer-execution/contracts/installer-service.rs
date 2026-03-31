@@ -12,6 +12,7 @@ use tokio_util::sync::CancellationToken;
 pub struct InstallRequest {
     pub package_id: String,
     pub package_name: String,
+    pub version: Version,
     pub installer_path: PathBuf,
     pub install_dir: Option<PathBuf>,
     pub install_config: InstallConfig, // from types/install.rs (spec 003)
@@ -35,6 +36,7 @@ pub struct UninstallRequest {
     pub install_dir: Option<PathBuf>,      // for ZIP/portable deletion
     pub method: InstallMethod,
     pub quiet: bool,
+    pub confirm: bool,                     // required for directory deletion
     pub cancel_token: CancellationToken,
 }
 

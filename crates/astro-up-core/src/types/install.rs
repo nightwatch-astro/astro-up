@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
@@ -103,7 +104,24 @@ pub struct InstallConfig {
     pub switches: Option<InstallerSwitches>,
     #[serde(default)]
     pub known_exit_codes: HashMap<String, KnownExitCode>,
-    /// Per-manifest timeout override in seconds. Default: 600 (10 min). Valid range: 10-3600.
-    #[serde(default)]
-    pub timeout_secs: Option<u64>,
+    /// Per-manifest timeout override. Default: 600s (10 min). Valid range: 10s–3600s.
+    /// Parsed with `humantime-serde` so manifests can write `timeout = "5m"`.
+    #[serde(default, with = "humantime_serde::option")]
+    pub timeout: Option<Duration>,
+}
+
+impl InstallConfig {
+    /// Validates timeout is within the allowed range (10s–3600s).
+    /// Returns an error message if invalid, None if valid or absent.
+    pub fn validate_timeout(&self) -> Option<String> {
+        if let Some(t) = self.timeout {
+            let secs = t.as_secs();
+            if !(10..=3600).contains(&secs) {
+                return Some(format!(
+                    "timeout must be between 10s and 3600s, got {secs}s"
+                ));
+            }
+        }
+        None
+    }
 }

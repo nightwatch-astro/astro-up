@@ -69,7 +69,7 @@ mod tests {
             post_install: vec![],
             switches: None,
             known_exit_codes: HashMap::new(),
-            timeout_secs: None,
+            timeout: None,
         }
     }
 

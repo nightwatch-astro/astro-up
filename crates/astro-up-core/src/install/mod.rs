@@ -9,7 +9,7 @@ pub mod uninstall;
 pub mod zip;
 
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use tracing::{info, instrument, warn};
 
@@ -22,21 +22,39 @@ use self::exit_codes::interpret_exit_code;
 use self::switches::build_args;
 use self::types::{ExitCodeOutcome, InstallRequest, InstallResult, UninstallRequest};
 
+/// Default installer timeout: 10 minutes.
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(600);
 const DEFAULT_INSTALL_SUBDIR: &str = "packages";
 
 /// Facade for installer execution. Handles the full lifecycle:
 /// pre-hooks -> elevation -> spawn -> exit code interpretation -> post-hooks -> ledger.
 pub struct InstallerService {
-    data_dir: PathBuf,
+    default_timeout: Duration,
+    default_install_dir: PathBuf,
 }
 
 impl InstallerService {
-    pub fn new(data_dir: PathBuf) -> Self {
-        Self { data_dir }
+    pub fn new(default_timeout: Duration, default_install_dir: PathBuf) -> Self {
+        Self {
+            default_timeout,
+            default_install_dir,
+        }
     }
 
-    fn default_install_dir(&self, package_id: &str) -> PathBuf {
-        self.data_dir.join(DEFAULT_INSTALL_SUBDIR).join(package_id)
+    /// Creates a service with default timeout (600s) and the given data directory.
+    pub fn with_data_dir(data_dir: PathBuf) -> Self {
+        Self::new(DEFAULT_TIMEOUT, data_dir)
+    }
+
+    /// Returns the default timeout for installers without a manifest override.
+    pub fn default_timeout(&self) -> Duration {
+        self.default_timeout
+    }
+
+    fn install_dir_for(&self, package_id: &str) -> PathBuf {
+        self.default_install_dir
+            .join(DEFAULT_INSTALL_SUBDIR)
+            .join(package_id)
     }
 
     #[instrument(skip_all, fields(package = %request.package_id))]
@@ -215,7 +233,7 @@ impl InstallerService {
         let dest = request
             .install_dir
             .clone()
-            .unwrap_or_else(|| self.default_install_dir(&request.package_id));
+            .unwrap_or_else(|| self.install_dir_for(&request.package_id));
         let path = zip::extract_zip(&request.installer_path, &dest).await?;
         Ok(InstallResult::Success { path: Some(path) })
     }
@@ -227,13 +245,16 @@ impl InstallerService {
         let dest = request
             .install_dir
             .clone()
-            .unwrap_or_else(|| self.default_install_dir(&request.package_id));
+            .unwrap_or_else(|| self.install_dir_for(&request.package_id));
         tokio::fs::create_dir_all(&dest).await?;
         let filename = request.installer_path.file_name().unwrap_or_default();
         tokio::fs::copy(&request.installer_path, dest.join(filename)).await?;
         Ok(InstallResult::Success { path: Some(dest) })
     }
 
+    /// Handles DownloadOnly packages: opens the containing folder on Windows.
+    /// On non-Windows, returns `Success` without opening a folder (no desktop
+    /// environment assumed in CI/cross-compile targets).
     #[allow(unused_variables)]
     async fn handle_download_only(
         &self,
@@ -241,7 +262,6 @@ impl InstallerService {
     ) -> Result<InstallResult, CoreError> {
         #[cfg(windows)]
         if let Some(parent) = installer_path.parent() {
-            // Open the containing folder in Explorer
             std::process::Command::new("explorer").arg(parent).spawn()?;
         }
         Ok(InstallResult::Success { path: None })

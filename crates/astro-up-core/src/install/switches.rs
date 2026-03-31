@@ -104,7 +104,7 @@ mod tests {
             post_install: vec![],
             switches: None,
             known_exit_codes: Default::default(),
-            timeout_secs: None,
+            timeout: None,
         }
     }
 
