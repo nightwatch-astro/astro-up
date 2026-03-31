@@ -156,7 +156,7 @@ A user configures a custom install directory. The system passes this to the inst
 ### Key Entities
 
 - **InstallRequest**: Package info, installer path, install directory, quiet flag, elevation requirement, timeout override
-- **InstallResult**: Dedicated enum — `Success`, `SuccessRebootRequired`, `Cancelled`. Trait signature: `Result<InstallResult, CoreError>`. Reboot is a success state (installed but needs reboot), not an error. Timeout and failures remain as `CoreError` variants.
+- **InstallResult**: Dedicated enum — `Success { path: Option<PathBuf> }`, `SuccessRebootRequired { path: Option<PathBuf> }`, `Cancelled`. The `path` field records the install directory (ZIP/portable) or `None` (exe/MSI where the installer chooses). Trait signature: `Result<InstallResult, CoreError>`. Reboot is a success state (installed but needs reboot), not an error. Timeout and failures remain as `CoreError` variants.
 - **UninstallRequest**: Package info, uninstall command from registry or directory path
 - **ExitCodeOutcome**: Success, SuccessRebootRequired, ElevationRequired, Failed { code, semantic: Option\<KnownExitCode\> }. Maps raw exit codes to actionable outcomes via the precedence chain (success_codes > known_exit_codes > defaults).
 
@@ -189,4 +189,5 @@ A user configures a custom install directory. The system passes this to the inst
 - Installer type is always specified in the manifest — never auto-detected
 - WebView2 bootstrapping is the Tauri installer's job (spec 019), not this spec
 - Depends on: spec 003 (types, LedgerEntry), spec 004 (config for timeouts/paths), spec 010 (download provides the installer file)
-- **Cross-spec changes to spec 003**: (1) `Installer` trait return type changes from `Result<(), CoreError>` to `Result<InstallResult, CoreError>` — breaking change, no downstream consumers yet. (2) `LedgerEntry` gains `install_path: Option<PathBuf>` field — additive, backward compatible. (3) `InstallConfig` gains `timeout: Option<Duration>` field — additive, backward compatible.
+- **Cross-spec changes to spec 003**: (1) `Installer` trait return type changes from `Result<(), CoreError>` to `Result<InstallResult, CoreError>` — breaking change, no downstream consumers yet. (2) `LedgerEntry` gains `install_path: Option<PathBuf>` field — additive, backward compatible. (3) `InstallConfig` gains `timeout: Option<Duration>` field — additive, backward compatible. (4) `CoreError` gains `UpgradeDenied { package_id }` variant for `UpgradeBehavior::Deny`.
+- **Duration serialization**: `InstallConfig.timeout` uses `humantime-serde` (serde derive for TOML/JSON manifest deserialization). This differs from spec 004's `humantime` (explicit parsing for SQLite config values). The distinction is intentional: manifest fields go through serde, config fields go through explicit parse/format at the API boundary.
