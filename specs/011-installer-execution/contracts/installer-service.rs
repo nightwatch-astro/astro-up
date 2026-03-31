@@ -70,13 +70,14 @@ impl InstallerService {
     fn interpret_exit_code(code: i32, config: &InstallConfig) -> ExitCodeOutcome;
 
     /// Run pre/post hooks (.ps1 via PowerShell, else cmd /c). 60s timeout.
-    async fn run_hook(command: &str, elevated: bool) -> Result<(), CoreError>;
+    /// Hooks inherit the current process elevation implicitly.
+    async fn run_hook(command: &str) -> Result<(), CoreError>;
 
     /// Record successful install in ledger.
     async fn record_ledger(
         package_id: &str,
         version: &Version,
-        install_path: Option<&PathBuf>,
+        install_path: Option<&Path>,
     ) -> Result<(), CoreError>;
 }
 
