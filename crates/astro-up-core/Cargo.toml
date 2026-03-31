@@ -32,6 +32,7 @@ pelite = "0.10"
 walkdir = "2"
 regex = "1"
 directories = "6"
+fd-lock = "4"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"
