@@ -157,34 +157,32 @@ pub async fn spawn_with_job_object(
     let timeout_secs = timeout.as_secs();
 
     let result = tokio::select! {
-        exit_code = async {
-            tokio::task::spawn_blocking(move || {
-                use windows::Win32::Foundation::HANDLE;
+        join_result = tokio::task::spawn_blocking(move || {
+            use windows::Win32::Foundation::HANDLE;
 
-                let proc_h = HANDLE(raw_process as *mut std::ffi::c_void);
-                let job_h = HANDLE(raw_job as *mut std::ffi::c_void);
+            let proc_h = HANDLE(raw_process as *mut std::ffi::c_void);
+            let job_h = HANDLE(raw_job as *mut std::ffi::c_void);
 
-                let wait = unsafe { WaitForSingleObject(proc_h, timeout_ms) };
-                let code: Result<i32, u64> = if wait.0 == 0 {
-                    // WAIT_OBJECT_0 = 0
-                    let mut exit_code: u32 = 0;
-                    unsafe {
-                        GetExitCodeProcess(proc_h, &mut exit_code).ok();
-                    }
-                    Ok(exit_code as i32)
-                } else {
-                    Err(timeout_secs)
-                };
+            let wait = unsafe { WaitForSingleObject(proc_h, timeout_ms) };
+            let code = if wait.0 == 0 {
+                let mut exit_code: u32 = 0;
                 unsafe {
-                    CloseHandle(proc_h).ok();
-                    CloseHandle(job_h).ok();
+                    GetExitCodeProcess(proc_h, &mut exit_code).ok();
                 }
-                code
-            }).await.map_err(|e| CoreError::Io(std::io::Error::other(e)))?
-        } => {
-            match exit_code {
-                Ok(code) => Ok(code),
-                Err(secs) => Err(CoreError::InstallerTimeout { timeout_secs: secs }),
+                Ok(exit_code as i32)
+            } else {
+                Err(timeout_secs)
+            };
+            unsafe {
+                CloseHandle(proc_h).ok();
+                CloseHandle(job_h).ok();
+            }
+            code
+        }) => {
+            match join_result {
+                Ok(Ok(code)) => Ok(code),
+                Ok(Err(secs)) => Err(CoreError::InstallerTimeout { timeout_secs: secs }),
+                Err(e) => Err(CoreError::Io(std::io::Error::other(e))),
             }
         }
         () = cancel_token.cancelled() => {
