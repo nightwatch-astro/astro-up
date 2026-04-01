@@ -621,6 +621,15 @@ where
                     succeeded.push(result);
                 }
                 super::history::OperationStatus::Failed => {
+                    // FR-019: log backup path on failure so user can restore
+                    if let Some(ref path) = result.backup_path {
+                        tracing::error!(
+                            package = %result.package_id,
+                            backup_path = %path.display(),
+                            error = result.error.as_deref().unwrap_or("unknown"),
+                            "install failed — backup available for restoration"
+                        );
+                    }
                     failed.push(result);
                 }
                 super::history::OperationStatus::Cancelled => {
