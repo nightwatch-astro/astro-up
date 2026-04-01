@@ -645,16 +645,21 @@ where
                 .map(|p: &String| VersionFormat::Custom { pattern: p.clone() })
                 .unwrap_or_default();
 
+            // Default policy: Major (allow all). Per-package overrides would
+            // come from config system (deferred to config wiring).
+            let sw_policy = crate::types::PolicyLevel::Major;
+
             entries.push(CatalogEntry {
                 software: sw,
                 installed_version: installed,
                 catalog_version: crate::types::Version::parse(&ve.version),
                 version_entry: ve,
                 version_format,
+                policy: sw_policy,
             });
         }
 
-        let planner = UpdatePlanner::new(entries);
+        let planner = UpdatePlanner::new(entries).with_allow_major(request.allow_major);
 
         if request.packages.is_empty() {
             planner.plan_all()

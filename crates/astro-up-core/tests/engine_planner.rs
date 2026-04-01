@@ -69,6 +69,7 @@ fn make_entry(id: &str, installed: &str, catalog: &str, deps: Vec<&str>) -> Cata
             pre_release: false,
         },
         version_format: VersionFormat::Semver,
+        policy: astro_up_core::types::PolicyLevel::Major,
     }
 }
 
@@ -170,4 +171,35 @@ fn plan_specific_transitive_deps() {
     let nina_pos = ids.iter().position(|s| s == "nina").unwrap();
     assert!(dotnet_pos < ascom_pos);
     assert!(ascom_pos < nina_pos);
+}
+
+/// Missing dependency not in catalog → MissingDependency error.
+#[test]
+fn missing_dependency_errors() {
+    // nina depends on "unknown-dep" which is not in the catalog
+    let entries = vec![make_entry("nina", "1.0.0", "2.0.0", vec!["unknown-dep"])];
+    let planner = UpdatePlanner::new(entries);
+    let result = planner.plan_all();
+    assert!(
+        matches!(
+            result,
+            Err(astro_up_core::error::CoreError::MissingDependency { .. })
+        ),
+        "expected MissingDependency, got: {result:?}"
+    );
+}
+
+/// Satisfied dependency (up-to-date) proceeds without error.
+#[test]
+fn satisfied_dependency_proceeds() {
+    // nina depends on ascom-platform, which is up-to-date
+    let entries = vec![
+        make_entry("nina", "1.0.0", "2.0.0", vec!["ascom-platform"]),
+        make_entry("ascom-platform", "7.0.0", "7.0.0", vec![]),
+    ];
+    let planner = UpdatePlanner::new(entries);
+    let plan = planner.plan_all().unwrap();
+    // Only nina needs update (ascom-platform is skipped as up-to-date)
+    assert_eq!(plan.items.len(), 1);
+    assert_eq!(plan.items[0].package_id, PackageId::new("nina").unwrap());
 }

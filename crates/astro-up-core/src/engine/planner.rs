@@ -132,6 +132,8 @@ pub struct CatalogEntry {
     pub version_entry: crate::catalog::VersionEntry,
     /// How the version string should be parsed and compared.
     pub version_format: VersionFormat,
+    /// Update policy for this package (default: Major = allow all).
+    pub policy: crate::types::PolicyLevel,
 }
 
 // ---------------------------------------------------------------------------
@@ -144,12 +146,22 @@ pub struct CatalogEntry {
 /// transitive dependencies, and produces a topologically sorted plan.
 pub struct UpdatePlanner {
     entries: Vec<CatalogEntry>,
+    allow_major: bool,
 }
 
 impl UpdatePlanner {
     /// Create a new planner with the given catalog entries.
     pub fn new(entries: Vec<CatalogEntry>) -> Self {
-        Self { entries }
+        Self {
+            entries,
+            allow_major: false,
+        }
+    }
+
+    /// Set the `--allow-major` override for this planning session.
+    pub fn with_allow_major(mut self, allow: bool) -> Self {
+        self.allow_major = allow;
+        self
     }
 
     /// Build an update plan for all packages with available updates.
@@ -164,6 +176,21 @@ impl UpdatePlanner {
                 Some(&entry.catalog_version),
                 &entry.version_format,
             );
+
+            // Apply policy enforcement (FR-003)
+            if let Some(skip_reason) = super::policy::apply_policy(
+                &status,
+                &entry.policy,
+                self.allow_major,
+                &entry.version_format,
+            ) {
+                skipped.push(SkippedPackage {
+                    package_id: entry.software.id.clone(),
+                    reason: skip_reason,
+                    state: PackageState::Installed,
+                });
+                continue;
+            }
 
             match &status {
                 PackageStatus::UpdateAvailable { current, available }
@@ -436,6 +463,7 @@ mod tests {
                 pre_release: false,
             },
             version_format: VersionFormat::Semver,
+            policy: crate::types::PolicyLevel::Major,
         }
     }
 
