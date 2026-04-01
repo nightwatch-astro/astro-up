@@ -220,6 +220,24 @@ impl UpdatePlanner {
             }
         }
 
+        // Dependency satisfaction check: verify all referenced deps exist
+        // in either the plan items or the catalog entries (even if up-to-date).
+        let known_ids: std::collections::HashSet<&crate::catalog::PackageId> =
+            self.entries.iter().map(|e| &e.software.id).collect();
+        for item in &items {
+            for dep_id in &item.dependencies {
+                if !known_ids.contains(dep_id) {
+                    return Err(CoreError::MissingDependency {
+                        dep_id: format!(
+                            "{} (required by {})",
+                            dep_id.as_ref(),
+                            item.package_id.as_ref()
+                        ),
+                    });
+                }
+            }
+        }
+
         let items = topological_sort(items)?;
 
         Ok(UpdatePlan {
