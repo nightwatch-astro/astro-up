@@ -104,6 +104,9 @@ pub enum CoreError {
     #[error("another instance of astro-up is running (PID {pid})")]
     CatalogLocked { pid: u32 },
 
+    #[error("orchestration engine already running (PID {pid})")]
+    OrchestrationLocked { pid: u32 },
+
     #[error("invalid package ID {input:?}: {reason}")]
     InvalidPackageId { input: String, reason: String },
 
