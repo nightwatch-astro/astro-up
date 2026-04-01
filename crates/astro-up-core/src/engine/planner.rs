@@ -55,6 +55,8 @@ pub enum SkipReason {
         /// The dependency that caused the skip.
         dep_id: PackageId,
     },
+    /// The installed version is newer than catalog and `--allow-downgrade` was not set.
+    DowngradeBlocked,
 }
 
 // ---------------------------------------------------------------------------
