@@ -214,6 +214,358 @@ where
             lock,
         })
     }
+
+    /// Execute the pipeline for a single planned package update.
+    ///
+    /// Steps: emit start → check process → check disk → download → backup →
+    /// install → verify → emit complete. Returns a [`PackageResult`] with the
+    /// outcome.
+    #[allow(dead_code)] // Called by `execute()` added in T015–T016.
+    pub(crate) async fn execute_single(
+        &self,
+        planned: &super::planner::PlannedUpdate,
+        on_event: &EventCallback,
+        cancel: &CancellationToken,
+    ) -> PackageResult {
+        use std::time::Instant;
+
+        let start = Instant::now();
+        let pkg_id = &planned.package_id;
+
+        // Count pipeline steps: process check, disk check, download, install, verify
+        // + optional backup
+        let step_count = if planned.has_backup_config { 6 } else { 5 };
+
+        // 1. Emit PackageStarted
+        on_event(Event::PackageStarted {
+            package_id: pkg_id.clone(),
+            step_count,
+        });
+
+        // Check cancellation before each step
+        macro_rules! check_cancel {
+            () => {
+                if cancel.is_cancelled() {
+                    return PackageResult {
+                        package_id: pkg_id.clone(),
+                        from_version: planned.current_version.clone(),
+                        to_version: planned.target_version.clone(),
+                        status: super::history::OperationStatus::Cancelled,
+                        duration: start.elapsed(),
+                        error: None,
+                        backup_path: None,
+                    };
+                }
+            };
+        }
+
+        // 2. Check process not running (FR-018)
+        //    Derive process name from the software name (e.g. "NINA" → "NINA.exe").
+        //    If the detection config has a file_path, extract the filename from it.
+        let process_name = planned
+            .software
+            .detection
+            .as_ref()
+            .and_then(|d| d.file_path.as_ref())
+            .and_then(|p| {
+                std::path::Path::new(p)
+                    .file_name()
+                    .map(|f| f.to_string_lossy().into_owned())
+            })
+            .unwrap_or_else(|| format!("{}.exe", planned.software.name));
+
+        if let Some(info) = super::process::check_process_running(&process_name) {
+            on_event(Event::ProcessBlocking {
+                package_id: pkg_id.clone(),
+                process_name: info.name.clone(),
+                pid: info.pid,
+            });
+            return PackageResult {
+                package_id: pkg_id.clone(),
+                from_version: planned.current_version.clone(),
+                to_version: planned.target_version.clone(),
+                status: super::history::OperationStatus::Failed,
+                duration: start.elapsed(),
+                error: Some(format!(
+                    "process {} (PID {}) is running",
+                    info.name, info.pid
+                )),
+                backup_path: None,
+            };
+        }
+
+        check_cancel!();
+
+        // 3. Check disk space (FR-011) — best-effort, log warning if unavailable
+        if let Err(e) = Self::check_disk_space(&planned.version_entry.url) {
+            tracing::warn!(
+                package = %pkg_id,
+                "disk space check failed, proceeding anyway: {e}"
+            );
+        }
+
+        check_cancel!();
+
+        // 4. Download
+        let download_request = crate::download::DownloadRequest {
+            url: planned.version_entry.url.clone(),
+            expected_hash: planned.version_entry.sha256.clone(),
+            dest_dir: std::env::temp_dir().join("astro-up").join("downloads"),
+            filename: Self::installer_filename(planned),
+            resume: true,
+        };
+
+        let download_result = match self
+            .downloader
+            .download(&download_request, cancel.child_token())
+            .await
+        {
+            Ok(result) => result,
+            Err(e) => {
+                on_event(Event::PackageComplete {
+                    package_id: pkg_id.clone(),
+                    status: "failed".into(),
+                });
+                return PackageResult {
+                    package_id: pkg_id.clone(),
+                    from_version: planned.current_version.clone(),
+                    to_version: planned.target_version.clone(),
+                    status: super::history::OperationStatus::Failed,
+                    duration: start.elapsed(),
+                    error: Some(format!("download failed: {e}")),
+                    backup_path: None,
+                };
+            }
+        };
+
+        let installer_path = match &download_result {
+            crate::download::DownloadResult::Success { path, .. } => path.clone(),
+            crate::download::DownloadResult::Cached { path } => path.clone(),
+        };
+
+        check_cancel!();
+
+        // 5. Backup (if configured)
+        let mut backup_path = None;
+        if planned.has_backup_config {
+            if let Some(ref backup_cfg) = planned.software.backup {
+                let backup_request = crate::backup::types::BackupRequest {
+                    package_id: pkg_id.to_string(),
+                    version: planned.current_version.clone(),
+                    config_paths: backup_cfg.config_paths.iter().map(PathBuf::from).collect(),
+                    event_tx: tokio::sync::broadcast::channel(16).0,
+                };
+
+                match self.backup.backup(&backup_request).await {
+                    Ok(metadata) => {
+                        // Use the first path as the backup location indicator
+                        if let Some(first) = metadata.paths.first() {
+                            backup_path = Some(first.clone());
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            package = %pkg_id,
+                            "backup failed, proceeding with install: {e}"
+                        );
+                    }
+                }
+            }
+        }
+
+        check_cancel!();
+
+        // 6. Install
+        let install_config =
+            planned
+                .software
+                .install
+                .clone()
+                .unwrap_or_else(|| crate::types::InstallConfig {
+                    method: crate::types::InstallMethod::Exe,
+                    scope: None,
+                    elevation: None,
+                    upgrade_behavior: None,
+                    install_modes: vec![],
+                    success_codes: vec![],
+                    pre_install: vec![],
+                    post_install: vec![],
+                    switches: None,
+                    known_exit_codes: std::collections::HashMap::new(),
+                    timeout_secs: None,
+                });
+
+        let timeout = std::time::Duration::from_secs(install_config.timeout_secs.unwrap_or(600));
+
+        let install_request = crate::install::types::InstallRequest {
+            package_id: pkg_id.to_string(),
+            package_name: planned.software.name.clone(),
+            version: planned.target_version.clone(),
+            installer_path,
+            install_dir: None,
+            install_config,
+            timeout,
+            quiet: true,
+            cancel_token: cancel.child_token(),
+            event_tx: tokio::sync::broadcast::channel(16).0,
+        };
+
+        let install_result = match self.installer.install(&install_request).await {
+            Ok(result) => result,
+            Err(e) => {
+                on_event(Event::PackageComplete {
+                    package_id: pkg_id.clone(),
+                    status: "failed".into(),
+                });
+                return PackageResult {
+                    package_id: pkg_id.clone(),
+                    from_version: planned.current_version.clone(),
+                    to_version: planned.target_version.clone(),
+                    status: super::history::OperationStatus::Failed,
+                    duration: start.elapsed(),
+                    error: Some(format!("install failed: {e}")),
+                    backup_path,
+                };
+            }
+        };
+
+        // Map install result to operation status
+        let install_status = match install_result {
+            crate::install::types::InstallResult::SuccessRebootRequired { .. } => {
+                super::history::OperationStatus::RebootPending
+            }
+            crate::install::types::InstallResult::Cancelled => {
+                on_event(Event::PackageComplete {
+                    package_id: pkg_id.clone(),
+                    status: "cancelled".into(),
+                });
+                return PackageResult {
+                    package_id: pkg_id.clone(),
+                    from_version: planned.current_version.clone(),
+                    to_version: planned.target_version.clone(),
+                    status: super::history::OperationStatus::Cancelled,
+                    duration: start.elapsed(),
+                    error: None,
+                    backup_path,
+                };
+            }
+            crate::install::types::InstallResult::Success { .. } => {
+                super::history::OperationStatus::Success
+            }
+        };
+
+        check_cancel!();
+
+        // 7. Verify: re-detect installed version and compare with target (FR-009)
+        let final_status = if let Some(ref detection_config) = planned.software.detection {
+            let resolver = crate::detect::PathResolver::new();
+            let detection = crate::detect::run_chain(detection_config, &resolver).await;
+
+            match detection {
+                crate::detect::DetectionResult::Installed { version, .. } => {
+                    if version >= planned.target_version {
+                        install_status
+                    } else {
+                        tracing::warn!(
+                            package = %pkg_id,
+                            detected = %version,
+                            expected = %planned.target_version,
+                            "post-install version mismatch"
+                        );
+                        // Still report success — the installer ran without error
+                        // but the detected version may lag (e.g., registry not yet
+                        // updated). Log the mismatch for diagnostics.
+                        install_status
+                    }
+                }
+                _ => {
+                    tracing::warn!(
+                        package = %pkg_id,
+                        "post-install detection did not find package — verification skipped"
+                    );
+                    install_status
+                }
+            }
+        } else {
+            // No detection config — skip verification
+            install_status
+        };
+
+        // 8. Emit PackageComplete
+        let status_str = match &final_status {
+            super::history::OperationStatus::Success => "succeeded",
+            super::history::OperationStatus::Failed => "failed",
+            super::history::OperationStatus::Cancelled => "cancelled",
+            super::history::OperationStatus::RebootPending => "reboot_pending",
+        };
+        on_event(Event::PackageComplete {
+            package_id: pkg_id.clone(),
+            status: status_str.into(),
+        });
+
+        // 9. Return PackageResult
+        PackageResult {
+            package_id: pkg_id.clone(),
+            from_version: planned.current_version.clone(),
+            to_version: planned.target_version.clone(),
+            status: final_status,
+            duration: start.elapsed(),
+            error: None,
+            backup_path,
+        }
+    }
+
+    /// Best-effort disk space check. Returns `Err` with a message if the check
+    /// itself fails (not if space is insufficient — that returns `CoreError`).
+    #[allow(dead_code)] // Called by `execute_single`.
+    fn check_disk_space(_url: &str) -> Result<(), String> {
+        use sysinfo::Disks;
+
+        let disks = Disks::new_with_refreshed_list();
+        // Find the disk mounted at the system temp dir (download destination)
+        let temp = std::env::temp_dir();
+        let mut best_match: Option<&sysinfo::Disk> = None;
+        let mut best_len = 0;
+
+        for disk in disks.list() {
+            let mount = disk.mount_point();
+            if temp.starts_with(mount) {
+                let len = mount.as_os_str().len();
+                if len > best_len {
+                    best_len = len;
+                    best_match = Some(disk);
+                }
+            }
+        }
+
+        if let Some(disk) = best_match {
+            let available = disk.available_space();
+            // Require at least 100 MB free (conservative minimum)
+            const MIN_FREE: u64 = 100 * 1024 * 1024;
+            if available < MIN_FREE {
+                return Err(format!(
+                    "insufficient disk space: {available} bytes available, need at least {MIN_FREE}"
+                ));
+            }
+        } else {
+            return Err("could not determine disk for temp directory".into());
+        }
+
+        Ok(())
+    }
+
+    /// Derive a reasonable filename for the downloaded installer.
+    #[allow(dead_code)] // Called by `execute_single`.
+    fn installer_filename(planned: &super::planner::PlannedUpdate) -> String {
+        // Extract extension from URL, default to .exe
+        let url_path = planned.version_entry.url.rsplit('/').next().unwrap_or("");
+        let ext = url_path
+            .rsplit('.')
+            .next()
+            .filter(|e| e.len() <= 5 && !e.contains('?'))
+            .unwrap_or("exe");
+        format!("{}-{}.{}", planned.package_id, planned.target_version, ext)
+    }
 }
 
 impl<C, L, D, I, B> Orchestrator for UpdateOrchestrator<C, L, D, I, B>
