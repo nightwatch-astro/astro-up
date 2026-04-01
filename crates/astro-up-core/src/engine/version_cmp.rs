@@ -1,12 +1,19 @@
 //! Version format handling — semver, date, and custom regex parsers.
 
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::fmt;
+use std::sync::{LazyLock, Mutex};
 
 use chrono::NaiveDate;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::types::version::{Version, try_parse_lenient};
+
+/// Cache for compiled regexes used in custom version formats.
+static REGEX_CACHE: LazyLock<Mutex<HashMap<String, Regex>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Status of a package relative to the catalog.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -165,15 +172,14 @@ pub fn parse_date(raw: &str) -> Option<NaiveDate> {
 ///   lexicographic comparison if either string cannot be parsed.
 /// - **Date**: parses dates via [`parse_date`] and compares chronologically.
 ///   Falls back to lexicographic comparison if either date cannot be parsed.
-/// - **Custom**: stub — always returns [`Ordering::Equal`] (full implementation in T025).
+/// - **Custom**: compiles regex (cached), extracts capture groups as numeric
+///   components, and compares them component-by-component. Falls back to
+///   lexicographic comparison if the regex is invalid or doesn't match.
 pub fn compare_versions(a: &str, b: &str, format: &VersionFormat) -> Ordering {
     match format {
         VersionFormat::Semver => compare_semver(a, b),
         VersionFormat::Date => compare_date(a, b),
-        VersionFormat::Custom { .. } => {
-            // Stub: full custom regex comparison implemented in T025.
-            Ordering::Equal
-        }
+        VersionFormat::Custom { pattern } => compare_custom(a, b, pattern),
     }
 }
 
@@ -194,6 +200,54 @@ fn compare_date(a: &str, b: &str) -> Ordering {
     match (parse_date(a), parse_date(b)) {
         (Some(da), Some(db)) => da.cmp(&db),
         _ => a.cmp(b),
+    }
+}
+
+/// Parse a version string using a custom regex pattern.
+///
+/// Extracts all capture groups (numbered 1..N) and parses them as `u64`.
+/// Returns `None` if the regex doesn't match or any capture group is not a valid integer.
+pub fn parse_custom(raw: &str, re: &Regex) -> Option<Vec<u64>> {
+    let caps = re.captures(raw)?;
+    let mut components = Vec::new();
+    for i in 1..caps.len() {
+        let s = caps.get(i)?.as_str();
+        components.push(s.parse::<u64>().ok()?);
+    }
+    if components.is_empty() {
+        return None;
+    }
+    Some(components)
+}
+
+/// Custom regex comparison. Compiles and caches the regex, then extracts
+/// numeric capture groups from both version strings and compares them
+/// component-by-component. Falls back to string comparison when the regex
+/// is invalid or doesn't match either version.
+fn compare_custom(a: &str, b: &str, pattern: &str) -> Ordering {
+    let re = {
+        let mut cache = match REGEX_CACHE.lock() {
+            Ok(guard) => guard,
+            Err(_) => return a.cmp(b),
+        };
+        if let Some(cached) = cache.get(pattern) {
+            cached.clone()
+        } else {
+            match Regex::new(pattern) {
+                Ok(re) => {
+                    cache.insert(pattern.to_string(), re.clone());
+                    re
+                }
+                Err(_) => return a.cmp(b),
+            }
+        }
+    };
+
+    match (parse_custom(a, &re), parse_custom(b, &re)) {
+        (Some(ref ca), Some(ref cb)) => ca.cmp(cb),
+        (Some(_), None) => Ordering::Greater,
+        (None, Some(_)) => Ordering::Less,
+        (None, None) => a.cmp(b),
     }
 }
 
@@ -427,11 +481,77 @@ mod tests {
     // --- Custom format returns Equal (stub) ---
 
     #[test]
-    fn custom_format_stub_returns_equal() {
+    fn custom_format_basic_ordering() {
         let format = VersionFormat::Custom {
             pattern: r"(\d+)\.(\d+)".to_string(),
         };
-        assert_eq!(compare_versions("1.0", "2.0", &format), Ordering::Equal);
+        assert_eq!(compare_versions("1.0", "2.0", &format), Ordering::Less);
+        assert_eq!(compare_versions("2.0", "1.0", &format), Ordering::Greater);
+        assert_eq!(compare_versions("1.0", "1.0", &format), Ordering::Equal);
+    }
+
+    #[test]
+    fn custom_format_multi_component() {
+        let format = VersionFormat::Custom {
+            pattern: r"(\d+)\.(\d+)\.(\d+)".to_string(),
+        };
+        assert_eq!(compare_versions("1.2.3", "1.2.4", &format), Ordering::Less);
+        assert_eq!(
+            compare_versions("1.3.0", "1.2.9", &format),
+            Ordering::Greater
+        );
+    }
+
+    #[test]
+    fn custom_format_single_group() {
+        let format = VersionFormat::Custom {
+            pattern: r"v(\d+)".to_string(),
+        };
+        assert_eq!(compare_versions("v10", "v9", &format), Ordering::Greater);
+    }
+
+    #[test]
+    fn custom_format_no_match_falls_back_to_string() {
+        let format = VersionFormat::Custom {
+            pattern: r"(\d+)\.(\d+)".to_string(),
+        };
+        assert_eq!(
+            compare_versions("abc", "def", &format),
+            Ordering::Less // string comparison
+        );
+    }
+
+    #[test]
+    fn custom_format_invalid_regex_falls_back_to_string() {
+        let format = VersionFormat::Custom {
+            pattern: r"([invalid".to_string(),
+        };
+        assert_eq!(compare_versions("a", "b", &format), Ordering::Less);
+    }
+
+    #[test]
+    fn parse_custom_extracts_groups() {
+        let re = Regex::new(r"(\d+)\.(\d+)").unwrap();
+        assert_eq!(parse_custom("3.14", &re), Some(vec![3, 14]));
+    }
+
+    #[test]
+    fn parse_custom_returns_none_on_no_match() {
+        let re = Regex::new(r"(\d+)\.(\d+)").unwrap();
+        assert_eq!(parse_custom("abc", &re), None);
+    }
+
+    #[test]
+    fn parse_custom_returns_none_on_non_numeric_group() {
+        let re = Regex::new(r"([a-z]+)-(\d+)").unwrap();
+        // First group is non-numeric, should return None
+        assert_eq!(parse_custom("abc-123", &re), None);
+    }
+
+    #[test]
+    fn parse_custom_no_capture_groups() {
+        let re = Regex::new(r"\d+\.\d+").unwrap();
+        assert_eq!(parse_custom("1.2", &re), None);
     }
 
     // --- VersionFormat Display ---
