@@ -669,11 +669,14 @@ where
         on_event: EventCallback,
         cancel: CancellationToken,
     ) -> Result<OrchestrationResult, CoreError> {
+        use std::collections::HashSet;
         use std::time::Instant;
 
         let start = Instant::now();
         let mut succeeded = Vec::new();
         let mut failed = Vec::new();
+        let mut skipped_deps = plan.skipped.clone();
+        let mut failed_ids: HashSet<crate::catalog::PackageId> = HashSet::new();
 
         on_event(Event::PlanReady {
             total: plan.items.len(),
@@ -688,6 +691,27 @@ where
                     planned.package_id
                 );
                 break;
+            }
+
+            // FR-007/FR-008: skip if any dependency failed
+            let dep_failed = planned
+                .dependencies
+                .iter()
+                .find(|dep| failed_ids.contains(dep));
+            if let Some(failed_dep) = dep_failed {
+                on_event(Event::PackageSkipped {
+                    package_id: planned.package_id.clone(),
+                    reason: format!("dependency {} failed", failed_dep),
+                });
+                failed_ids.insert(planned.package_id.clone());
+                skipped_deps.push(super::planner::SkippedPackage {
+                    package_id: planned.package_id.clone(),
+                    reason: super::planner::SkipReason::DependencyFailed {
+                        dep_id: failed_dep.clone(),
+                    },
+                    state: super::planner::PackageState::Installed,
+                });
+                continue;
             }
 
             let result = self.execute_single(planned, &on_event, &cancel).await;
@@ -707,10 +731,10 @@ where
                             "install failed — backup available for restoration"
                         );
                     }
+                    failed_ids.insert(result.package_id.clone());
                     failed.push(result);
                 }
                 super::history::OperationStatus::Cancelled => {
-                    // Package was cancelled mid-pipeline; stop processing further packages
                     failed.push(result);
                     break;
                 }
@@ -720,13 +744,13 @@ where
         on_event(Event::OrchestrationComplete {
             succeeded: succeeded.len(),
             failed: failed.len(),
-            skipped: plan.skipped.len(),
+            skipped: skipped_deps.len(),
         });
 
         Ok(OrchestrationResult {
             succeeded,
             failed,
-            skipped: plan.skipped,
+            skipped: skipped_deps,
             duration: start.elapsed(),
         })
     }
