@@ -1,0 +1,7 @@
+---
+source: crates/astro-up-core/tests/version_formats.rs
+expression: "lines.join(\"\\n\")"
+---
+          2026.03.29 < 2026.04.01           (format: semver)
+          2026.03.29 > 3.1.0                (format: semver)
+               3.1.0 < 2026.03.29           (format: semver)

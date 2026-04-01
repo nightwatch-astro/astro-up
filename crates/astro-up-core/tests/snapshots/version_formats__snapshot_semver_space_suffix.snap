@@ -1,0 +1,9 @@
+---
+source: crates/astro-up-core/tests/version_formats.rs
+expression: "lines.join(\"\\n\")"
+---
+             3.1 HF2 < 3.1 HF3              (format: semver)
+             3.1 HF3 > 3.1 HF2              (format: semver)
+             3.1 HF2 == 3.1 HF2              (format: semver)
+             3.1 HF2 < 3.1.0                (format: semver)
+             6.6 SP2 < 6.6 SP3              (format: semver)

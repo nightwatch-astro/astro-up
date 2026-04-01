@@ -3,7 +3,9 @@
 
 use std::cmp::Ordering;
 
-use astro_up_core::engine::version_cmp::{PackageStatus, VersionFormat, compare_versions};
+use astro_up_core::engine::version_cmp::{
+    PackageStatus, VersionFormat, check_format_compatibility, compare_versions,
+};
 use astro_up_core::types::Version;
 
 // ---------------------------------------------------------------------------
@@ -380,4 +382,163 @@ fn status_is_major_upgrade_false_for_others() {
     for s in &statuses {
         assert!(!s.is_major_upgrade(), "expected false for {s}");
     }
+}
+
+// ---------------------------------------------------------------------------
+// 8. Snapshot tests — edge case version comparisons
+// ---------------------------------------------------------------------------
+
+/// Helper: format a comparison result for snapshot output.
+fn cmp_line(a: &str, b: &str, format: &VersionFormat) -> String {
+    let result = compare_versions(a, b, format);
+    let symbol = match result {
+        Ordering::Less => "<",
+        Ordering::Equal => "==",
+        Ordering::Greater => ">",
+    };
+    format!("{a:>20} {symbol} {b:<20} (format: {format})")
+}
+
+#[test]
+fn snapshot_semver_lenient_two_part_vs_three_part() {
+    // v3.1 vs 3.1.0 — 2-part should coerce to 3-part
+    let lines = [
+        cmp_line("v3.1", "3.1.0", &VersionFormat::Semver),
+        cmp_line("3.1.0", "v3.1", &VersionFormat::Semver),
+        cmp_line("v3.1", "3.2.0", &VersionFormat::Semver),
+        cmp_line("3.1", "3.1.0", &VersionFormat::Semver),
+    ];
+    insta::assert_snapshot!(lines.join("\n"));
+}
+
+#[test]
+fn snapshot_date_mixed_separators() {
+    // 2026.03.29 vs 2026-03-29 — different separators, same date
+    let lines = [
+        cmp_line("2026.03.29", "2026-03-29", &VersionFormat::Date),
+        cmp_line("2026-03-29", "2026.03.29", &VersionFormat::Date),
+        cmp_line("2026.03.29", "2026-04-01", &VersionFormat::Date),
+        cmp_line("2025-12-31", "2026.01.01", &VersionFormat::Date),
+    ];
+    insta::assert_snapshot!(lines.join("\n"));
+}
+
+#[test]
+fn snapshot_semver_space_suffix() {
+    // "3.1 HF2" vs "3.1 HF3" — suffix treated as pre-release
+    let lines = [
+        cmp_line("3.1 HF2", "3.1 HF3", &VersionFormat::Semver),
+        cmp_line("3.1 HF3", "3.1 HF2", &VersionFormat::Semver),
+        cmp_line("3.1 HF2", "3.1 HF2", &VersionFormat::Semver),
+        cmp_line("3.1 HF2", "3.1.0", &VersionFormat::Semver),
+        cmp_line("6.6 SP2", "6.6 SP3", &VersionFormat::Semver),
+    ];
+    insta::assert_snapshot!(lines.join("\n"));
+}
+
+#[test]
+fn snapshot_four_part_vs_three_part() {
+    // 4-part coercion: 3.1.2.3001 vs 3.1.2
+    let lines = [
+        cmp_line("3.1.2.3001", "3.1.2", &VersionFormat::Semver),
+        cmp_line("3.1.2.3001", "3.1.3", &VersionFormat::Semver),
+        cmp_line("4.1.12288.0", "4.1.12288", &VersionFormat::Semver),
+        cmp_line("3.1.2.3001", "3.1.2.9999", &VersionFormat::Semver),
+    ];
+    insta::assert_snapshot!(lines.join("\n"));
+}
+
+#[test]
+fn snapshot_newer_than_catalog() {
+    // Installed is newer than catalog latest
+    let installed = Version::parse("3.2.0");
+    let catalog = Version::parse("3.1.5");
+    let status = PackageStatus::determine(Some(&installed), Some(&catalog), &VersionFormat::Semver);
+    insta::assert_debug_snapshot!(status);
+}
+
+#[test]
+fn snapshot_newer_than_catalog_date_format() {
+    let installed = Version::parse("2026.04.01");
+    let catalog = Version::parse("2026.03.15");
+    let status = PackageStatus::determine(Some(&installed), Some(&catalog), &VersionFormat::Date);
+    insta::assert_debug_snapshot!(status);
+}
+
+#[test]
+fn snapshot_format_mismatch_semver_with_date_string() {
+    // Semver format given a date-like string — should trigger compatibility warning
+    let lines = [
+        cmp_line("2026.03.29", "2026.04.01", &VersionFormat::Semver),
+        cmp_line("2026.03.29", "3.1.0", &VersionFormat::Semver),
+        cmp_line("3.1.0", "2026.03.29", &VersionFormat::Semver),
+    ];
+    insta::assert_snapshot!(lines.join("\n"));
+}
+
+#[test]
+fn snapshot_check_format_compatibility_warnings() {
+    let cases: Vec<String> = vec![
+        // Semver format with non-semver strings
+        format!(
+            "semver + 'not-a-version': {:?}",
+            check_format_compatibility("not-a-version", &VersionFormat::Semver)
+        ),
+        format!(
+            "semver + '1.2.3': {:?}",
+            check_format_compatibility("1.2.3", &VersionFormat::Semver)
+        ),
+        format!(
+            "semver + 'v3.1': {:?}",
+            check_format_compatibility("v3.1", &VersionFormat::Semver)
+        ),
+        // Date format with non-date strings
+        format!(
+            "date + '3.1.0': {:?}",
+            check_format_compatibility("3.1.0", &VersionFormat::Date)
+        ),
+        format!(
+            "date + '2026.03.29': {:?}",
+            check_format_compatibility("2026.03.29", &VersionFormat::Date)
+        ),
+        format!(
+            "date + '2026-03-29': {:?}",
+            check_format_compatibility("2026-03-29", &VersionFormat::Date)
+        ),
+        format!(
+            "date + 'not-a-date': {:?}",
+            check_format_compatibility("not-a-date", &VersionFormat::Date)
+        ),
+        // Custom format with invalid regex
+        format!(
+            "custom(invalid) + 'anything': {:?}",
+            check_format_compatibility(
+                "anything",
+                &VersionFormat::Custom {
+                    pattern: "([invalid".to_string(),
+                }
+            )
+        ),
+        // Custom format with non-matching string
+        format!(
+            "custom(digits) + 'abc': {:?}",
+            check_format_compatibility(
+                "abc",
+                &VersionFormat::Custom {
+                    pattern: r"(\d+)\.(\d+)".to_string(),
+                }
+            )
+        ),
+        // Custom format with matching string
+        format!(
+            "custom(digits) + '3.14': {:?}",
+            check_format_compatibility(
+                "3.14",
+                &VersionFormat::Custom {
+                    pattern: r"(\d+)\.(\d+)".to_string(),
+                }
+            )
+        ),
+    ];
+    insta::assert_snapshot!(cases.join("\n"));
 }
