@@ -33,9 +33,8 @@ pub fn check_processes_running(process_name: &str) -> Vec<ProcessInfo> {
 /// Build a [`System`] with only the process list refreshed (minimal overhead).
 fn refreshed_system() -> System {
     let mut sys = System::new_with_specifics(
-        RefreshKind::nothing().with_processes(
-            ProcessRefreshKind::nothing().with_exe(UpdateKind::OnlyIfNotSet),
-        ),
+        RefreshKind::nothing()
+            .with_processes(ProcessRefreshKind::nothing().with_exe(UpdateKind::OnlyIfNotSet)),
     );
     sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
     sys

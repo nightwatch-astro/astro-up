@@ -5,7 +5,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::types::version::{try_parse_lenient, Version};
+use crate::types::version::{Version, try_parse_lenient};
 
 /// Status of a package relative to the catalog.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -84,14 +84,10 @@ impl fmt::Display for PackageStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UpToDate => write!(f, "up to date"),
-            Self::UpdateAvailable {
-                current,
-                available,
-            } => write!(f, "update available: {} -> {}", current.raw, available.raw),
-            Self::MajorUpgradeAvailable {
-                current,
-                available,
-            } => write!(
+            Self::UpdateAvailable { current, available } => {
+                write!(f, "update available: {} -> {}", current.raw, available.raw)
+            }
+            Self::MajorUpgradeAvailable { current, available } => write!(
                 f,
                 "major upgrade available: {} -> {}",
                 current.raw, available.raw
@@ -257,8 +253,8 @@ mod tests {
     }
 
     #[test]
-    fn semver_unparseable_fallback() {
-        // Both unparseable: lexicographic comparison
+    fn semver_unparsable_fallback() {
+        // Both unparsable: lexicographic comparison
         assert_eq!(
             compare_versions("abc", "def", &VersionFormat::Semver),
             Ordering::Less
@@ -367,7 +363,7 @@ mod tests {
     }
 
     #[test]
-    fn is_major_upgrade_false_unparseable() {
+    fn is_major_upgrade_false_unparsable() {
         let from = Version {
             raw: "abc".into(),
             parsed: None,
