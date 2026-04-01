@@ -223,7 +223,7 @@ where
     #[allow(dead_code)] // Called by `execute()` added in T015–T016.
     pub(crate) async fn execute_single(
         &self,
-        planned: &super::planner::PlannedUpdate,
+        planned: &crate::engine::planner::PlannedUpdate,
         on_event: &EventCallback,
         cancel: &CancellationToken,
     ) -> PackageResult {
@@ -246,6 +246,10 @@ where
         macro_rules! check_cancel {
             () => {
                 if cancel.is_cancelled() {
+                    on_event(Event::PackageComplete {
+                        package_id: pkg_id.clone(),
+                        status: "cancelled".into(),
+                    });
                     return PackageResult {
                         package_id: pkg_id.clone(),
                         from_version: planned.current_version.clone(),
@@ -258,6 +262,8 @@ where
                 }
             };
         }
+
+        check_cancel!();
 
         // 2. Check process not running (FR-018)
         //    Derive process name from the software name (e.g. "NINA" → "NINA.exe").
@@ -556,7 +562,7 @@ where
 
     /// Derive a reasonable filename for the downloaded installer.
     #[allow(dead_code)] // Called by `execute_single`.
-    fn installer_filename(planned: &super::planner::PlannedUpdate) -> String {
+    fn installer_filename(planned: &crate::engine::planner::PlannedUpdate) -> String {
         // Extract extension from URL, default to .exe
         let url_path = planned.version_entry.url.rsplit('/').next().unwrap_or("");
         let ext = url_path
@@ -582,11 +588,61 @@ where
 
     async fn execute(
         &self,
-        _plan: UpdatePlan,
-        _on_event: EventCallback,
-        _cancel: CancellationToken,
+        plan: UpdatePlan,
+        on_event: EventCallback,
+        cancel: CancellationToken,
     ) -> Result<OrchestrationResult, CoreError> {
-        todo!("T014–T016: pipeline execution")
+        use std::time::Instant;
+
+        let start = Instant::now();
+        let mut succeeded = Vec::new();
+        let mut failed = Vec::new();
+
+        on_event(Event::PlanReady {
+            total: plan.items.len(),
+            skipped: plan.skipped.len(),
+        });
+
+        for planned in &plan.items {
+            // Check cancellation between packages
+            if cancel.is_cancelled() {
+                tracing::info!(
+                    "orchestration cancelled before package {}",
+                    planned.package_id
+                );
+                break;
+            }
+
+            let result = self.execute_single(planned, &on_event, &cancel).await;
+
+            match &result.status {
+                super::history::OperationStatus::Success
+                | super::history::OperationStatus::RebootPending => {
+                    succeeded.push(result);
+                }
+                super::history::OperationStatus::Failed => {
+                    failed.push(result);
+                }
+                super::history::OperationStatus::Cancelled => {
+                    // Package was cancelled mid-pipeline; stop processing further packages
+                    failed.push(result);
+                    break;
+                }
+            }
+        }
+
+        on_event(Event::OrchestrationComplete {
+            succeeded: succeeded.len(),
+            failed: failed.len(),
+            skipped: plan.skipped.len(),
+        });
+
+        Ok(OrchestrationResult {
+            succeeded,
+            failed,
+            skipped: plan.skipped,
+            duration: start.elapsed(),
+        })
     }
 
     async fn history(&self, _filter: HistoryFilter) -> Result<Vec<OperationRecord>, CoreError> {
@@ -717,6 +773,170 @@ mod tests {
         )
     }
 
+    // -----------------------------------------------------------------------
+    // Cancellation-aware mock implementations
+    // -----------------------------------------------------------------------
+
+    /// A downloader that succeeds immediately, returning a cached path.
+    struct SuccessDownloader;
+    impl crate::traits::Downloader for SuccessDownloader {
+        async fn download(
+            &self,
+            _request: &crate::download::DownloadRequest,
+            _cancel_token: tokio_util::sync::CancellationToken,
+        ) -> Result<crate::download::DownloadResult, CoreError> {
+            Ok(crate::download::DownloadResult::Cached {
+                path: std::path::PathBuf::from("/tmp/fake-installer.exe"),
+            })
+        }
+    }
+
+    /// An installer that succeeds immediately.
+    struct SuccessInstaller;
+    impl crate::traits::Installer for SuccessInstaller {
+        async fn install(
+            &self,
+            _request: &crate::install::types::InstallRequest,
+        ) -> Result<crate::install::types::InstallResult, CoreError> {
+            Ok(crate::install::types::InstallResult::Success { path: None })
+        }
+        async fn uninstall(
+            &self,
+            _request: &crate::install::types::UninstallRequest,
+        ) -> Result<(), CoreError> {
+            Ok(())
+        }
+        fn supports(&self, _method: &crate::types::InstallMethod) -> bool {
+            true
+        }
+    }
+
+    /// An installer that reports cancellation.
+    struct CancellingInstaller;
+    impl crate::traits::Installer for CancellingInstaller {
+        async fn install(
+            &self,
+            _request: &crate::install::types::InstallRequest,
+        ) -> Result<crate::install::types::InstallResult, CoreError> {
+            Ok(crate::install::types::InstallResult::Cancelled)
+        }
+        async fn uninstall(
+            &self,
+            _request: &crate::install::types::UninstallRequest,
+        ) -> Result<(), CoreError> {
+            Ok(())
+        }
+        fn supports(&self, _method: &crate::types::InstallMethod) -> bool {
+            true
+        }
+    }
+
+    /// Build an orchestrator with subsystems that succeed.
+    fn build_success_orchestrator(
+        lock_path: &std::path::Path,
+    ) -> Result<
+        UpdateOrchestrator<
+            MockPackageSource,
+            MockLedgerStore,
+            SuccessDownloader,
+            SuccessInstaller,
+            MockBackupManager,
+        >,
+        CoreError,
+    > {
+        let db = rusqlite::Connection::open_in_memory().unwrap();
+        UpdateOrchestrator::new(
+            lock_path,
+            MockPackageSource,
+            MockLedgerStore,
+            SuccessDownloader,
+            SuccessInstaller,
+            MockBackupManager,
+            std::sync::Arc::new(std::sync::Mutex::new(db)),
+        )
+    }
+
+    /// Build an orchestrator whose installer always returns Cancelled.
+    fn build_cancelling_installer_orchestrator(
+        lock_path: &std::path::Path,
+    ) -> Result<
+        UpdateOrchestrator<
+            MockPackageSource,
+            MockLedgerStore,
+            SuccessDownloader,
+            CancellingInstaller,
+            MockBackupManager,
+        >,
+        CoreError,
+    > {
+        let db = rusqlite::Connection::open_in_memory().unwrap();
+        UpdateOrchestrator::new(
+            lock_path,
+            MockPackageSource,
+            MockLedgerStore,
+            SuccessDownloader,
+            CancellingInstaller,
+            MockBackupManager,
+            std::sync::Arc::new(std::sync::Mutex::new(db)),
+        )
+    }
+
+    /// Create a minimal PlannedUpdate for testing.
+    fn test_planned_update(id: &str) -> crate::engine::planner::PlannedUpdate {
+        use crate::catalog::VersionEntry;
+        use crate::types::{Category, SoftwareType};
+
+        crate::engine::planner::PlannedUpdate {
+            package_id: PackageId::new(id).unwrap(),
+            software: crate::types::Software {
+                id: PackageId::new(id).unwrap(),
+                slug: id.to_string(),
+                name: id.to_string(),
+                software_type: SoftwareType::Application,
+                category: Category::Capture,
+                os: vec!["windows".to_string()],
+                description: None,
+                homepage: None,
+                publisher: None,
+                icon_url: None,
+                license: None,
+                license_url: None,
+                aliases: vec![],
+                tags: vec![],
+                notes: None,
+                docs_url: None,
+                channel: None,
+                min_os_version: None,
+                manifest_version: None,
+                detection: None,
+                install: None,
+                checkver: None,
+                dependencies: None,
+                hardware: None,
+                backup: None,
+                versioning: None,
+            },
+            current_version: Version::parse("1.0.0"),
+            target_version: Version::parse("2.0.0"),
+            version_entry: VersionEntry {
+                package_id: PackageId::new(id).unwrap(),
+                version: "2.0.0".to_string(),
+                url: "https://example.com/installer.exe".to_string(),
+                sha256: None,
+                discovered_at: chrono::Utc::now(),
+                release_notes_url: None,
+                pre_release: false,
+            },
+            version_format: crate::engine::version_cmp::VersionFormat::Semver,
+            has_backup_config: false,
+            dependencies: vec![],
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Tests
+    // -----------------------------------------------------------------------
+
     #[test]
     fn orchestrator_new_acquires_lock() {
         let dir = tempfile::tempdir().unwrap();
@@ -790,5 +1010,206 @@ mod tests {
 
         assert_eq!(deserialized.duration, Duration::from_secs(42));
         assert!(deserialized.succeeded.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // Cancellation tests
+    // -----------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn execute_single_cancelled_before_start() {
+        let dir = tempfile::tempdir().unwrap();
+        let lock_path = dir.path().join("orchestration.lock");
+        let orch = build_success_orchestrator(&lock_path).unwrap();
+
+        let cancel = CancellationToken::new();
+        cancel.cancel(); // Cancel immediately
+
+        let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let events_clone = events.clone();
+        let on_event: EventCallback = Box::new(move |e| {
+            events_clone.lock().unwrap().push(e);
+        });
+
+        let planned = test_planned_update("nina-app");
+        let result = orch.execute_single(&planned, &on_event, &cancel).await;
+
+        assert_eq!(
+            result.status,
+            crate::engine::history::OperationStatus::Cancelled,
+            "should be cancelled"
+        );
+        assert!(result.error.is_none());
+
+        // Should have emitted PackageStarted and PackageComplete(cancelled)
+        let captured = events.lock().unwrap();
+        assert!(
+            captured.iter().any(
+                |e| matches!(e, Event::PackageComplete { status, .. } if status == "cancelled")
+            ),
+            "should emit PackageComplete with cancelled status"
+        );
+    }
+
+    #[tokio::test]
+    async fn execute_single_installer_returns_cancelled() {
+        let dir = tempfile::tempdir().unwrap();
+        let lock_path = dir.path().join("orchestration.lock");
+        let orch = build_cancelling_installer_orchestrator(&lock_path).unwrap();
+
+        let cancel = CancellationToken::new();
+
+        let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let events_clone = events.clone();
+        let on_event: EventCallback = Box::new(move |e| {
+            events_clone.lock().unwrap().push(e);
+        });
+
+        let planned = test_planned_update("nina-app");
+        let result = orch.execute_single(&planned, &on_event, &cancel).await;
+
+        assert_eq!(
+            result.status,
+            crate::engine::history::OperationStatus::Cancelled,
+            "installer cancellation should propagate"
+        );
+
+        let captured = events.lock().unwrap();
+        assert!(
+            captured.iter().any(
+                |e| matches!(e, Event::PackageComplete { status, .. } if status == "cancelled")
+            ),
+            "should emit PackageComplete with cancelled status from installer"
+        );
+    }
+
+    #[tokio::test]
+    async fn execute_cancels_between_packages() {
+        let dir = tempfile::tempdir().unwrap();
+        let lock_path = dir.path().join("orchestration.lock");
+        let orch = build_success_orchestrator(&lock_path).unwrap();
+
+        let cancel = CancellationToken::new();
+        let cancel_clone = cancel.clone();
+        let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let events_clone = events.clone();
+        let pkg_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let pkg_count_clone = pkg_count.clone();
+
+        let on_event: EventCallback = Box::new(move |e| {
+            if matches!(&e, Event::PackageComplete { .. }) {
+                let count = pkg_count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                if count == 0 {
+                    // Cancel after first package completes
+                    cancel_clone.cancel();
+                }
+            }
+            events_clone.lock().unwrap().push(e);
+        });
+
+        let plan = crate::engine::planner::UpdatePlan {
+            items: vec![
+                test_planned_update("pkg-a"),
+                test_planned_update("pkg-b"),
+                test_planned_update("pkg-c"),
+            ],
+            skipped: vec![],
+            warnings: vec![],
+        };
+
+        let result = orch.execute(plan, on_event, cancel).await.unwrap();
+
+        // First package should succeed, second should be cancelled (or not started),
+        // third should not be processed
+        assert!(
+            result.succeeded.len() <= 1,
+            "at most 1 package should succeed, got {}",
+            result.succeeded.len()
+        );
+        assert!(
+            result.succeeded.len() + result.failed.len() <= 2,
+            "at most 2 packages should be processed"
+        );
+
+        // Verify OrchestrationComplete was emitted
+        let captured = events.lock().unwrap();
+        assert!(
+            captured
+                .iter()
+                .any(|e| matches!(e, Event::OrchestrationComplete { .. })),
+            "should emit OrchestrationComplete"
+        );
+    }
+
+    #[tokio::test]
+    async fn execute_empty_plan_completes_immediately() {
+        let dir = tempfile::tempdir().unwrap();
+        let lock_path = dir.path().join("orchestration.lock");
+        let orch = build_success_orchestrator(&lock_path).unwrap();
+
+        let cancel = CancellationToken::new();
+        let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let events_clone = events.clone();
+        let on_event: EventCallback = Box::new(move |e| {
+            events_clone.lock().unwrap().push(e);
+        });
+
+        let plan = crate::engine::planner::UpdatePlan {
+            items: vec![],
+            skipped: vec![],
+            warnings: vec![],
+        };
+
+        let result = orch.execute(plan, on_event, cancel).await.unwrap();
+
+        assert!(result.succeeded.is_empty());
+        assert!(result.failed.is_empty());
+        assert!(result.skipped.is_empty());
+
+        let captured = events.lock().unwrap();
+        assert!(
+            captured.iter().any(|e| matches!(
+                e,
+                Event::OrchestrationComplete {
+                    succeeded: 0,
+                    failed: 0,
+                    skipped: 0
+                }
+            )),
+            "should emit OrchestrationComplete with all zeros"
+        );
+    }
+
+    #[tokio::test]
+    async fn execute_already_cancelled_processes_no_packages() {
+        let dir = tempfile::tempdir().unwrap();
+        let lock_path = dir.path().join("orchestration.lock");
+        let orch = build_success_orchestrator(&lock_path).unwrap();
+
+        let cancel = CancellationToken::new();
+        cancel.cancel(); // Pre-cancel
+
+        let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let events_clone = events.clone();
+        let on_event: EventCallback = Box::new(move |e| {
+            events_clone.lock().unwrap().push(e);
+        });
+
+        let plan = crate::engine::planner::UpdatePlan {
+            items: vec![test_planned_update("pkg-a"), test_planned_update("pkg-b")],
+            skipped: vec![],
+            warnings: vec![],
+        };
+
+        let result = orch.execute(plan, on_event, cancel).await.unwrap();
+
+        assert!(
+            result.succeeded.is_empty(),
+            "no packages should succeed when pre-cancelled"
+        );
+        assert!(
+            result.failed.is_empty(),
+            "no packages should be processed when pre-cancelled"
+        );
     }
 }
