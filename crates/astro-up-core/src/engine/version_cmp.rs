@@ -7,6 +7,109 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::version::{try_parse_lenient, Version};
 
+/// Status of a package relative to the catalog.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "status")]
+pub enum PackageStatus {
+    /// Installed version matches catalog latest.
+    UpToDate,
+    /// A newer version is available (minor/patch update).
+    UpdateAvailable {
+        current: Version,
+        available: Version,
+    },
+    /// A newer major version is available (breaking change potential).
+    MajorUpgradeAvailable {
+        current: Version,
+        available: Version,
+    },
+    /// Installed version is newer than the catalog's latest.
+    NewerThanCatalog {
+        current: Version,
+        catalog_latest: Version,
+    },
+    /// Package is not installed.
+    NotInstalled,
+    /// Status cannot be determined.
+    Unknown,
+}
+
+impl PackageStatus {
+    /// Determine the status of a package by comparing installed and catalog versions.
+    ///
+    /// - If `installed` is `None`, returns [`PackageStatus::NotInstalled`].
+    /// - If `catalog_latest` is `None`, returns [`PackageStatus::Unknown`].
+    /// - Equal versions return [`PackageStatus::UpToDate`].
+    /// - Installed newer than catalog returns [`PackageStatus::NewerThanCatalog`].
+    /// - Catalog newer than installed returns [`PackageStatus::UpdateAvailable`]
+    ///   (major upgrade distinction is deferred to T027).
+    pub fn determine(
+        installed: Option<&Version>,
+        catalog_latest: Option<&Version>,
+        format: &VersionFormat,
+    ) -> Self {
+        let (Some(current), Some(latest)) = (installed, catalog_latest) else {
+            return match (installed, catalog_latest) {
+                (None, _) => Self::NotInstalled,
+                (_, None) => Self::Unknown,
+                _ => unreachable!(),
+            };
+        };
+
+        match current.compare_with_format(latest, format) {
+            Ordering::Equal => Self::UpToDate,
+            Ordering::Greater => Self::NewerThanCatalog {
+                current: current.clone(),
+                catalog_latest: latest.clone(),
+            },
+            Ordering::Less => {
+                // T027 will add MajorUpgradeAvailable distinction here.
+                Self::UpdateAvailable {
+                    current: current.clone(),
+                    available: latest.clone(),
+                }
+            }
+        }
+    }
+
+    /// Returns `true` if this status represents a major version upgrade.
+    ///
+    /// Stub — always returns `false`. Full implementation in T027.
+    pub fn is_major_upgrade(&self) -> bool {
+        false
+    }
+}
+
+impl fmt::Display for PackageStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UpToDate => write!(f, "up to date"),
+            Self::UpdateAvailable {
+                current,
+                available,
+            } => write!(f, "update available: {} -> {}", current.raw, available.raw),
+            Self::MajorUpgradeAvailable {
+                current,
+                available,
+            } => write!(
+                f,
+                "major upgrade available: {} -> {}",
+                current.raw, available.raw
+            ),
+            Self::NewerThanCatalog {
+                current,
+                catalog_latest,
+            } => write!(
+                f,
+                "newer than catalog: {} > {}",
+                current.raw, catalog_latest.raw
+            ),
+            Self::NotInstalled => write!(f, "not installed"),
+            Self::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
 /// Describes how version strings should be parsed and compared.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
@@ -271,5 +374,129 @@ mod tests {
         };
         let to = Version::parse("2.0.0");
         assert!(!Version::is_major_upgrade(&from, &to));
+    }
+
+    // --- PackageStatus::determine ---
+
+    #[test]
+    fn status_not_installed_when_no_installed_version() {
+        let latest = Version::parse("1.0.0");
+        let status = PackageStatus::determine(None, Some(&latest), &VersionFormat::Semver);
+        assert_eq!(status, PackageStatus::NotInstalled);
+    }
+
+    #[test]
+    fn status_unknown_when_no_catalog_version() {
+        let installed = Version::parse("1.0.0");
+        let status = PackageStatus::determine(Some(&installed), None, &VersionFormat::Semver);
+        assert_eq!(status, PackageStatus::Unknown);
+    }
+
+    #[test]
+    fn status_up_to_date_when_equal() {
+        let installed = Version::parse("1.2.3");
+        let latest = Version::parse("1.2.3");
+        let status =
+            PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+        assert_eq!(status, PackageStatus::UpToDate);
+    }
+
+    #[test]
+    fn status_update_available_when_older() {
+        let installed = Version::parse("1.0.0");
+        let latest = Version::parse("1.5.0");
+        let status =
+            PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+        assert_eq!(
+            status,
+            PackageStatus::UpdateAvailable {
+                current: installed,
+                available: latest,
+            }
+        );
+    }
+
+    #[test]
+    fn status_update_available_even_for_major_bump() {
+        // T027 will change this to MajorUpgradeAvailable
+        let installed = Version::parse("1.0.0");
+        let latest = Version::parse("2.0.0");
+        let status =
+            PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+        assert_eq!(
+            status,
+            PackageStatus::UpdateAvailable {
+                current: installed,
+                available: latest,
+            }
+        );
+    }
+
+    #[test]
+    fn status_newer_than_catalog() {
+        let installed = Version::parse("3.0.0");
+        let latest = Version::parse("2.5.0");
+        let status =
+            PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+        assert_eq!(
+            status,
+            PackageStatus::NewerThanCatalog {
+                current: installed,
+                catalog_latest: latest,
+            }
+        );
+    }
+
+    #[test]
+    fn status_not_installed_when_both_none() {
+        let status = PackageStatus::determine(None, None, &VersionFormat::Semver);
+        assert_eq!(status, PackageStatus::NotInstalled);
+    }
+
+    // --- PackageStatus::is_major_upgrade stub ---
+
+    #[test]
+    fn is_major_upgrade_stub_always_false() {
+        let statuses = [
+            PackageStatus::UpToDate,
+            PackageStatus::UpdateAvailable {
+                current: Version::parse("1.0.0"),
+                available: Version::parse("2.0.0"),
+            },
+            PackageStatus::MajorUpgradeAvailable {
+                current: Version::parse("1.0.0"),
+                available: Version::parse("2.0.0"),
+            },
+            PackageStatus::NotInstalled,
+            PackageStatus::Unknown,
+        ];
+        for status in &statuses {
+            assert!(!status.is_major_upgrade());
+        }
+    }
+
+    // --- PackageStatus Display ---
+
+    #[test]
+    fn package_status_display() {
+        assert_eq!(PackageStatus::UpToDate.to_string(), "up to date");
+        assert_eq!(PackageStatus::NotInstalled.to_string(), "not installed");
+        assert_eq!(PackageStatus::Unknown.to_string(), "unknown");
+        assert_eq!(
+            PackageStatus::UpdateAvailable {
+                current: Version::parse("1.0.0"),
+                available: Version::parse("2.0.0"),
+            }
+            .to_string(),
+            "update available: 1.0.0 -> 2.0.0"
+        );
+        assert_eq!(
+            PackageStatus::NewerThanCatalog {
+                current: Version::parse("3.0.0"),
+                catalog_latest: Version::parse("2.0.0"),
+            }
+            .to_string(),
+            "newer than catalog: 3.0.0 > 2.0.0"
+        );
     }
 }
