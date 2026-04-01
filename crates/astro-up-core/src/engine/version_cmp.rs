@@ -50,7 +50,8 @@ impl PackageStatus {
     /// - Equal versions return [`PackageStatus::UpToDate`].
     /// - Installed newer than catalog returns [`PackageStatus::NewerThanCatalog`].
     /// - Catalog newer than installed returns [`PackageStatus::UpdateAvailable`]
-    ///   (major upgrade distinction is deferred to T027).
+    ///   or [`PackageStatus::MajorUpgradeAvailable`] when the major semver
+    ///   component differs (semver format only).
     pub fn determine(
         installed: Option<&Version>,
         catalog_latest: Option<&Version>,
@@ -71,20 +72,26 @@ impl PackageStatus {
                 catalog_latest: latest.clone(),
             },
             Ordering::Less => {
-                // T027 will add MajorUpgradeAvailable distinction here.
-                Self::UpdateAvailable {
-                    current: current.clone(),
-                    available: latest.clone(),
+                if matches!(format, VersionFormat::Semver)
+                    && Version::is_major_upgrade(current, latest)
+                {
+                    Self::MajorUpgradeAvailable {
+                        current: current.clone(),
+                        available: latest.clone(),
+                    }
+                } else {
+                    Self::UpdateAvailable {
+                        current: current.clone(),
+                        available: latest.clone(),
+                    }
                 }
             }
         }
     }
 
     /// Returns `true` if this status represents a major version upgrade.
-    ///
-    /// Stub — always returns `false`. Full implementation in T027.
     pub fn is_major_upgrade(&self) -> bool {
-        false
+        matches!(self, Self::MajorUpgradeAvailable { .. })
     }
 }
 
@@ -673,15 +680,14 @@ mod tests {
     }
 
     #[test]
-    fn status_update_available_even_for_major_bump() {
-        // T027 will change this to MajorUpgradeAvailable
+    fn status_major_upgrade_available_for_major_bump() {
         let installed = Version::parse("1.0.0");
         let latest = Version::parse("2.0.0");
         let status =
             PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
         assert_eq!(
             status,
-            PackageStatus::UpdateAvailable {
+            PackageStatus::MajorUpgradeAvailable {
                 current: installed,
                 available: latest,
             }
@@ -709,26 +715,68 @@ mod tests {
         assert_eq!(status, PackageStatus::NotInstalled);
     }
 
-    // --- PackageStatus::is_major_upgrade stub ---
+    // --- PackageStatus::is_major_upgrade ---
 
     #[test]
-    fn is_major_upgrade_stub_always_false() {
+    fn is_major_upgrade_true_for_major_upgrade_available() {
+        let status = PackageStatus::MajorUpgradeAvailable {
+            current: Version::parse("1.0.0"),
+            available: Version::parse("2.0.0"),
+        };
+        assert!(status.is_major_upgrade());
+    }
+
+    #[test]
+    fn is_major_upgrade_false_for_other_variants() {
         let statuses = [
             PackageStatus::UpToDate,
             PackageStatus::UpdateAvailable {
                 current: Version::parse("1.0.0"),
-                available: Version::parse("2.0.0"),
+                available: Version::parse("1.5.0"),
             },
-            PackageStatus::MajorUpgradeAvailable {
-                current: Version::parse("1.0.0"),
-                available: Version::parse("2.0.0"),
+            PackageStatus::NewerThanCatalog {
+                current: Version::parse("3.0.0"),
+                catalog_latest: Version::parse("2.0.0"),
             },
             PackageStatus::NotInstalled,
             PackageStatus::Unknown,
         ];
         for status in &statuses {
-            assert!(!status.is_major_upgrade());
+            assert!(!status.is_major_upgrade(), "expected false for {status}");
         }
+    }
+
+    // --- PackageStatus::determine — major vs minor distinction ---
+
+    #[test]
+    fn status_minor_update_stays_update_available() {
+        let installed = Version::parse("1.0.0");
+        let latest = Version::parse("1.5.0");
+        let status =
+            PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+        assert!(matches!(status, PackageStatus::UpdateAvailable { .. }));
+        assert!(!status.is_major_upgrade());
+    }
+
+    #[test]
+    fn status_patch_update_stays_update_available() {
+        let installed = Version::parse("2.1.0");
+        let latest = Version::parse("2.1.5");
+        let status =
+            PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+        assert!(matches!(status, PackageStatus::UpdateAvailable { .. }));
+    }
+
+    #[test]
+    fn status_major_bump_with_unparsable_stays_update_available() {
+        let installed = Version {
+            raw: "abc".into(),
+            parsed: None,
+        };
+        let latest = Version::parse("2.0.0");
+        let status =
+            PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+        assert!(matches!(status, PackageStatus::UpdateAvailable { .. }));
     }
 
     // --- PackageStatus Display ---

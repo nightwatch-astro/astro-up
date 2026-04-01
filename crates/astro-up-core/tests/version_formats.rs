@@ -108,29 +108,27 @@ fn semver_lenient_space_suffix_trimmed() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Date format — YYYY.MM.DD and YYYY-MM-DD (stub returns Equal)
+// 3. Date format — YYYY.MM.DD and YYYY-MM-DD
 // ---------------------------------------------------------------------------
 
 #[test]
-fn date_format_dot_separator_stub() {
+fn date_format_dot_separator() {
     assert_eq!(
         compare_versions("2024.01.15", "2025.06.01", &VersionFormat::Date),
-        Ordering::Equal,
-        "Date format is a stub and must return Equal"
+        Ordering::Less,
     );
 }
 
 #[test]
-fn date_format_dash_separator_stub() {
+fn date_format_dash_separator() {
     assert_eq!(
         compare_versions("2024-01-15", "2025-06-01", &VersionFormat::Date),
-        Ordering::Equal,
-        "Date format is a stub and must return Equal"
+        Ordering::Less,
     );
 }
 
 #[test]
-fn date_format_same_date_stub() {
+fn date_format_same_date() {
     assert_eq!(
         compare_versions("2024.01.01", "2024.01.01", &VersionFormat::Date),
         Ordering::Equal,
@@ -138,31 +136,23 @@ fn date_format_same_date_stub() {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Custom regex — stub returns Equal
+// 4. Custom regex
 // ---------------------------------------------------------------------------
 
 #[test]
-fn custom_regex_stub_returns_equal() {
+fn custom_regex_ordering() {
     let fmt = VersionFormat::Custom {
         pattern: r"(\d+)\.(\d+)".to_string(),
     };
-    assert_eq!(
-        compare_versions("1.0", "2.0", &fmt),
-        Ordering::Equal,
-        "Custom format is a stub and must return Equal"
-    );
+    assert_eq!(compare_versions("1.0", "2.0", &fmt), Ordering::Less,);
 }
 
 #[test]
-fn custom_regex_stub_different_strings() {
+fn custom_regex_greater() {
     let fmt = VersionFormat::Custom {
         pattern: r"v(\d+)".to_string(),
     };
-    assert_eq!(
-        compare_versions("v100", "v1", &fmt),
-        Ordering::Equal,
-        "Custom format is a stub and must return Equal"
-    );
+    assert_eq!(compare_versions("v100", "v1", &fmt), Ordering::Greater,);
 }
 
 // ---------------------------------------------------------------------------
@@ -315,14 +305,13 @@ fn status_update_available_minor() {
 }
 
 #[test]
-fn status_update_available_major_bump_treated_as_update() {
-    // Before T027, major bumps are still UpdateAvailable (not MajorUpgradeAvailable)
+fn status_major_upgrade_available() {
     let installed = Version::parse("1.0.0");
     let latest = Version::parse("2.0.0");
     let status = PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
     assert_eq!(
         status,
-        PackageStatus::UpdateAvailable {
+        PackageStatus::MajorUpgradeAvailable {
             current: installed,
             available: latest,
         }
@@ -344,36 +333,42 @@ fn status_newer_than_catalog() {
 }
 
 #[test]
-fn status_with_date_format_stub_always_up_to_date() {
-    // Date stub returns Equal, so any pair should be UpToDate
+fn status_with_date_format_update_available() {
     let installed = Version::parse("2024.01.15");
     let latest = Version::parse("2025.06.01");
     let status = PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Date);
-    assert_eq!(status, PackageStatus::UpToDate);
+    // Date format: non-semver, so always UpdateAvailable (never MajorUpgradeAvailable)
+    assert!(matches!(status, PackageStatus::UpdateAvailable { .. }));
 }
 
 #[test]
-fn status_with_custom_format_stub_always_up_to_date() {
+fn status_with_custom_format_update_available() {
     let fmt = VersionFormat::Custom {
         pattern: r"(\d+)".to_string(),
     };
     let installed = Version::parse("1");
     let latest = Version::parse("99");
     let status = PackageStatus::determine(Some(&installed), Some(&latest), &fmt);
-    assert_eq!(status, PackageStatus::UpToDate);
+    // Custom format: non-semver, so always UpdateAvailable
+    assert!(matches!(status, PackageStatus::UpdateAvailable { .. }));
 }
 
 #[test]
-fn status_is_major_upgrade_stub_always_false() {
+fn status_is_major_upgrade_true_for_major() {
+    let status = PackageStatus::MajorUpgradeAvailable {
+        current: Version::parse("1.0.0"),
+        available: Version::parse("2.0.0"),
+    };
+    assert!(status.is_major_upgrade());
+}
+
+#[test]
+fn status_is_major_upgrade_false_for_others() {
     let statuses = [
         PackageStatus::UpToDate,
         PackageStatus::UpdateAvailable {
             current: Version::parse("1.0.0"),
-            available: Version::parse("2.0.0"),
-        },
-        PackageStatus::MajorUpgradeAvailable {
-            current: Version::parse("1.0.0"),
-            available: Version::parse("2.0.0"),
+            available: Version::parse("1.5.0"),
         },
         PackageStatus::NewerThanCatalog {
             current: Version::parse("3.0.0"),
@@ -383,9 +378,6 @@ fn status_is_major_upgrade_stub_always_false() {
         PackageStatus::Unknown,
     ];
     for s in &statuses {
-        assert!(
-            !s.is_major_upgrade(),
-            "is_major_upgrade() stub should return false for {s}"
-        );
+        assert!(!s.is_major_upgrade(), "expected false for {s}");
     }
 }
