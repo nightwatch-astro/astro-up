@@ -258,6 +258,73 @@ fn compare_custom(a: &str, b: &str, pattern: &str) -> Ordering {
     }
 }
 
+/// Check whether a raw version string is compatible with the expected format.
+///
+/// Returns `Some(warning_message)` when the string does not match the expected
+/// format and the comparison will fall back to raw string ordering. Returns
+/// `None` when the string parses successfully under the given format.
+pub fn check_format_compatibility(raw: &str, format: &VersionFormat) -> Option<String> {
+    match format {
+        VersionFormat::Semver => {
+            if try_parse_lenient(raw).is_none() {
+                Some(format!(
+                    "version \"{raw}\" does not match semver format; \
+                     comparison will use raw string ordering"
+                ))
+            } else {
+                None
+            }
+        }
+        VersionFormat::Date => {
+            if parse_date(raw).is_none() {
+                Some(format!(
+                    "version \"{raw}\" does not match date format (YYYY.MM.DD / YYYY-MM-DD); \
+                     comparison will use raw string ordering"
+                ))
+            } else {
+                None
+            }
+        }
+        VersionFormat::Custom { pattern } => {
+            let re = {
+                let mut cache = match REGEX_CACHE.lock() {
+                    Ok(guard) => guard,
+                    Err(_) => {
+                        return Some(format!(
+                            "version \"{raw}\" could not be checked against custom pattern \
+                             \"{pattern}\"; regex cache is poisoned"
+                        ));
+                    }
+                };
+                if let Some(cached) = cache.get(pattern.as_str()) {
+                    cached.clone()
+                } else {
+                    match Regex::new(pattern) {
+                        Ok(re) => {
+                            cache.insert(pattern.clone(), re.clone());
+                            re
+                        }
+                        Err(_) => {
+                            return Some(format!(
+                                "custom version pattern \"{pattern}\" is not valid regex; \
+                                 comparison will use raw string ordering"
+                            ));
+                        }
+                    }
+                }
+            };
+            if parse_custom(raw, &re).is_none() {
+                Some(format!(
+                    "version \"{raw}\" does not match custom pattern \"{pattern}\"; \
+                     comparison will use raw string ordering"
+                ))
+            } else {
+                None
+            }
+        }
+    }
+}
+
 impl Version {
     /// Compare this version to another using the given [`VersionFormat`].
     ///
@@ -802,5 +869,65 @@ mod tests {
             .to_string(),
             "newer than catalog: 3.0.0 > 2.0.0"
         );
+    }
+
+    // --- check_format_compatibility ---
+
+    #[test]
+    fn compatibility_semver_with_valid_string() {
+        assert!(check_format_compatibility("1.2.3", &VersionFormat::Semver).is_none());
+        assert!(check_format_compatibility("v2.0", &VersionFormat::Semver).is_none());
+    }
+
+    #[test]
+    fn compatibility_semver_with_unparsable_string() {
+        let warning = check_format_compatibility("not-a-version", &VersionFormat::Semver);
+        assert!(warning.is_some());
+        let msg = warning.unwrap();
+        assert!(msg.contains("not-a-version"));
+        assert!(msg.contains("semver"));
+    }
+
+    #[test]
+    fn compatibility_date_with_valid_string() {
+        assert!(check_format_compatibility("2024.01.15", &VersionFormat::Date).is_none());
+        assert!(check_format_compatibility("2024-06-01", &VersionFormat::Date).is_none());
+    }
+
+    #[test]
+    fn compatibility_date_with_unparsable_string() {
+        let warning = check_format_compatibility("not-a-date", &VersionFormat::Date);
+        assert!(warning.is_some());
+        let msg = warning.unwrap();
+        assert!(msg.contains("not-a-date"));
+        assert!(msg.contains("date format"));
+    }
+
+    #[test]
+    fn compatibility_custom_with_matching_string() {
+        let fmt = VersionFormat::Custom {
+            pattern: r"(\d+)\.(\d+)".to_string(),
+        };
+        assert!(check_format_compatibility("3.14", &fmt).is_none());
+    }
+
+    #[test]
+    fn compatibility_custom_with_non_matching_string() {
+        let fmt = VersionFormat::Custom {
+            pattern: r"(\d+)\.(\d+)".to_string(),
+        };
+        let warning = check_format_compatibility("abc-xyz", &fmt);
+        assert!(warning.is_some());
+        assert!(warning.unwrap().contains("custom pattern"));
+    }
+
+    #[test]
+    fn compatibility_custom_with_invalid_regex() {
+        let fmt = VersionFormat::Custom {
+            pattern: r"([invalid".to_string(),
+        };
+        let warning = check_format_compatibility("anything", &fmt);
+        assert!(warning.is_some());
+        assert!(warning.unwrap().contains("not valid regex"));
     }
 }
