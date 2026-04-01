@@ -304,8 +304,7 @@ fn status_up_to_date() {
 fn status_update_available_minor() {
     let installed = Version::parse("1.0.0");
     let latest = Version::parse("1.5.0");
-    let status =
-        PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+    let status = PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
     assert_eq!(
         status,
         PackageStatus::UpdateAvailable {
@@ -320,8 +319,7 @@ fn status_update_available_major_bump_treated_as_update() {
     // Before T027, major bumps are still UpdateAvailable (not MajorUpgradeAvailable)
     let installed = Version::parse("1.0.0");
     let latest = Version::parse("2.0.0");
-    let status =
-        PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
+    let status = PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Semver);
     assert_eq!(
         status,
         PackageStatus::UpdateAvailable {
@@ -335,8 +333,7 @@ fn status_update_available_major_bump_treated_as_update() {
 fn status_newer_than_catalog() {
     let installed = Version::parse("3.0.0");
     let catalog = Version::parse("2.5.0");
-    let status =
-        PackageStatus::determine(Some(&installed), Some(&catalog), &VersionFormat::Semver);
+    let status = PackageStatus::determine(Some(&installed), Some(&catalog), &VersionFormat::Semver);
     assert_eq!(
         status,
         PackageStatus::NewerThanCatalog {
@@ -351,8 +348,7 @@ fn status_with_date_format_stub_always_up_to_date() {
     // Date stub returns Equal, so any pair should be UpToDate
     let installed = Version::parse("2024.01.15");
     let latest = Version::parse("2025.06.01");
-    let status =
-        PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Date);
+    let status = PackageStatus::determine(Some(&installed), Some(&latest), &VersionFormat::Date);
     assert_eq!(status, PackageStatus::UpToDate);
 }
 

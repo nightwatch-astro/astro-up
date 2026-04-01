@@ -242,3 +242,116 @@ Then: T011 (tests, depends on T004+T005)
 - Spec 005's catalog lockfile code (`catalog/lockfile.rs`) provides a reusable PID-based locking pattern for T007
 - The `Orchestrator` trait (contracts/engine-service.rs) is the public API — CLI and GUI both consume it
 - Constitution check passed — no violations, no complexity tracking needed
+
+## Task Dependencies
+
+<!-- Machine-readable. Do not edit manually unless you also update GitHub issue dependencies -->
+
+```toml
+[graph]
+# Phase 1: Setup (all CLOSED)
+[graph.T001]
+blocked_by = []
+[graph.T002]
+blocked_by = []
+[graph.T003]
+blocked_by = []
+
+# Phase 2: Foundational (depends on Phase 1 — CLOSED, so effectively [])
+[graph.T004]
+blocked_by = []
+[graph.T005]
+blocked_by = ["T004"]
+[graph.T006]
+blocked_by = []
+[graph.T007]
+blocked_by = []
+[graph.T008]
+blocked_by = []
+[graph.T009]
+blocked_by = []
+[graph.T010]
+blocked_by = []
+[graph.T011]
+blocked_by = ["T004", "T005"]
+
+# Phase 3: US1 — Single Package Update (depends on all Phase 2)
+[graph.T012]
+blocked_by = ["T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011"]
+[graph.T013]
+blocked_by = ["T012"]
+[graph.T014]
+blocked_by = ["T013"]
+[graph.T015]
+blocked_by = ["T014"]
+[graph.T016]
+blocked_by = ["T014", "T015"]
+[graph.T017]
+blocked_by = ["T012", "T013", "T014", "T015", "T016"]
+
+# Phase 4: US2 — Update All Packages (depends on US1)
+[graph.T018]
+blocked_by = ["T012", "T013", "T014", "T015", "T016", "T017"]
+[graph.T019]
+blocked_by = ["T012", "T013", "T014", "T015", "T016", "T017"]
+[graph.T020]
+blocked_by = ["T018", "T019"]
+[graph.T021]
+blocked_by = ["T016", "T019"]
+[graph.T022]
+blocked_by = ["T018"]
+[graph.T023]
+blocked_by = ["T018", "T019", "T020", "T021", "T022"]
+
+# Phase 5: US3 — Version Comparison (depends on Phase 2 only — parallel with US1)
+[graph.T024]
+blocked_by = ["T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011"]
+[graph.T025]
+blocked_by = ["T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011"]
+[graph.T026]
+blocked_by = ["T024", "T025"]
+[graph.T027]
+blocked_by = ["T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011"]
+[graph.T028]
+blocked_by = ["T024", "T025", "T026", "T027"]
+
+# Phase 6: US4 — Dependency Resolution (depends on US2)
+[graph.T029]
+blocked_by = ["T018", "T019", "T020", "T021", "T022", "T023"]
+[graph.T030]
+blocked_by = ["T018", "T019", "T020", "T021", "T022", "T023"]
+[graph.T031]
+blocked_by = ["T029", "T030"]
+
+# Phase 7: US5 — Update Policy Enforcement (depends on US2)
+[graph.T032]
+blocked_by = ["T018", "T019", "T020", "T021", "T022", "T023"]
+[graph.T033]
+blocked_by = ["T032"]
+[graph.T034]
+blocked_by = ["T018", "T019", "T020", "T021", "T022", "T023"]
+[graph.T035]
+blocked_by = ["T032", "T033", "T034"]
+
+# Phase 8: US6 — Operation History (depends on US1)
+[graph.T036]
+blocked_by = ["T012", "T013", "T014", "T015", "T016", "T017"]
+[graph.T037]
+blocked_by = ["T036"]
+[graph.T038]
+blocked_by = ["T037"]
+[graph.T039]
+blocked_by = ["T037"]
+[graph.T040]
+blocked_by = ["T036", "T037", "T038", "T039"]
+
+# Phase 9: Polish (depends on all user stories)
+[graph.T041]
+blocked_by = ["T017", "T023", "T028", "T031", "T035", "T040"]
+[graph.T042]
+blocked_by = ["T041"]
+[graph.T043]
+blocked_by = ["T042"]
+[graph.T044]
+blocked_by = ["T043"]
+```

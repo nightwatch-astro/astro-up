@@ -3,6 +3,7 @@
 use std::cmp::Ordering;
 use std::fmt;
 
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
 use crate::types::version::{Version, try_parse_lenient};
@@ -132,19 +133,43 @@ impl fmt::Display for VersionFormat {
     }
 }
 
+/// Parse a date version string into a [`NaiveDate`].
+///
+/// Supports `YYYY.MM.DD` and `YYYY-MM-DD` formats. Trailing text after the date
+/// (e.g. `2024.01.15-beta`) is ignored.
+pub fn parse_date(raw: &str) -> Option<NaiveDate> {
+    // Try dot-separated first (YYYY.MM.DD), then dash-separated (YYYY-MM-DD).
+    // We only look at the first 10 characters (or up to the first non-date char)
+    // to handle trailing text.
+    for sep in ['.', '-'] {
+        let parts: Vec<&str> = raw.splitn(4, sep).collect();
+        if parts.len() >= 3 {
+            let year: i32 = parts[0].parse().ok()?;
+            let month: u32 = parts[1].parse().ok()?;
+            // The day part may have trailing text (e.g. "15-beta" or "15.1").
+            // Take only leading digits.
+            let day_str = parts[2]
+                .split(|c: char| !c.is_ascii_digit())
+                .next()
+                .unwrap_or("");
+            let day: u32 = day_str.parse().ok()?;
+            return NaiveDate::from_ymd_opt(year, month, day);
+        }
+    }
+    None
+}
+
 /// Compare two version strings according to the given [`VersionFormat`].
 ///
 /// - **Semver**: uses lenient parsing via [`try_parse_lenient`]. Falls back to
 ///   lexicographic comparison if either string cannot be parsed.
-/// - **Date**: stub — always returns [`Ordering::Equal`] (full implementation in T024).
+/// - **Date**: parses dates via [`parse_date`] and compares chronologically.
+///   Falls back to lexicographic comparison if either date cannot be parsed.
 /// - **Custom**: stub — always returns [`Ordering::Equal`] (full implementation in T025).
 pub fn compare_versions(a: &str, b: &str, format: &VersionFormat) -> Ordering {
     match format {
         VersionFormat::Semver => compare_semver(a, b),
-        VersionFormat::Date => {
-            // Stub: full date comparison implemented in T024.
-            Ordering::Equal
-        }
+        VersionFormat::Date => compare_date(a, b),
         VersionFormat::Custom { .. } => {
             // Stub: full custom regex comparison implemented in T025.
             Ordering::Equal
@@ -160,6 +185,15 @@ fn compare_semver(a: &str, b: &str) -> Ordering {
         (Some(_), None) => Ordering::Greater,
         (None, Some(_)) => Ordering::Less,
         (None, None) => a.cmp(b),
+    }
+}
+
+/// Date comparison using [`parse_date`]. Falls back to lexicographic comparison
+/// when either date cannot be parsed.
+fn compare_date(a: &str, b: &str) -> Ordering {
+    match (parse_date(a), parse_date(b)) {
+        (Some(da), Some(db)) => da.cmp(&db),
+        _ => a.cmp(b),
     }
 }
 
@@ -270,17 +304,123 @@ mod tests {
         );
     }
 
-    // --- Date format returns Equal (stub) ---
+    // --- parse_date ---
 
     #[test]
-    fn date_format_stub_returns_equal() {
+    fn parse_date_dot_separated() {
+        assert_eq!(
+            parse_date("2024.01.15"),
+            Some(NaiveDate::from_ymd_opt(2024, 1, 15).unwrap())
+        );
+    }
+
+    #[test]
+    fn parse_date_dash_separated() {
+        assert_eq!(
+            parse_date("2024-01-15"),
+            Some(NaiveDate::from_ymd_opt(2024, 1, 15).unwrap())
+        );
+    }
+
+    #[test]
+    fn parse_date_trailing_text_dot() {
+        assert_eq!(
+            parse_date("2024.03.10-beta"),
+            Some(NaiveDate::from_ymd_opt(2024, 3, 10).unwrap())
+        );
+    }
+
+    #[test]
+    fn parse_date_trailing_text_dash() {
+        assert_eq!(
+            parse_date("2024-03-10-rc1"),
+            Some(NaiveDate::from_ymd_opt(2024, 3, 10).unwrap())
+        );
+    }
+
+    #[test]
+    fn parse_date_invalid_returns_none() {
+        assert_eq!(parse_date("not-a-date"), None);
+        assert_eq!(parse_date("abc"), None);
+        assert_eq!(parse_date(""), None);
+    }
+
+    #[test]
+    fn parse_date_invalid_day_returns_none() {
+        // February 30 does not exist
+        assert_eq!(parse_date("2024.02.30"), None);
+    }
+
+    // --- Date format comparison ---
+
+    #[test]
+    fn date_format_basic_ordering() {
         assert_eq!(
             compare_versions("2024.01.15", "2025.06.01", &VersionFormat::Date),
-            Ordering::Equal
+            Ordering::Less
         );
         assert_eq!(
-            compare_versions("2024-01-15", "2025-06-01", &VersionFormat::Date),
+            compare_versions("2025.06.01", "2024.01.15", &VersionFormat::Date),
+            Ordering::Greater
+        );
+        assert_eq!(
+            compare_versions("2024.01.15", "2024.01.15", &VersionFormat::Date),
             Ordering::Equal
+        );
+    }
+
+    #[test]
+    fn date_format_dash_separator() {
+        assert_eq!(
+            compare_versions("2024-01-15", "2025-06-01", &VersionFormat::Date),
+            Ordering::Less
+        );
+    }
+
+    #[test]
+    fn date_format_mixed_separators() {
+        // Both get parsed to the same date regardless of separator
+        assert_eq!(
+            compare_versions("2024.01.15", "2024-01-15", &VersionFormat::Date),
+            Ordering::Equal
+        );
+    }
+
+    #[test]
+    fn date_format_with_trailing_text() {
+        assert_eq!(
+            compare_versions("2024.01.15-beta", "2025.06.01", &VersionFormat::Date),
+            Ordering::Less
+        );
+    }
+
+    #[test]
+    fn date_format_unparsable_fallback() {
+        // Both unparsable: lexicographic comparison
+        assert_eq!(
+            compare_versions("abc", "def", &VersionFormat::Date),
+            Ordering::Less
+        );
+        // One parsable, one not: falls back to string comparison
+        assert_eq!(
+            compare_versions("2024.01.15", "zzz", &VersionFormat::Date),
+            Ordering::Less
+        );
+    }
+
+    #[test]
+    fn date_format_same_year_different_month() {
+        assert_eq!(
+            compare_versions("2024.01.01", "2024.12.01", &VersionFormat::Date),
+            Ordering::Less
+        );
+    }
+
+    #[test]
+    fn date_format_same_month_different_day() {
+        assert_eq!(
+            compare_versions("2024.06.01", "2024.06.30", &VersionFormat::Date),
+            Ordering::Less
         );
     }
 
