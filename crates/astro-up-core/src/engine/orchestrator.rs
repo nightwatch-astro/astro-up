@@ -509,8 +509,8 @@ where
             status: status_str.into(),
         });
 
-        // 9. Return PackageResult
-        PackageResult {
+        // 9. Record to operation history (best-effort — don't fail pipeline)
+        let result = PackageResult {
             package_id: pkg_id.clone(),
             from_version: planned.current_version.clone(),
             to_version: planned.target_version.clone(),
@@ -518,7 +518,32 @@ where
             duration: start.elapsed(),
             error: None,
             backup_path,
+        };
+
+        if let Ok(conn) = self.db.lock() {
+            let op_type =
+                if result.from_version.raw == "0.0.0" || result.from_version.raw.is_empty() {
+                    super::history::OperationType::Install
+                } else {
+                    super::history::OperationType::Update
+                };
+            let record = super::history::OperationRecord {
+                id: 0,
+                package_id: result.package_id.as_ref().to_string(),
+                operation_type: op_type,
+                from_version: Some(result.from_version.raw.clone()),
+                to_version: Some(result.to_version.raw.clone()),
+                status: result.status.clone(),
+                duration_ms: result.duration.as_millis() as u64,
+                error_message: result.error.clone(),
+                created_at: chrono::Utc::now(),
+            };
+            if let Err(e) = super::history::record_operation(&conn, &record) {
+                tracing::warn!(package = %pkg_id, "failed to record operation history: {e}");
+            }
         }
+
+        result
     }
 
     /// Best-effort disk space check. Returns `Err` with a message if the check
@@ -582,8 +607,60 @@ where
     I: crate::traits::Installer + Send + Sync,
     B: crate::traits::BackupManager + Send + Sync,
 {
-    async fn plan(&self, _request: UpdateRequest) -> Result<UpdatePlan, CoreError> {
-        todo!("T014–T020: planner integration")
+    async fn plan(&self, request: UpdateRequest) -> Result<UpdatePlan, CoreError> {
+        use super::planner::{CatalogEntry, UpdatePlanner};
+        use super::version_cmp::VersionFormat;
+
+        // Build catalog entries from PackageSource + LedgerStore
+        let all_software = self
+            .catalog
+            .list_all()
+            .map_err(|e| CoreError::Database(format!("catalog error: {e}")))?;
+        let mut entries = Vec::new();
+
+        for sw in all_software {
+            // Look up installed version from ledger
+            let installed = self.detector.list_acknowledged().ok().and_then(|ack| {
+                ack.into_iter()
+                    .find(|e| AsRef::<str>::as_ref(&e.package_id) == AsRef::<str>::as_ref(&sw.id))
+                    .map(|e| e.version)
+            });
+
+            // Placeholder version entry — full catalog version lookup requires
+            // CatalogReader integration (deferred to wiring task)
+            let ve = crate::catalog::VersionEntry {
+                package_id: sw.id.clone(),
+                version: String::new(),
+                url: String::new(),
+                sha256: None,
+                discovered_at: chrono::Utc::now(),
+                release_notes_url: None,
+                pre_release: false,
+            };
+
+            let version_format: VersionFormat = sw
+                .versioning
+                .as_ref()
+                .and_then(|v| v.major_version_pattern.as_ref())
+                .map(|p: &String| VersionFormat::Custom { pattern: p.clone() })
+                .unwrap_or_default();
+
+            entries.push(CatalogEntry {
+                software: sw,
+                installed_version: installed,
+                catalog_version: crate::types::Version::parse(&ve.version),
+                version_entry: ve,
+                version_format,
+            });
+        }
+
+        let planner = UpdatePlanner::new(entries);
+
+        if request.packages.is_empty() {
+            planner.plan_all()
+        } else {
+            planner.plan_specific(&request.packages)
+        }
     }
 
     async fn execute(
@@ -654,8 +731,12 @@ where
         })
     }
 
-    async fn history(&self, _filter: HistoryFilter) -> Result<Vec<OperationRecord>, CoreError> {
-        todo!("T036–T039: history queries")
+    async fn history(&self, filter: HistoryFilter) -> Result<Vec<OperationRecord>, CoreError> {
+        let conn = self
+            .db
+            .lock()
+            .map_err(|e| CoreError::Database(format!("failed to lock db connection: {e}")))?;
+        super::history::query_history(&conn, &filter)
     }
 }
 
