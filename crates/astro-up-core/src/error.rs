@@ -131,6 +131,12 @@ pub enum CoreError {
         cause: Box<dyn std::error::Error + Send + Sync>,
     },
 
+    #[error("dependency cycle detected: {}", path.join(" -> "))]
+    DependencyCycle { path: Vec<String> },
+
+    #[error("database error: {0}")]
+    Database(String),
+
     #[error("download cancelled")]
     Cancelled,
 
