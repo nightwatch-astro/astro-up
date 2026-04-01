@@ -26,7 +26,7 @@ impl Version {
     }
 }
 
-fn try_parse_lenient(raw: &str) -> Option<semver::Version> {
+pub(crate) fn try_parse_lenient(raw: &str) -> Option<semver::Version> {
     // Try strict semver first
     if let Ok(v) = semver::Version::parse(raw) {
         return Some(v);
