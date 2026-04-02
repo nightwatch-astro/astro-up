@@ -115,4 +115,5 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - SQLite (existing — catalog, config, ledger via astro-up-core) (015-cli-interface)
 
 ## Recent Changes
+- 015-cli-interface: CLI scaffold — all 9 commands, dual-layer tracing, OutputMode, exit codes, JSON output, confirmation helpers
 - 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4
