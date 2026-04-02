@@ -202,4 +202,5 @@ Global flags: `--verbose`, `--quiet`, `--config <path>`, `--json`
 - Separate binary from the GUI (astro-up-cli vs astro-up-gui)
 - ratatui for progress bars and tables during long operations, not a persistent TUI app
 - All business logic shared with GUI via astro-up-core
+- Panic handler: human-panic for release builds (user-friendly crash reports instead of raw backtraces)
 - Depends on: spec 004 (config), spec 005 (catalog), spec 006 (detection), spec 010 (download), spec 011 (install), spec 012 (engine), spec 013 (backup)
