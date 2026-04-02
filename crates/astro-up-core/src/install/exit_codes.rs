@@ -58,19 +58,7 @@ mod tests {
     use std::collections::HashMap;
 
     fn base_config() -> InstallConfig {
-        InstallConfig {
-            method: crate::types::InstallMethod::Exe,
-            scope: None,
-            elevation: None,
-            upgrade_behavior: None,
-            install_modes: vec![],
-            success_codes: vec![],
-            pre_install: vec![],
-            post_install: vec![],
-            switches: None,
-            known_exit_codes: HashMap::new(),
-            timeout_secs: None,
-        }
+        InstallConfig::default()
     }
 
     #[test]

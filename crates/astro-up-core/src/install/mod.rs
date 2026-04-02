@@ -6,10 +6,11 @@ pub mod process;
 pub mod switches;
 pub mod types;
 pub mod uninstall;
+pub(crate) mod wide;
 pub mod zip;
 
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use tracing::{info, instrument, warn};
 
@@ -22,21 +23,39 @@ use self::exit_codes::interpret_exit_code;
 use self::switches::build_args;
 use self::types::{ExitCodeOutcome, InstallRequest, InstallResult, UninstallRequest};
 
+/// Default installer timeout: 10 minutes.
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(600);
 const DEFAULT_INSTALL_SUBDIR: &str = "packages";
 
 /// Facade for installer execution. Handles the full lifecycle:
 /// pre-hooks -> elevation -> spawn -> exit code interpretation -> post-hooks -> ledger.
 pub struct InstallerService {
-    data_dir: PathBuf,
+    default_timeout: Duration,
+    default_install_dir: PathBuf,
 }
 
 impl InstallerService {
-    pub fn new(data_dir: PathBuf) -> Self {
-        Self { data_dir }
+    pub fn new(default_timeout: Duration, default_install_dir: PathBuf) -> Self {
+        Self {
+            default_timeout,
+            default_install_dir,
+        }
     }
 
-    fn default_install_dir(&self, package_id: &str) -> PathBuf {
-        self.data_dir.join(DEFAULT_INSTALL_SUBDIR).join(package_id)
+    /// Creates a service with default timeout (600s) and the given data directory.
+    pub fn with_data_dir(data_dir: PathBuf) -> Self {
+        Self::new(DEFAULT_TIMEOUT, data_dir)
+    }
+
+    /// Returns the default timeout for installers without a manifest override.
+    pub fn default_timeout(&self) -> Duration {
+        self.default_timeout
+    }
+
+    fn install_dir_for(&self, package_id: &str) -> PathBuf {
+        self.default_install_dir
+            .join(DEFAULT_INSTALL_SUBDIR)
+            .join(package_id)
     }
 
     #[instrument(skip_all, fields(package = %request.package_id))]
@@ -56,10 +75,9 @@ impl InstallerService {
         }
 
         // Pre-install hooks (abort on failure)
-        let is_elevated = elevation::is_elevated();
         for hook_cmd in &config.pre_install {
             info!(hook = %hook_cmd, "running pre-install hook");
-            if let Err(e) = hooks::run_hook(hook_cmd, is_elevated).await {
+            if let Err(e) = hooks::run_hook(hook_cmd).await {
                 let _ = request.event_tx.send(Event::InstallFailed {
                     id: request.package_id.clone(),
                     error: format!("pre-install hook failed: {e}"),
@@ -70,14 +88,14 @@ impl InstallerService {
 
         // Proactive elevation check
         #[cfg(windows)]
-        if matches!(config.elevation, Some(Elevation::Required)) && !is_elevated {
+        if matches!(config.elevation, Some(Elevation::Required)) && !elevation::is_elevated() {
             info!("proactive elevation required, re-executing");
             let args: Vec<String> = std::env::args().collect();
             elevation::elevate_and_reexec(&args).await?;
             return Ok(InstallResult::Success { path: None });
         }
         #[cfg(not(windows))]
-        if matches!(config.elevation, Some(Elevation::Required)) && !is_elevated {
+        if matches!(config.elevation, Some(Elevation::Required)) && !elevation::is_elevated() {
             return Err(CoreError::ElevationRequired);
         }
 
@@ -93,12 +111,10 @@ impl InstallerService {
             }
         }
 
-        // Deny upgrade if configured
         if matches!(config.upgrade_behavior, Some(UpgradeBehavior::Deny)) {
-            return Err(CoreError::Io(std::io::Error::new(
-                std::io::ErrorKind::PermissionDenied,
-                format!("upgrade denied for {}", request.package_id),
-            )));
+            return Err(CoreError::UpgradeDenied {
+                package_id: request.package_id.clone(),
+            });
         }
 
         // Execute based on method
@@ -112,7 +128,7 @@ impl InstallerService {
         if result.is_ok() {
             for hook_cmd in &config.post_install {
                 info!(hook = %hook_cmd, "running post-install hook");
-                if let Err(e) = hooks::run_hook(hook_cmd, is_elevated).await {
+                if let Err(e) = hooks::run_hook(hook_cmd).await {
                     warn!(hook = %hook_cmd, error = %e, "post-install hook failed");
                 }
             }
@@ -120,7 +136,7 @@ impl InstallerService {
             // Record ledger entry
             let install_path = match &result {
                 Ok(InstallResult::Success { path })
-                | Ok(InstallResult::SuccessRebootRequired { path }) => path.as_ref(),
+                | Ok(InstallResult::SuccessRebootRequired { path }) => path.as_deref(),
                 _ => None,
             };
             let entry = ledger::record_install(&request.package_id, &request.version, install_path);
@@ -208,14 +224,18 @@ impl InstallerService {
         }
     }
 
+    fn resolve_install_dir(&self, request: &InstallRequest) -> PathBuf {
+        request
+            .install_dir
+            .clone()
+            .unwrap_or_else(|| self.install_dir_for(&request.package_id))
+    }
+
     async fn handle_zip_install(
         &self,
         request: &InstallRequest,
     ) -> Result<InstallResult, CoreError> {
-        let dest = request
-            .install_dir
-            .clone()
-            .unwrap_or_else(|| self.default_install_dir(&request.package_id));
+        let dest = self.resolve_install_dir(request);
         let path = zip::extract_zip(&request.installer_path, &dest).await?;
         Ok(InstallResult::Success { path: Some(path) })
     }
@@ -224,16 +244,16 @@ impl InstallerService {
         &self,
         request: &InstallRequest,
     ) -> Result<InstallResult, CoreError> {
-        let dest = request
-            .install_dir
-            .clone()
-            .unwrap_or_else(|| self.default_install_dir(&request.package_id));
+        let dest = self.resolve_install_dir(request);
         tokio::fs::create_dir_all(&dest).await?;
         let filename = request.installer_path.file_name().unwrap_or_default();
         tokio::fs::copy(&request.installer_path, dest.join(filename)).await?;
         Ok(InstallResult::Success { path: Some(dest) })
     }
 
+    /// Handles DownloadOnly packages: opens the containing folder on Windows.
+    /// On non-Windows, returns `Success` without opening a folder (no desktop
+    /// environment assumed in CI/cross-compile targets).
     #[allow(unused_variables)]
     async fn handle_download_only(
         &self,
@@ -241,7 +261,6 @@ impl InstallerService {
     ) -> Result<InstallResult, CoreError> {
         #[cfg(windows)]
         if let Some(parent) = installer_path.parent() {
-            // Open the containing folder in Explorer
             std::process::Command::new("explorer").arg(parent).spawn()?;
         }
         Ok(InstallResult::Success { path: None })
@@ -281,7 +300,6 @@ impl InstallerService {
             package = %package_id,
             metric = crate::metrics::INSTALL_DURATION_SECONDS,
             duration_secs = duration.as_secs_f64(),
-            duration_ms = duration.as_millis() as u64,
             "install completed"
         );
     }
@@ -297,7 +315,6 @@ impl Installer for InstallerService {
     }
 
     fn supports(&self, method: &InstallMethod) -> bool {
-        // All 10 installer types are supported
         matches!(
             method,
             InstallMethod::Exe

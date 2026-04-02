@@ -30,6 +30,9 @@ pub enum CoreError {
     #[error("installer timed out after {timeout_secs}s")]
     InstallerTimeout { timeout_secs: u64 },
 
+    #[error("upgrade denied for {package_id}")]
+    UpgradeDenied { package_id: String },
+
     #[error("installer busy")]
     InstallerBusy,
 

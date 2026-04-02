@@ -26,6 +26,8 @@ pub fn find_uninstall_command(package_id: &str) -> Option<String> {
         ),
     ];
 
+    let package_id_lower = package_id.to_lowercase();
+
     for (hive, path) in &search_paths {
         let Ok(key) = RegKey::predef(*hive).open_subkey(path) else {
             continue;
@@ -34,12 +36,8 @@ pub fn find_uninstall_command(package_id: &str) -> Option<String> {
             let Ok(subkey) = key.open_subkey(&name) else {
                 continue;
             };
-            // Match by display name (case-insensitive contains)
             let display_name: String = subkey.get_value("DisplayName").unwrap_or_default();
-            if !display_name
-                .to_lowercase()
-                .contains(&package_id.to_lowercase())
-            {
+            if !display_name.to_lowercase().contains(&package_id_lower) {
                 continue;
             }
             // Prefer QuietUninstallString
@@ -129,14 +127,13 @@ pub async fn remove_directory(install_dir: &Path, confirm: bool) -> Result<(), C
         )));
     }
 
-    if !install_dir.exists() {
-        return Err(CoreError::NotFound {
+    match tokio::fs::remove_dir_all(install_dir).await {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(CoreError::NotFound {
             input: install_dir.display().to_string(),
-        });
+        }),
+        Err(e) => Err(e.into()),
     }
-
-    tokio::fs::remove_dir_all(install_dir).await?;
-    Ok(())
 }
 
 /// Simple command-line splitting that handles quoted strings.

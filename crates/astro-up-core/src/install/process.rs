@@ -68,25 +68,21 @@ pub async fn spawn_with_job_object(
     timeout: Duration,
     cancel_token: CancellationToken,
 ) -> Result<i32, CoreError> {
-    use std::ffi::OsStr;
     use std::mem;
-    use std::os::windows::ffi::OsStrExt;
 
     use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::JobObjects::*;
     use windows::Win32::System::Threading::*;
     use windows::core::PWSTR;
 
-    // Build command line: "exe" arg1 arg2 ...
+    use super::wide::to_wide_null;
+
     let cmd_line = if args.is_empty() {
         format!("\"{exe}\"")
     } else {
         format!("\"{exe}\" {}", args.join(" "))
     };
-    let mut cmd_wide: Vec<u16> = OsStr::new(&cmd_line)
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect();
+    let mut cmd_wide = to_wide_null(&cmd_line);
 
     // Create job object
     let job = unsafe { CreateJobObjectW(None, None) }

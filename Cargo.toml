@@ -19,6 +19,7 @@ semver = { version = "1", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 garde = { version = "0.22", features = ["derive", "url"] }
 humantime = "2"
+humantime-serde = "1"
 tracing = "0.1"
 astro-up-core = { path = "crates/astro-up-core" }
 insta = { version = "1", features = ["json", "toml"] }

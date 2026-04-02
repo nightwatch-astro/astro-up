@@ -201,21 +201,89 @@ mod tests {
 
     #[tokio::test]
     async fn reject_zip_slip_attack() {
-        // Create a ZIP with a malicious path manually
-        let file = tempfile::NamedTempFile::new().unwrap();
-        let mut zip = zip::ZipWriter::new(file.reopen().unwrap());
-        let options = zip::write::SimpleFileOptions::default();
+        // Build a raw ZIP file with a malicious "../evil.txt" entry.
+        // The zip crate's ZipWriter sanitizes paths, so we construct raw bytes.
+        // ZIP local file header format: signature + fields + filename + data
+        let malicious_name = b"../evil.txt";
+        let payload = b"malicious content";
+        let crc = 0u32; // CRC validation not needed — we're testing path rejection
 
-        // Use raw_entry to bypass path validation in the writer
-        // Note: zip crate may sanitize on write, so we test that enclosed_name catches it
-        zip.start_file("normal.txt", options).unwrap();
-        zip.write_all(b"safe").unwrap();
-        zip.finish().unwrap();
+        // Local file header
+        let mut local_header = Vec::new();
+        local_header.extend_from_slice(&0x04034b50u32.to_le_bytes()); // signature
+        local_header.extend_from_slice(&20u16.to_le_bytes()); // version needed
+        local_header.extend_from_slice(&0u16.to_le_bytes()); // flags
+        local_header.extend_from_slice(&0u16.to_le_bytes()); // compression (stored)
+        local_header.extend_from_slice(&0u16.to_le_bytes()); // mod time
+        local_header.extend_from_slice(&0u16.to_le_bytes()); // mod date
+        local_header.extend_from_slice(&crc.to_le_bytes()); // crc32
+        local_header.extend_from_slice(&(payload.len() as u32).to_le_bytes()); // compressed
+        local_header.extend_from_slice(&(payload.len() as u32).to_le_bytes()); // uncompressed
+        local_header.extend_from_slice(&(malicious_name.len() as u16).to_le_bytes()); // name len
+        local_header.extend_from_slice(&0u16.to_le_bytes()); // extra len
+
+        let local_offset = 0u32;
+
+        // Central directory header
+        let mut central = Vec::new();
+        central.extend_from_slice(&0x02014b50u32.to_le_bytes()); // signature
+        central.extend_from_slice(&20u16.to_le_bytes()); // version made by
+        central.extend_from_slice(&20u16.to_le_bytes()); // version needed
+        central.extend_from_slice(&0u16.to_le_bytes()); // flags
+        central.extend_from_slice(&0u16.to_le_bytes()); // compression
+        central.extend_from_slice(&0u16.to_le_bytes()); // mod time
+        central.extend_from_slice(&0u16.to_le_bytes()); // mod date
+        central.extend_from_slice(&crc.to_le_bytes()); // crc32
+        central.extend_from_slice(&(payload.len() as u32).to_le_bytes()); // compressed
+        central.extend_from_slice(&(payload.len() as u32).to_le_bytes()); // uncompressed
+        central.extend_from_slice(&(malicious_name.len() as u16).to_le_bytes()); // name len
+        central.extend_from_slice(&0u16.to_le_bytes()); // extra len
+        central.extend_from_slice(&0u16.to_le_bytes()); // comment len
+        central.extend_from_slice(&0u16.to_le_bytes()); // disk number
+        central.extend_from_slice(&0u16.to_le_bytes()); // internal attrs
+        central.extend_from_slice(&0u32.to_le_bytes()); // external attrs
+        central.extend_from_slice(&local_offset.to_le_bytes()); // local header offset
+
+        // Assemble the ZIP file
+        let mut zip_bytes = Vec::new();
+        zip_bytes.extend_from_slice(&local_header);
+        zip_bytes.extend_from_slice(malicious_name);
+        zip_bytes.extend_from_slice(payload);
+
+        let central_offset = zip_bytes.len() as u32;
+        zip_bytes.extend_from_slice(&central);
+        zip_bytes.extend_from_slice(malicious_name);
+
+        let central_size = (zip_bytes.len() as u32) - central_offset;
+
+        // End of central directory
+        zip_bytes.extend_from_slice(&0x06054b50u32.to_le_bytes()); // signature
+        zip_bytes.extend_from_slice(&0u16.to_le_bytes()); // disk number
+        zip_bytes.extend_from_slice(&0u16.to_le_bytes()); // central dir disk
+        zip_bytes.extend_from_slice(&1u16.to_le_bytes()); // entries on disk
+        zip_bytes.extend_from_slice(&1u16.to_le_bytes()); // total entries
+        zip_bytes.extend_from_slice(&central_size.to_le_bytes()); // central dir size
+        zip_bytes.extend_from_slice(&central_offset.to_le_bytes()); // central dir offset
+        zip_bytes.extend_from_slice(&0u16.to_le_bytes()); // comment len
+
+        let file = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(file.path(), &zip_bytes).unwrap();
 
         let dest = tempfile::tempdir().unwrap();
-        // Normal file should extract fine
         let result = extract_zip(file.path(), dest.path()).await;
-        assert!(result.is_ok());
+
+        // Must reject the traversal path
+        assert!(result.is_err(), "zip-slip path should be rejected");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("zip-slip"),
+            "error should mention zip-slip: {err}"
+        );
+        // Verify no file was written outside dest
+        assert!(
+            !dest.path().join("../evil.txt").exists(),
+            "malicious file must not be created"
+        );
     }
 
     #[tokio::test]
