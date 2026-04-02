@@ -227,23 +227,26 @@ pub(crate) fn resolve_dir_names(paths: &[PathBuf]) -> Vec<String> {
     names
 }
 
+/// Reads metadata.json from a backup archive (sync, usable from spawn_blocking).
+pub(crate) fn read_metadata_sync(archive_path: &Path) -> Result<BackupMetadata, CoreError> {
+    let file = File::open(archive_path)?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| CoreError::Io(io::Error::other(e)))?;
+    let mut entry = archive
+        .by_name("metadata.json")
+        .map_err(|e| CoreError::Io(io::Error::other(e)))?;
+    let mut buf = String::new();
+    entry.read_to_string(&mut buf)?;
+    let metadata: BackupMetadata = serde_json::from_str(&buf)?;
+    Ok(metadata)
+}
+
 /// Reads metadata.json from a backup archive without extracting.
 pub async fn read_metadata(archive_path: &Path) -> Result<BackupMetadata, CoreError> {
     let archive_path = archive_path.to_path_buf();
-    tokio::task::spawn_blocking(move || {
-        let file = File::open(&archive_path)?;
-        let mut archive =
-            zip::ZipArchive::new(file).map_err(|e| CoreError::Io(io::Error::other(e)))?;
-        let mut entry = archive
-            .by_name("metadata.json")
-            .map_err(|e| CoreError::Io(io::Error::other(e)))?;
-        let mut buf = String::new();
-        entry.read_to_string(&mut buf)?;
-        let metadata: BackupMetadata = serde_json::from_str(&buf)?;
-        Ok(metadata)
-    })
-    .await
-    .map_err(|e| CoreError::Io(io::Error::other(e)))?
+    tokio::task::spawn_blocking(move || read_metadata_sync(&archive_path))
+        .await
+        .map_err(|e| CoreError::Io(io::Error::other(e)))?
 }
 
 /// Extracts a backup archive to the original paths stored in metadata.
