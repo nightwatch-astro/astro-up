@@ -168,6 +168,11 @@ mod tests {
             assert_eq!(lock.path(), lock_path);
         }
 
+        // On Windows, the OS may not release the file lock synchronously on
+        // handle close. A brief yield gives the kernel time to clean up.
+        #[cfg(windows)]
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
         // After drop, the guard releases flock. Re-acquire should succeed.
         let _lock = OrchestrationLock::acquire(&lock_path).unwrap();
     }
