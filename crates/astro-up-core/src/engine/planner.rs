@@ -147,6 +147,7 @@ pub struct CatalogEntry {
 pub struct UpdatePlanner {
     entries: Vec<CatalogEntry>,
     allow_major: bool,
+    allow_downgrade: bool,
 }
 
 impl UpdatePlanner {
@@ -155,12 +156,19 @@ impl UpdatePlanner {
         Self {
             entries,
             allow_major: false,
+            allow_downgrade: false,
         }
     }
 
     /// Set the `--allow-major` override for this planning session.
     pub fn with_allow_major(mut self, allow: bool) -> Self {
         self.allow_major = allow;
+        self
+    }
+
+    /// Set the `--allow-downgrade` override for this planning session.
+    pub fn with_allow_downgrade(mut self, allow: bool) -> Self {
+        self.allow_downgrade = allow;
         self
     }
 
@@ -233,15 +241,29 @@ impl UpdatePlanner {
                     current,
                     catalog_latest,
                 } => {
-                    warnings.push(format!(
-                        "{}: installed {} is newer than catalog {}",
-                        entry.software.id, current.raw, catalog_latest.raw
-                    ));
-                    skipped.push(SkippedPackage {
-                        package_id: entry.software.id.clone(),
-                        reason: SkipReason::NewerThanCatalog,
-                        state: PackageState::Installed,
-                    });
+                    if self.allow_downgrade {
+                        // FR-012: allow downgrade when explicitly requested
+                        items.push(PlannedUpdate {
+                            package_id: entry.software.id.clone(),
+                            software: entry.software.clone(),
+                            current_version: current.clone(),
+                            target_version: catalog_latest.clone(),
+                            version_entry: entry.version_entry.clone(),
+                            version_format: entry.version_format.clone(),
+                            has_backup_config: entry.software.backup.is_some(),
+                            dependencies: Vec::new(),
+                        });
+                    } else {
+                        warnings.push(format!(
+                            "{}: installed {} is newer than catalog {} (use --allow-downgrade to override)",
+                            entry.software.id, current.raw, catalog_latest.raw
+                        ));
+                        skipped.push(SkippedPackage {
+                            package_id: entry.software.id.clone(),
+                            reason: SkipReason::DowngradeBlocked,
+                            state: PackageState::Installed,
+                        });
+                    }
                 }
                 PackageStatus::NotInstalled | PackageStatus::Unknown => {
                     // Not installed or unknown — nothing to update

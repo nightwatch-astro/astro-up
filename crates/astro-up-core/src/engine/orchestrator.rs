@@ -302,12 +302,21 @@ where
 
         check_cancel!();
 
-        // 3. Check disk space (FR-011) — best-effort, log warning if unavailable
+        // 3. Check disk space (FR-011) — abort if insufficient
         if let Err(e) = Self::check_disk_space(&planned.version_entry.url) {
-            tracing::warn!(
-                package = %pkg_id,
-                "disk space check failed, proceeding anyway: {e}"
-            );
+            on_event(Event::PackageComplete {
+                package_id: pkg_id.clone(),
+                status: "failed".into(),
+            });
+            return PackageResult {
+                package_id: pkg_id.clone(),
+                from_version: planned.current_version.clone(),
+                to_version: planned.target_version.clone(),
+                status: super::history::OperationStatus::Failed,
+                duration: start.elapsed(),
+                error: Some(format!("disk space check: {e}")),
+                backup_path: None,
+            };
         }
 
         check_cancel!();
@@ -660,7 +669,9 @@ where
             });
         }
 
-        let planner = UpdatePlanner::new(entries).with_allow_major(request.allow_major);
+        let planner = UpdatePlanner::new(entries)
+            .with_allow_major(request.allow_major)
+            .with_allow_downgrade(request.allow_downgrade);
 
         if request.packages.is_empty() {
             planner.plan_all()

@@ -138,7 +138,7 @@ fn mixed_up_to_date_and_updateable() {
 
     let skip_reasons: Vec<_> = plan.skipped.iter().map(|s| &s.reason).collect();
     assert!(skip_reasons.contains(&&SkipReason::UpToDate));
-    assert!(skip_reasons.contains(&&SkipReason::NewerThanCatalog));
+    assert!(skip_reasons.contains(&&SkipReason::DowngradeBlocked));
     assert_eq!(plan.warnings.len(), 1, "newer-than-catalog warning");
 }
 
