@@ -15,7 +15,7 @@ fn get_version() -> String {
 }
 
 /// Check for app self-update and emit event if available.
-async fn check_for_app_update(app: &AppHandle) {
+pub(crate) async fn check_for_app_update(app: &AppHandle) {
     use tauri_plugin_updater::UpdaterExt;
 
     let updater = match app.updater() {
@@ -29,6 +29,7 @@ async fn check_for_app_update(app: &AppHandle) {
     match updater.check().await {
         Ok(Some(update)) => {
             tracing::info!(version = update.version.as_str(), "App update available");
+            tray::set_badge_count(app, 1);
             let _ = app.emit(
                 "update-available",
                 serde_json::json!({
@@ -39,6 +40,7 @@ async fn check_for_app_update(app: &AppHandle) {
         }
         Ok(None) => {
             tracing::debug!("App is up to date");
+            tray::set_badge_count(app, 0);
         }
         Err(e) => {
             tracing::warn!("Update check failed: {e}");

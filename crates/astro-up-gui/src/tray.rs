@@ -33,6 +33,10 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
             "show" => show_main_window(app),
             "check_updates" => {
                 tracing::info!("Tray: check for updates requested");
+                let handle = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    crate::check_for_app_update(&handle).await;
+                });
             }
             "quit" => {
                 tracing::info!("Tray: quit requested");
