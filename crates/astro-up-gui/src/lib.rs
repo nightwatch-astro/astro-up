@@ -96,7 +96,13 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState::new())
+        .manage({
+            let data_dir = directories::ProjectDirs::from("dev", "nightwatch", "astro-up")
+                .map(|d| d.data_dir().to_path_buf())
+                .unwrap_or_else(|| std::env::temp_dir().join("astro-up"));
+            std::fs::create_dir_all(&data_dir).expect("Failed to create data directory");
+            AppState::new(&data_dir).expect("Failed to initialize app state")
+        })
         .invoke_handler(tauri::generate_handler![
             get_version,
             commands::list_software,

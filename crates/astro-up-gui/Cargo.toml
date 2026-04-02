@@ -14,6 +14,9 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 astro-up-core.workspace = true
 dashmap = "6"
+directories = "6"
+rusqlite = { version = "0.39", features = ["bundled"] }
+semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tauri = { version = "2", features = ["tray-icon"] }
