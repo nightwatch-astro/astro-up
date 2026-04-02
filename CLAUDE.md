@@ -113,7 +113,11 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - SQLite — operations table in existing app database (012-install-orchestration)
 - Rust 2024 edition (1.85+) + clap 4 (derive), ratatui 0.29 (TUI), color-eyre 0.6 (errors), tracing-subscriber 0.3 (logging layers), tracing-appender 0.2 (file rotation), human-panic 2 (panic handler), dialoguer 0.11 (prompts), tabled 0.17 (tables) (015-cli-interface)
 - SQLite (existing — catalog, config, ledger via astro-up-core) (015-cli-interface)
+- Rust 2024 edition + tauri 2, tauri-plugin-{window-state,single-instance,updater,autostart,dialog}, dashmap 6, directories 6, uuid 1 (016-tauri-app-shell)
+- Vue 3 + PrimeVue 4 (Aura), @tanstack/vue-query 5, @tauri-apps/{api,plugin-window-state,plugin-autostart,plugin-updater} 2, TypeScript 5 (016-tauri-app-shell)
+- SQLite (existing — catalog + config via astro-up-core, rusqlite 0.39) (016-tauri-app-shell)
 
 ## Recent Changes
+- 016-tauri-app-shell: Tauri v2 shell — 11 commands (6 wired to core), system tray with badge, theme switching, error toasts, self-update check, close-during-operation prompt
 - 015-cli-interface: CLI scaffold — all 9 commands, dual-layer tracing, OutputMode, exit codes, JSON output, confirmation helpers
 - 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4

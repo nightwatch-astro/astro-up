@@ -1,0 +1,101 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
+import { invoke } from "@tauri-apps/api/core";
+import type { OperationId } from "../types/commands";
+
+// --- Read queries ---
+
+export function useSoftwareList(filter: () => string) {
+  return useQuery({
+    queryKey: ["software", filter],
+    queryFn: () => invoke<unknown[]>("list_software", { filter: filter() }),
+  });
+}
+
+export function useCatalogSearch(query: () => string) {
+  return useQuery({
+    queryKey: ["catalog-search", query],
+    queryFn: () => invoke<unknown[]>("search_catalog", { query: query() }),
+    enabled: () => query().length > 0,
+  });
+}
+
+export function useUpdateCheck() {
+  return useQuery({
+    queryKey: ["updates"],
+    queryFn: () => invoke<unknown[]>("check_for_updates"),
+  });
+}
+
+export function useConfig() {
+  return useQuery({
+    queryKey: ["config"],
+    queryFn: () => invoke<Record<string, unknown>>("get_config"),
+  });
+}
+
+// --- Mutations ---
+
+export function useSaveConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (config: Record<string, unknown>) =>
+      invoke("save_config", { config }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["config"] });
+    },
+  });
+}
+
+export function useInstallSoftware() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      invoke<OperationId>("install_software", { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["software"] });
+    },
+  });
+}
+
+export function useUpdateSoftware() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      invoke<OperationId>("update_software", { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["software"] });
+      queryClient.invalidateQueries({ queryKey: ["updates"] });
+    },
+  });
+}
+
+export function useScanInstalled() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => invoke<unknown>("scan_installed"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["software"] });
+    },
+  });
+}
+
+export function useCreateBackup() {
+  return useMutation({
+    mutationFn: (paths: string[]) =>
+      invoke<OperationId>("create_backup", { paths }),
+  });
+}
+
+export function useRestoreBackup() {
+  return useMutation({
+    mutationFn: (params: { archive: string; filter?: string[] }) =>
+      invoke<OperationId>("restore_backup", params),
+  });
+}
+
+export function useCancelOperation() {
+  return useMutation({
+    mutationFn: (operationId: string) =>
+      invoke("cancel_operation", { operationId }),
+  });
+}

@@ -12,13 +12,21 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Astro-Up",
         "width": 1024,
-        "height": 768
+        "height": 768,
+        "center": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
     }
   }
 }
