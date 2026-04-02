@@ -80,16 +80,21 @@ fn global_json_flag_accepted() {
     cmd().args(["--json", "scan"]).assert().success();
 }
 
+/// Normalize binary name across platforms (astro-up-cli.exe → astro-up-cli).
+fn normalize_binary_name(s: &str) -> String {
+    s.replace("astro-up-cli.exe", "astro-up-cli")
+}
+
 #[test]
 fn snapshot_help_output() {
     let output = cmd().arg("--help").output().unwrap();
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout = normalize_binary_name(&String::from_utf8_lossy(&output.stdout));
     insta::assert_snapshot!("cli_help", stdout);
 }
 
 #[test]
 fn snapshot_show_help_output() {
     let output = cmd().args(["show", "--help"]).output().unwrap();
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout = normalize_binary_name(&String::from_utf8_lossy(&output.stdout));
     insta::assert_snapshot!("show_help", stdout);
 }
