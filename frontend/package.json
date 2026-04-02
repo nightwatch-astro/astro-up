@@ -15,7 +15,10 @@
     "primevue": "^4",
     "@primeuix/themes": "^2",
     "@tanstack/vue-query": "^5",
-    "@tauri-apps/api": "^2"
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-autostart": "^2",
+    "@tauri-apps/plugin-updater": "^2",
+    "@tauri-apps/plugin-window-state": "^2"
   },
   "devDependencies": {
     "typescript": "^5",
