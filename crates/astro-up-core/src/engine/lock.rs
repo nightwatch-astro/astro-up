@@ -157,22 +157,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let lock_path = dir.path().join("orchestration.lock");
 
-        {
-            let lock = OrchestrationLock::acquire(&lock_path).unwrap();
-            assert!(lock_path.exists());
+        let lock = OrchestrationLock::acquire(&lock_path).unwrap();
+        assert!(lock_path.exists());
+        assert_eq!(lock.path(), lock_path);
 
-            // Lock file should contain our PID.
+        // On non-Windows, verify PID was written. On Windows, the exclusive
+        // fd_lock prevents other handles from reading the file.
+        #[cfg(not(windows))]
+        {
             let contents = std::fs::read_to_string(&lock_path).unwrap();
             assert_eq!(contents, std::process::id().to_string());
-
-            assert_eq!(lock.path(), lock_path);
         }
-
-        // Note: re-acquire of the SAME path in the SAME process is not tested
-        // here because Box::leak means the file handle (and OS advisory lock)
-        // outlives the guard drop. In production this is fine — each process
-        // acquires once and holds until exit. Cross-process release is tested
-        // implicitly by `double_acquire_fails` + stale PID detection.
     }
 
     #[test]
