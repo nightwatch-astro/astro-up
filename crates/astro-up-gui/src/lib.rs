@@ -3,7 +3,7 @@ mod state;
 mod tray;
 
 use state::AppState;
-use tauri::Manager;
+use tauri::{Manager, RunEvent, WindowEvent};
 
 #[tauri::command]
 fn get_version() -> String {
@@ -45,15 +45,50 @@ pub fn run() {
             commands::cancel_operation,
         ])
         .setup(|app| {
+            let start = std::time::Instant::now();
+
             #[cfg(desktop)]
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
 
-            tracing::info!("Astro-Up GUI initialized");
+            tracing::debug!("Plugins registered in {:?}", start.elapsed());
+
+            if let Some(window) = app.get_webview_window("main") {
+                tracing::debug!(label = "main", "Window created: {:?}", window.inner_size());
+            }
+
+            tray::setup(app.handle())?;
+            tracing::debug!("System tray created");
+
+            tracing::info!(
+                version = astro_up_core::version().to_string().as_str(),
+                elapsed_ms = start.elapsed().as_millis() as u64,
+                "Astro-Up GUI initialized"
+            );
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                // Default: minimize to tray instead of quitting.
+                // TODO: read ui.close_action from config; if "quit", don't prevent.
+                // TODO: if operations active, show cancel/background prompt (T017).
+                let app = window.app_handle();
+                let state = app.state::<AppState>();
+                if state.has_active_operations() {
+                    tracing::info!("Close requested with active operations — hiding to tray");
+                }
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let RunEvent::ExitRequested { api, .. } = &event {
+                // Keep running in tray when all windows are closed.
+                api.prevent_exit();
+            }
+        });
 }
 
 #[cfg(test)]
