@@ -272,18 +272,23 @@ fn test_planned_update(id: &str) -> PlannedUpdate {
 
 /// Create a PlannedUpdate whose detection config file_path matches a running process.
 fn test_planned_update_with_running_process(id: &str) -> PlannedUpdate {
-    // Use the current test runner executable as the "blocking" process.
-    let exe_path = std::env::current_exe()
-        .expect("should be able to get current exe path")
-        .to_string_lossy()
-        .into_owned();
-
+    // Set software.name to a process guaranteed to be running.
+    // The orchestrator derives the process name from detection.file_path filename,
+    // falling back to "{software.name}.exe". We skip file_path here so the fallback
+    // triggers, then use a name that matches a real process on all platforms.
+    //
+    // On CI (Linux/macOS): "cargo" is always running (it's the test runner parent).
+    // On Windows: same — cargo spawns the test binary.
     let mut planned = test_planned_update(id);
+    planned.software.name = "cargo".to_string();
+    // No detection config → orchestrator falls back to "{name}.exe" = "cargo.exe"
+    // which won't match on Linux (process is "cargo" not "cargo.exe").
+    // Instead, set file_path to just "cargo" so filename extraction yields "cargo".
     planned.software.detection = Some(DetectionConfig {
         method: DetectionMethod::PeFile,
         registry_key: None,
         registry_value: None,
-        file_path: Some(exe_path),
+        file_path: Some("cargo".to_string()),
         version_regex: None,
         product_code: None,
         upgrade_code: None,
