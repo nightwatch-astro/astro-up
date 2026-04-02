@@ -497,6 +497,36 @@ mod tests {
         assert_eq!(settings, "MODIFIED");
     }
 
+    #[tokio::test]
+    async fn selective_restore_invalid_filter_lists_available_paths() {
+        let src = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        make_test_tree(src.path());
+
+        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+        let request = BackupRequest {
+            package_id: "test-pkg".into(),
+            version: Version::parse("1.0.0"),
+            config_paths: vec![src.path().join("Profiles"), src.path().join("Settings")],
+            event_tx: tx,
+        };
+
+        create_backup(&request, backup_dir.path()).await.unwrap();
+
+        let archive = fs::read_dir(backup_dir.path().join("test-pkg"))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .next()
+            .unwrap()
+            .path();
+
+        let err = restore(&archive, Some("NonExistent")).await.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("NonExistent"), "error should mention the filter: {msg}");
+        assert!(msg.contains("Profiles"), "error should list available paths: {msg}");
+        assert!(msg.contains("Settings"), "error should list available paths: {msg}");
+    }
+
     #[test]
     fn dir_name_collision_disambiguated() {
         let paths = vec![

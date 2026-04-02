@@ -87,6 +87,7 @@ impl BackupService {
         Ok(())
     }
 
+    #[instrument(skip_all, fields(archive = %archive_path.display()))]
     pub async fn restore_preview(
         &self,
         archive_path: &Path,
@@ -94,12 +95,126 @@ impl BackupService {
         preview::restore_preview(archive_path).await
     }
 
+    #[instrument(skip_all, fields(package = %package_id))]
     pub async fn list(&self, package_id: &str) -> Result<Vec<BackupListEntry>, CoreError> {
         prune::list_backups(&self.backup_dir, package_id).await
     }
 
+    #[instrument(skip_all, fields(package = %package_id, keep))]
     pub async fn prune(&self, package_id: &str, keep: usize) -> Result<u32, CoreError> {
         prune::prune_backups(&self.backup_dir, package_id, keep).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::Version;
+
+    fn make_service(backup_dir: PathBuf) -> BackupService {
+        BackupService::new(backup_dir, 0)
+    }
+
+    #[tokio::test]
+    async fn backup_rejects_empty_config_paths() {
+        let backup_dir = tempfile::tempdir().unwrap();
+        let service = make_service(backup_dir.path().to_path_buf());
+        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+
+        let request = BackupRequest {
+            package_id: "test-pkg".into(),
+            version: Version::parse("1.0.0"),
+            config_paths: vec![],
+            event_tx: tx,
+        };
+
+        let err = service.backup(&request).await.unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("no backup paths configured"),
+            "expected empty config_paths error, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn restore_warns_on_version_mismatch() {
+        let src = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(src.path().join("Config")).unwrap();
+        std::fs::write(src.path().join("Config/a.txt"), "data").unwrap();
+
+        let service = make_service(backup_dir.path().to_path_buf());
+        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+
+        let request = BackupRequest {
+            package_id: "test-pkg".into(),
+            version: Version::parse("1.0.0"),
+            config_paths: vec![src.path().join("Config")],
+            event_tx: tx,
+        };
+        service.backup(&request).await.unwrap();
+
+        let archive = std::fs::read_dir(backup_dir.path().join("test-pkg"))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .next()
+            .unwrap()
+            .path();
+
+        // Restore with a different current_version — should succeed with warning (not error)
+        let (tx2, _rx2) = tokio::sync::broadcast::channel(16);
+        let restore_req = RestoreRequest {
+            archive_path: archive,
+            path_filter: None,
+            current_version: Some(Version::parse("2.0.0")),
+            event_tx: tx2,
+        };
+        // Should not error — version mismatch is a warning, not a failure
+        service.restore(&restore_req).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn restore_creates_missing_target_directory() {
+        let src = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(src.path().join("Config")).unwrap();
+        std::fs::write(src.path().join("Config/a.txt"), "data").unwrap();
+
+        let service = make_service(backup_dir.path().to_path_buf());
+        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+
+        let request = BackupRequest {
+            package_id: "test-pkg".into(),
+            version: Version::parse("1.0.0"),
+            config_paths: vec![src.path().join("Config")],
+            event_tx: tx,
+        };
+        service.backup(&request).await.unwrap();
+
+        let archive = std::fs::read_dir(backup_dir.path().join("test-pkg"))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .next()
+            .unwrap()
+            .path();
+
+        // Delete the entire Config directory
+        std::fs::remove_dir_all(src.path().join("Config")).unwrap();
+        assert!(!src.path().join("Config").exists());
+
+        // Restore should recreate the directory
+        let (tx2, _rx2) = tokio::sync::broadcast::channel(16);
+        let restore_req = RestoreRequest {
+            archive_path: archive,
+            path_filter: None,
+            current_version: None,
+            event_tx: tx2,
+        };
+        service.restore(&restore_req).await.unwrap();
+
+        assert!(src.path().join("Config/a.txt").exists());
+        let content = std::fs::read_to_string(src.path().join("Config/a.txt")).unwrap();
+        assert_eq!(content, "data");
     }
 }
 
