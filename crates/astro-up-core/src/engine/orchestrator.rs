@@ -607,6 +607,7 @@ where
     I: crate::traits::Installer + Send + Sync,
     B: crate::traits::BackupManager + Send + Sync,
 {
+    #[tracing::instrument(skip(self))]
     async fn plan(&self, request: UpdateRequest) -> Result<UpdatePlan, CoreError> {
         use super::planner::{CatalogEntry, UpdatePlanner};
         use super::version_cmp::VersionFormat;
@@ -668,6 +669,7 @@ where
         }
     }
 
+    #[tracing::instrument(skip(self, plan, on_event, cancel), fields(plan_items = plan.items.len()))]
     async fn execute(
         &self,
         plan: UpdatePlan,
@@ -760,6 +762,7 @@ where
         })
     }
 
+    #[tracing::instrument(skip(self))]
     async fn history(&self, filter: HistoryFilter) -> Result<Vec<OperationRecord>, CoreError> {
         let conn = self
             .db
