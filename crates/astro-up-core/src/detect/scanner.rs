@@ -53,6 +53,18 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         let start = Instant::now();
         let packages = self.packages.list_all()?;
 
+        // Build ledger path index for PE detection fallback (#215)
+        let ledger_paths: std::collections::HashMap<String, String> = self
+            .ledger
+            .list_acknowledged()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|entry| {
+                let path = entry.install_path?.to_string_lossy().into_owned();
+                Some((entry.package_id, path))
+            })
+            .collect();
+
         let mut results = Vec::with_capacity(packages.len());
         let mut errors = Vec::new();
 
@@ -74,7 +86,8 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
                 continue;
             }
 
-            let result = run_chain(detection_config, &self.resolver).await;
+            let ledger_path = ledger_paths.get(&id).map(|s| s.as_str());
+            let result = run_chain(detection_config, &self.resolver, ledger_path).await;
 
             // Report per-package errors for Unavailable results
             if let DetectionResult::Unavailable { ref reason } = result {
