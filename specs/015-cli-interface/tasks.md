@@ -54,7 +54,9 @@
 
 ## Phase 4: User Story 4 — Scan for Installed Software (Priority: P4)
 
-**Goal**: `astro-up scan` runs detection and shows results. Moved ahead of US2/US3 because install/update depend on scan results.
+**Goal**: `astro-up scan` runs detection and shows results.
+
+**Note**: Phase order ≠ priority order. Scan is implemented before US2/US3 because install/update depend on scan data being available.
 
 **Independent Test**: Run `scan`, verify detection results displayed.
 
@@ -85,7 +87,7 @@
 **Independent Test**: Install a test package, verify download + install. Try already-installed package, verify update prompt.
 
 - [ ] T021 [P] [US2] Implement ratatui progress TUI in `src/output/progress.rs`: create `ProgressRenderer` that subscribes to core `Event` channel, renders download progress bar + install status via ratatui `Gauge` + `Paragraph`. Handle terminal setup/restore.
-- [ ] T022 [US2] Implement `handle_install()` in `src/commands/install.rs`: check if package exists in catalog (suggest fuzzy matches if not), check if already installed (offer update via confirm), show plan table, run orchestration engine with progress renderer, display result
+- [ ] T022 [US2] Implement `handle_install()` in `src/commands/install.rs`: check if package exists in catalog (suggest fuzzy matches if not), check if already installed (offer update via confirm), show plan table, run orchestration engine with progress renderer, display result. Support `--dry-run` (show plan only) and `--json` per FR-006/FR-008.
 - [ ] T023 [US2] Wire install command in `src/lib.rs` dispatch with `CancellationToken`
 
 **Checkpoint**: `astro-up install <pkg>` shows plan, confirms, downloads with progress, installs. `--dry-run` shows plan only. `--json` outputs structured result.
@@ -112,8 +114,8 @@
 
 **Independent Test**: Create backup, list it, restore it.
 
-- [ ] T027 [US6] Implement `handle_backup()` in `src/commands/backup.rs`: create backup via `BackupService`, display result (archive path, file count, size)
-- [ ] T028 [US6] Implement `handle_restore()` in `src/commands/restore.rs`: list available backups, let user pick via dialoguer Select (or `--yes` for latest), show `restore_preview()` file change summary, confirm, execute restore
+- [ ] T027 [US6] Implement `handle_backup()` in `src/commands/backup.rs`: create backup via `BackupService`, display result (archive path, file count, size). Support `--json` output per FR-006.
+- [ ] T028 [US6] Implement `handle_restore()` in `src/commands/restore.rs`: list available backups, let user pick via dialoguer Select (or `--yes` for latest), show `restore_preview()` file change summary, confirm, execute restore. Support `--json` output per FR-006.
 - [ ] T029 [US6] Wire backup and restore commands in `src/lib.rs` dispatch
 
 **Checkpoint**: `backup nina`, `restore nina`, `restore nina --path Profiles` work.
@@ -137,7 +139,7 @@
 
 **Purpose**: `astro-up self-update` checks for and installs CLI updates.
 
-- [ ] T032 Implement `handle_self_update()` in `src/commands/self_update.rs`: check GitHub Releases for latest astro-up version, compare with current, download and replace binary if newer. Support `--dry-run`.
+- [ ] T032 Implement `handle_self_update()` in `src/commands/self_update.rs`: check GitHub Releases for latest astro-up version, compare with current. If newer: download to temp file, swap via atomic rename (Unix) or rename-on-reboot (Windows). Support `--dry-run`. Support `--json` per FR-006.
 - [ ] T033 Wire self-update command in `src/lib.rs` dispatch
 
 ---
