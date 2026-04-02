@@ -230,8 +230,7 @@ pub(crate) fn resolve_dir_names(paths: &[PathBuf]) -> Vec<String> {
 /// Reads metadata.json from a backup archive (sync, usable from spawn_blocking).
 pub(crate) fn read_metadata_sync(archive_path: &Path) -> Result<BackupMetadata, CoreError> {
     let file = File::open(archive_path)?;
-    let mut archive =
-        zip::ZipArchive::new(file).map_err(|e| CoreError::Io(io::Error::other(e)))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| CoreError::Io(io::Error::other(e)))?;
     let mut entry = archive
         .by_name("metadata.json")
         .map_err(|e| CoreError::Io(io::Error::other(e)))?;
@@ -525,9 +524,18 @@ mod tests {
 
         let err = restore(&archive, Some("NonExistent")).await.unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("NonExistent"), "error should mention the filter: {msg}");
-        assert!(msg.contains("Profiles"), "error should list available paths: {msg}");
-        assert!(msg.contains("Settings"), "error should list available paths: {msg}");
+        assert!(
+            msg.contains("NonExistent"),
+            "error should mention the filter: {msg}"
+        );
+        assert!(
+            msg.contains("Profiles"),
+            "error should list available paths: {msg}"
+        );
+        assert!(
+            msg.contains("Settings"),
+            "error should list available paths: {msg}"
+        );
     }
 
     #[test]

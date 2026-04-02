@@ -106,6 +106,28 @@ impl BackupService {
     }
 }
 
+impl BackupManager for BackupService {
+    async fn backup(&self, request: &BackupRequest) -> Result<BackupMetadata, CoreError> {
+        self.backup(request).await
+    }
+
+    async fn restore(&self, request: &RestoreRequest) -> Result<(), CoreError> {
+        self.restore(request).await
+    }
+
+    async fn restore_preview(&self, archive_path: &Path) -> Result<FileChangeSummary, CoreError> {
+        self.restore_preview(archive_path).await
+    }
+
+    async fn list(&self, package_id: &str) -> Result<Vec<BackupListEntry>, CoreError> {
+        self.list(package_id).await
+    }
+
+    async fn prune(&self, package_id: &str, keep: usize) -> Result<u32, CoreError> {
+        self.prune(package_id, keep).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -215,27 +237,5 @@ mod tests {
         assert!(src.path().join("Config/a.txt").exists());
         let content = std::fs::read_to_string(src.path().join("Config/a.txt")).unwrap();
         assert_eq!(content, "data");
-    }
-}
-
-impl BackupManager for BackupService {
-    async fn backup(&self, request: &BackupRequest) -> Result<BackupMetadata, CoreError> {
-        self.backup(request).await
-    }
-
-    async fn restore(&self, request: &RestoreRequest) -> Result<(), CoreError> {
-        self.restore(request).await
-    }
-
-    async fn restore_preview(&self, archive_path: &Path) -> Result<FileChangeSummary, CoreError> {
-        self.restore_preview(archive_path).await
-    }
-
-    async fn list(&self, package_id: &str) -> Result<Vec<BackupListEntry>, CoreError> {
-        self.list(package_id).await
-    }
-
-    async fn prune(&self, package_id: &str, keep: usize) -> Result<u32, CoreError> {
-        self.prune(package_id, keep).await
     }
 }

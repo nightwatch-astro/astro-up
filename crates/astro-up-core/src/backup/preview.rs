@@ -69,12 +69,11 @@ fn restore_preview_sync(archive_path: &Path) -> Result<FileChangeSummary, CoreEr
 
     // Files on disk in the config paths but NOT in the archive = missing
     // (won't be touched by restore)
-    let archive_on_disk_paths: std::collections::HashSet<std::path::PathBuf> =
-        metadata
-            .file_hashes
-            .keys()
-            .filter_map(|entry| resolve_on_disk_path(entry, &dir_to_path))
-            .collect();
+    let archive_on_disk_paths: std::collections::HashSet<std::path::PathBuf> = metadata
+        .file_hashes
+        .keys()
+        .filter_map(|entry| resolve_on_disk_path(entry, &dir_to_path))
+        .collect();
 
     for (dir_name, original_path) in &dir_to_path {
         if !original_path.exists() {
