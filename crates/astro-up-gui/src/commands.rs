@@ -29,23 +29,27 @@ fn emit_event(app: &AppHandle, event: &astro_up_core::events::Event) {
 // --- Read commands ---
 
 #[tauri::command]
-pub async fn list_software(_filter: String) -> Result<serde_json::Value, CoreError> {
+pub async fn list_software(filter: String) -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "list_software", filter, "Command invoked");
     // TODO: delegate to core crate once App struct is wired
     Ok(serde_json::json!([]))
 }
 
 #[tauri::command]
-pub async fn search_catalog(_query: String) -> Result<serde_json::Value, CoreError> {
+pub async fn search_catalog(query: String) -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "search_catalog", query, "Command invoked");
     Ok(serde_json::json!([]))
 }
 
 #[tauri::command]
 pub async fn check_for_updates() -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "check_for_updates", "Command invoked");
     Ok(serde_json::json!([]))
 }
 
 #[tauri::command]
 pub async fn get_config() -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "get_config", "Command invoked");
     Ok(serde_json::json!({}))
 }
 
@@ -53,6 +57,7 @@ pub async fn get_config() -> Result<serde_json::Value, CoreError> {
 
 #[tauri::command]
 pub async fn save_config(_config: serde_json::Value) -> Result<(), CoreError> {
+    tracing::debug!(command = "save_config", "Command invoked");
     Ok(())
 }
 
@@ -64,6 +69,11 @@ pub async fn scan_installed(
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, CoreError> {
     let (op_id, _token) = state.register_operation();
+    tracing::debug!(
+        command = "scan_installed",
+        operation_id = op_id.id,
+        "Command invoked"
+    );
     let _ = &app; // Will use for emit_event once core is wired
     let _ = emit_event; // suppress unused warning until wired
     state.remove_operation(&op_id.id);
@@ -74,9 +84,15 @@ pub async fn scan_installed(
 pub async fn install_software(
     _app: AppHandle,
     state: State<'_, AppState>,
-    _id: String,
+    id: String,
 ) -> Result<OperationId, CoreError> {
     let (op_id, _token) = state.register_operation();
+    tracing::debug!(
+        command = "install_software",
+        package = id,
+        operation_id = op_id.id,
+        "Command invoked"
+    );
     Ok(op_id)
 }
 
@@ -84,9 +100,15 @@ pub async fn install_software(
 pub async fn update_software(
     _app: AppHandle,
     state: State<'_, AppState>,
-    _id: String,
+    id: String,
 ) -> Result<OperationId, CoreError> {
     let (op_id, _token) = state.register_operation();
+    tracing::debug!(
+        command = "update_software",
+        package = id,
+        operation_id = op_id.id,
+        "Command invoked"
+    );
     Ok(op_id)
 }
 
@@ -97,6 +119,11 @@ pub async fn create_backup(
     _paths: Vec<String>,
 ) -> Result<OperationId, CoreError> {
     let (op_id, _token) = state.register_operation();
+    tracing::debug!(
+        command = "create_backup",
+        operation_id = op_id.id,
+        "Command invoked"
+    );
     Ok(op_id)
 }
 
@@ -104,10 +131,16 @@ pub async fn create_backup(
 pub async fn restore_backup(
     _app: AppHandle,
     state: State<'_, AppState>,
-    _archive: String,
+    archive: String,
     _filter: Option<Vec<String>>,
 ) -> Result<OperationId, CoreError> {
     let (op_id, _token) = state.register_operation();
+    tracing::debug!(
+        command = "restore_backup",
+        archive,
+        operation_id = op_id.id,
+        "Command invoked"
+    );
     Ok(op_id)
 }
 
@@ -116,6 +149,11 @@ pub async fn cancel_operation(
     state: State<'_, AppState>,
     operation_id: String,
 ) -> Result<(), CoreError> {
+    tracing::debug!(
+        command = "cancel_operation",
+        operation_id,
+        "Command invoked"
+    );
     if state.cancel_operation(&operation_id) {
         tracing::info!(operation_id, "Operation cancelled");
         Ok(())

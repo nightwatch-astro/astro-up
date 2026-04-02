@@ -3,11 +3,43 @@ mod state;
 mod tray;
 
 use state::AppState;
-use tauri::{Manager, RunEvent, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 
 #[tauri::command]
 fn get_version() -> String {
     astro_up_core::version().to_string()
+}
+
+/// Check for app self-update and emit event if available.
+async fn check_for_app_update(app: &AppHandle) {
+    use tauri_plugin_updater::UpdaterExt;
+
+    let updater = match app.updater() {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::debug!("Updater not available: {e}");
+            return;
+        }
+    };
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            tracing::info!(version = update.version.as_str(), "App update available");
+            let _ = app.emit(
+                "update-available",
+                serde_json::json!({
+                    "version": update.version,
+                    "body": update.body,
+                }),
+            );
+        }
+        Ok(None) => {
+            tracing::debug!("App is up to date");
+        }
+        Err(e) => {
+            tracing::warn!("Update check failed: {e}");
+        }
+    }
 }
 
 pub fn run() {
@@ -59,6 +91,12 @@ pub fn run() {
 
             tray::setup(app.handle())?;
             tracing::debug!("System tray created");
+
+            // Startup self-update check (T029)
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                check_for_app_update(&handle).await;
+            });
 
             tracing::info!(
                 version = astro_up_core::version().to_string().as_str(),

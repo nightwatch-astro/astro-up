@@ -33,8 +33,14 @@ onMounted(() => {
 <template>
   <Toast position="bottom-right" />
   <main class="p-4">
-    <h1 class="text-2xl font-bold">Astro-Up</h1>
-    <p class="text-sm opacity-60">v{{ version }}</p>
-    <p class="mt-4">Astrophotography software manager for Windows.</p>
+    <h1 class="text-2xl font-bold">
+      Astro-Up
+    </h1>
+    <p class="text-sm opacity-60">
+      v{{ version }}
+    </p>
+    <p class="mt-4">
+      Astrophotography software manager for Windows.
+    </p>
   </main>
 </template>
