@@ -40,7 +40,11 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     /// Show software status
+    #[command(args_conflicts_with_subcommands = true)]
     Show {
+        /// Show details for a specific package
+        package: Option<String>,
+
         #[command(subcommand)]
         filter: Option<ShowFilter>,
     },
@@ -122,7 +126,14 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
     let mode = OutputMode::detect(cli.json, cli.quiet);
 
     match cli.command {
-        Commands::Show { filter } => commands::show::handle_show(filter, &mode).await,
+        Commands::Show { package, filter } => {
+            if let Some(ref pkg) = package {
+                let reader = commands::ensure_catalog().await?;
+                commands::show::handle_show_detail(&reader, pkg, &mode)
+            } else {
+                commands::show::handle_show(filter, &mode).await
+            }
+        }
         Commands::Install {
             ref package,
             dry_run,
@@ -168,7 +179,21 @@ mod tests {
     #[test]
     fn cli_parses_show_command() {
         let cli = Cli::parse_from(["astro-up", "show"]);
-        assert!(matches!(cli.command, Commands::Show { filter: None }));
+        assert!(matches!(
+            cli.command,
+            Commands::Show {
+                package: None,
+                filter: None
+            }
+        ));
+    }
+
+    #[test]
+    fn cli_parses_show_package_detail() {
+        let cli = Cli::parse_from(["astro-up", "show", "nina"]);
+        assert!(
+            matches!(cli.command, Commands::Show { package: Some(ref p), filter: None } if p == "nina")
+        );
     }
 
     #[test]
