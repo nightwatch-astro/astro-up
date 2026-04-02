@@ -272,23 +272,22 @@ fn test_planned_update(id: &str) -> PlannedUpdate {
 
 /// Create a PlannedUpdate whose detection config file_path matches a running process.
 fn test_planned_update_with_running_process(id: &str) -> PlannedUpdate {
-    // Set software.name to a process guaranteed to be running.
-    // The orchestrator derives the process name from detection.file_path filename,
-    // falling back to "{software.name}.exe". We skip file_path here so the fallback
-    // triggers, then use a name that matches a real process on all platforms.
-    //
-    // On CI (Linux/macOS): "cargo" is always running (it's the test runner parent).
-    // On Windows: same — cargo spawns the test binary.
+    // Use "cargo" as the blocking process — always running during test execution.
+    // sysinfo reports "cargo" on Unix and "cargo.exe" on Windows, so the file_path
+    // must match the platform's process name for the orchestrator's filename extraction.
+    let process_file = if cfg!(windows) {
+        "cargo.exe"
+    } else {
+        "cargo"
+    };
+
     let mut planned = test_planned_update(id);
     planned.software.name = "cargo".to_string();
-    // No detection config → orchestrator falls back to "{name}.exe" = "cargo.exe"
-    // which won't match on Linux (process is "cargo" not "cargo.exe").
-    // Instead, set file_path to just "cargo" so filename extraction yields "cargo".
     planned.software.detection = Some(DetectionConfig {
         method: DetectionMethod::PeFile,
         registry_key: None,
         registry_value: None,
-        file_path: Some("cargo".to_string()),
+        file_path: Some(process_file.to_string()),
         version_regex: None,
         product_code: None,
         upgrade_code: None,
