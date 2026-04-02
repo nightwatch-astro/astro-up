@@ -42,7 +42,7 @@ async fn chain_pe_fallback_on_non_windows() {
     };
 
     let resolver = PathResolver::new();
-    let result = detect::run_chain(&config, &resolver).await;
+    let result = detect::run_chain(&config, &resolver, None).await;
 
     // On non-Windows: registry returns Unavailable (not installed-like), so chain continues to PE
     // PE should find version 3.2.1
@@ -63,7 +63,7 @@ async fn chain_stops_at_pe_success() {
     // PE succeeds on first try — no fallback needed
     let config = pe_config("tests/fixtures/test.exe");
     let resolver = PathResolver::new();
-    let result = detect::run_chain(&config, &resolver).await;
+    let result = detect::run_chain(&config, &resolver, None).await;
 
     match result {
         DetectionResult::Installed { version, method } => {
@@ -79,7 +79,32 @@ async fn chain_exhausted_returns_not_installed() {
     // PE with nonexistent file, no fallback
     let config = pe_config("tests/fixtures/nonexistent.exe");
     let resolver = PathResolver::new();
-    let result = detect::run_chain(&config, &resolver).await;
+    let result = detect::run_chain(&config, &resolver, None).await;
 
     assert!(matches!(result, DetectionResult::NotInstalled));
+}
+
+#[tokio::test]
+async fn chain_pe_uses_ledger_path_fallback() {
+    // PE config with an unresolvable template, but ledger provides a valid path
+    let config = pe_config("{nonexistent_token}/test.exe");
+    let resolver = PathResolver::new();
+
+    // Without ledger path: should return Unavailable (can't resolve template)
+    let result = detect::run_chain(&config, &resolver, None).await;
+    assert!(
+        matches!(result, DetectionResult::Unavailable { .. }),
+        "expected Unavailable without ledger path, got {result:?}"
+    );
+
+    // With ledger path pointing to real fixture: should find version
+    let result =
+        detect::run_chain(&config, &resolver, Some("tests/fixtures/test.exe")).await;
+    match result {
+        DetectionResult::Installed { version, method } => {
+            assert_eq!(version.raw, "3.2.1");
+            assert_eq!(method, DetectionMethod::PeFile);
+        }
+        other => panic!("expected Installed from ledger path fallback, got {other:?}"),
+    }
 }

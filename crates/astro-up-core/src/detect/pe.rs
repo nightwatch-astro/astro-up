@@ -4,16 +4,29 @@ use crate::types::{DetectionConfig, DetectionMethod, Version};
 /// Detect version from PE file headers (VS_FIXEDFILEINFO).
 ///
 /// Cross-platform — pelite works on Linux/macOS too.
-/// Resolves file path via PathResolver, then reads version info.
-pub async fn detect(config: &DetectionConfig, resolver: &PathResolver) -> DetectionResult {
-    let Some(ref template) = config.file_path else {
-        return DetectionResult::NotInstalled;
-    };
-
-    let Some(path) = resolver.expand(template) else {
-        return DetectionResult::Unavailable {
-            reason: format!("cannot resolve path template: {template}"),
-        };
+/// Resolves file path via PathResolver, then falls back to `ledger_path`
+/// (the install ledger's recorded executable path) if template resolution fails.
+pub async fn detect(
+    config: &DetectionConfig,
+    resolver: &PathResolver,
+    ledger_path: Option<&str>,
+) -> DetectionResult {
+    let path = match &config.file_path {
+        Some(template) => match resolver.expand(template) {
+            Some(resolved) => resolved,
+            None => match ledger_path {
+                Some(lp) => lp.to_string(),
+                None => {
+                    return DetectionResult::Unavailable {
+                        reason: format!("cannot resolve path template: {template}"),
+                    };
+                }
+            },
+        },
+        None => match ledger_path {
+            Some(lp) => lp.to_string(),
+            None => return DetectionResult::NotInstalled,
+        },
     };
 
     // PE parsing is blocking I/O — run on blocking thread

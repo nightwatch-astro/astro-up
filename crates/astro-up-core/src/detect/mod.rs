@@ -90,24 +90,35 @@ pub enum DetectionError {
 use crate::types::DetectionConfig;
 
 /// Execute a detection chain, stopping at the first successful result.
-pub async fn run_chain(config: &DetectionConfig, resolver: &PathResolver) -> DetectionResult {
-    let result = run_single_method(config, resolver).await;
+///
+/// `ledger_path` is the install ledger's recorded executable path for the package,
+/// used as a fallback by PE detection when the manifest path template cannot be resolved.
+pub async fn run_chain(
+    config: &DetectionConfig,
+    resolver: &PathResolver,
+    ledger_path: Option<&str>,
+) -> DetectionResult {
+    let result = run_single_method(config, resolver, ledger_path).await;
 
     match &result {
         DetectionResult::Installed { .. } | DetectionResult::InstalledUnknownVersion { .. } => {
             result
         }
         _ => match &config.fallback {
-            Some(next) => Box::pin(run_chain(next, resolver)).await,
+            Some(next) => Box::pin(run_chain(next, resolver, ledger_path)).await,
             None => result,
         },
     }
 }
 
-async fn run_single_method(config: &DetectionConfig, resolver: &PathResolver) -> DetectionResult {
+async fn run_single_method(
+    config: &DetectionConfig,
+    resolver: &PathResolver,
+    ledger_path: Option<&str>,
+) -> DetectionResult {
     match config.method {
         DetectionMethod::Registry => registry::detect(config).await,
-        DetectionMethod::PeFile => pe::detect(config, resolver).await,
+        DetectionMethod::PeFile => pe::detect(config, resolver, ledger_path).await,
         DetectionMethod::Wmi | DetectionMethod::DriverStore => wmi_driver::detect(config).await,
         DetectionMethod::AscomProfile => ascom::detect(config).await,
         DetectionMethod::FileExists => file::detect_exists(config, resolver).await,
