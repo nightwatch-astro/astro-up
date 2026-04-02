@@ -2,6 +2,8 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use crate::catalog::PackageId;
+
 /// Typed notification from the engine to UI layers.
 ///
 /// Adjacently tagged for clean TypeScript consumption:
@@ -81,6 +83,42 @@ pub enum Event {
     },
     ScanComplete {
         total_found: u32,
+    },
+
+    // -- Orchestration events --
+    /// Plan has been computed and is ready for execution.
+    PlanReady {
+        total: usize,
+        skipped: usize,
+    },
+    /// Starting the install pipeline for a single package.
+    PackageStarted {
+        package_id: PackageId,
+        step_count: usize,
+    },
+    /// Single-package pipeline completed.
+    PackageComplete {
+        package_id: PackageId,
+        /// Stringified operation status (placeholder until OperationStatus type exists).
+        status: String,
+    },
+    /// Package skipped due to policy or dependency failure.
+    PackageSkipped {
+        package_id: PackageId,
+        /// Stringified skip reason (placeholder until SkipReason type exists).
+        reason: String,
+    },
+    /// Waiting for a blocking process to close before proceeding.
+    ProcessBlocking {
+        package_id: PackageId,
+        process_name: String,
+        pid: u32,
+    },
+    /// All packages have been processed.
+    OrchestrationComplete {
+        succeeded: usize,
+        failed: usize,
+        skipped: usize,
     },
 }
 
@@ -165,6 +203,32 @@ mod tests {
                 current_id: "test".into(),
             },
             Event::ScanComplete { total_found: 42 },
+            Event::PlanReady {
+                total: 5,
+                skipped: 1,
+            },
+            Event::PackageStarted {
+                package_id: PackageId::new("nina-app").unwrap(),
+                step_count: 3,
+            },
+            Event::PackageComplete {
+                package_id: PackageId::new("nina-app").unwrap(),
+                status: "succeeded".into(),
+            },
+            Event::PackageSkipped {
+                package_id: PackageId::new("phd2").unwrap(),
+                reason: "dependency_failed".into(),
+            },
+            Event::ProcessBlocking {
+                package_id: PackageId::new("nina-app").unwrap(),
+                process_name: "NINA.exe".into(),
+                pid: 1234,
+            },
+            Event::OrchestrationComplete {
+                succeeded: 3,
+                failed: 1,
+                skipped: 1,
+            },
         ];
 
         insta::assert_json_snapshot!(events);

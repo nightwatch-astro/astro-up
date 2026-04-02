@@ -18,8 +18,7 @@ fn make_manager() -> DownloadManager {
 async fn backdate_file(path: &std::path::Path, days_ago: u64) {
     let past = SystemTime::now() - Duration::from_secs(days_ago * 86400);
     let file = std::fs::File::options().write(true).open(path).unwrap();
-    let ft = std::time::SystemTime::from(past).into();
-    file.set_times(std::fs::FileTimes::new().set_modified(ft))
+    file.set_times(std::fs::FileTimes::new().set_modified(past))
         .unwrap();
 }
 

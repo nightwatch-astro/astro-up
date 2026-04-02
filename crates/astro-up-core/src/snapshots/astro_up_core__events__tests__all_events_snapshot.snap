@@ -1,5 +1,6 @@
 ---
 source: crates/astro-up-core/src/events.rs
+assertion_line: 234
 expression: events
 ---
 [
@@ -138,6 +139,50 @@ expression: events
     "type": "scan_complete",
     "data": {
       "total_found": 42
+    }
+  },
+  {
+    "type": "plan_ready",
+    "data": {
+      "total": 5,
+      "skipped": 1
+    }
+  },
+  {
+    "type": "package_started",
+    "data": {
+      "package_id": "nina-app",
+      "step_count": 3
+    }
+  },
+  {
+    "type": "package_complete",
+    "data": {
+      "package_id": "nina-app",
+      "status": "succeeded"
+    }
+  },
+  {
+    "type": "package_skipped",
+    "data": {
+      "package_id": "phd2",
+      "reason": "dependency_failed"
+    }
+  },
+  {
+    "type": "process_blocking",
+    "data": {
+      "package_id": "nina-app",
+      "process_name": "NINA.exe",
+      "pid": 1234
+    }
+  },
+  {
+    "type": "orchestration_complete",
+    "data": {
+      "succeeded": 3,
+      "failed": 1,
+      "skipped": 1
     }
   }
 ]

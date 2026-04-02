@@ -35,10 +35,7 @@ fn error_messages_are_readable() {
         },
         CoreError::VersionParseFailed {
             raw: "not-a-version".into(),
-            cause: Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "invalid format",
-            )),
+            cause: Box::new(std::io::Error::other("invalid format")),
         },
         CoreError::ProviderUnavailable {
             provider: CheckMethod::Github,
@@ -50,10 +47,7 @@ fn error_messages_are_readable() {
         CoreError::ManualDownloadRequired {
             id: "firecapture".into(),
             url: "https://example.com/download".into(),
-            cause: Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "captcha required",
-            )),
+            cause: Box::new(std::io::Error::other("captcha required")),
         },
     ];
 

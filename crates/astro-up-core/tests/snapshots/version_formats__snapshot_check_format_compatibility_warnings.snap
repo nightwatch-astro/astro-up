@@ -1,0 +1,14 @@
+---
+source: crates/astro-up-core/tests/version_formats.rs
+expression: "cases.join(\"\\n\")"
+---
+semver + 'not-a-version': Some("version \"not-a-version\" does not match semver format; comparison will use raw string ordering")
+semver + '1.2.3': None
+semver + 'v3.1': None
+date + '3.1.0': Some("version \"3.1.0\" does not match date format (YYYY.MM.DD / YYYY-MM-DD); comparison will use raw string ordering")
+date + '2026.03.29': None
+date + '2026-03-29': None
+date + 'not-a-date': Some("version \"not-a-date\" does not match date format (YYYY.MM.DD / YYYY-MM-DD); comparison will use raw string ordering")
+custom(invalid) + 'anything': Some("custom version pattern \"([invalid\" is not valid regex; comparison will use raw string ordering")
+custom(digits) + 'abc': Some("version \"abc\" does not match custom pattern \"(\\d+)\\.(\\d+)\"; comparison will use raw string ordering")
+custom(digits) + '3.14': None

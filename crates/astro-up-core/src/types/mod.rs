@@ -5,7 +5,7 @@ mod detection;
 mod hardware;
 mod install;
 mod software;
-mod version;
+pub(crate) mod version;
 mod versioning;
 
 pub use backup::*;

@@ -1,0 +1,8 @@
+---
+source: crates/astro-up-core/tests/version_formats.rs
+expression: "lines.join(\"\\n\")"
+---
+                v3.1 == 3.1.0                (format: semver)
+               3.1.0 == v3.1                 (format: semver)
+                v3.1 < 3.2.0                (format: semver)
+                 3.1 == 3.1.0                (format: semver)

@@ -17,7 +17,7 @@ crates/astro-up-gui/gen/
 .specify/extensions/*/.specify/
 
 # IDE
-.vscode/
+**/.vscode/
 .idea/
 *.swp
 *.swo

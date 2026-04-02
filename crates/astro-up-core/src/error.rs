@@ -104,6 +104,9 @@ pub enum CoreError {
     #[error("another instance of astro-up is running (PID {pid})")]
     CatalogLocked { pid: u32 },
 
+    #[error("orchestration engine already running (PID {pid})")]
+    OrchestrationLocked { pid: u32 },
+
     #[error("invalid package ID {input:?}: {reason}")]
     InvalidPackageId { input: String, reason: String },
 
@@ -127,6 +130,12 @@ pub enum CoreError {
         #[source]
         cause: Box<dyn std::error::Error + Send + Sync>,
     },
+
+    #[error("dependency cycle detected: {}", path.join(" -> "))]
+    DependencyCycle { path: Vec<String> },
+
+    #[error("database error: {0}")]
+    Database(String),
 
     #[error("download cancelled")]
     Cancelled,

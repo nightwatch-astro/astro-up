@@ -1,0 +1,26 @@
+---
+source: crates/astro-up-core/tests/version_formats.rs
+expression: status
+---
+NewerThanCatalog {
+    current: Version {
+        raw: "2026.04.01",
+        parsed: Some(
+            Version {
+                major: 2026,
+                minor: 4,
+                patch: 1,
+            },
+        ),
+    },
+    catalog_latest: Version {
+        raw: "2026.03.15",
+        parsed: Some(
+            Version {
+                major: 2026,
+                minor: 3,
+                patch: 15,
+            },
+        ),
+    },
+}
