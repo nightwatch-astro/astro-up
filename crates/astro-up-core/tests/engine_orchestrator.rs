@@ -275,11 +275,7 @@ fn test_planned_update_with_running_process(id: &str) -> PlannedUpdate {
     // Use "cargo" as the blocking process — always running during test execution.
     // sysinfo reports "cargo" on Unix and "cargo.exe" on Windows, so the file_path
     // must match the platform's process name for the orchestrator's filename extraction.
-    let process_file = if cfg!(windows) {
-        "cargo.exe"
-    } else {
-        "cargo"
-    };
+    let process_file = if cfg!(windows) { "cargo.exe" } else { "cargo" };
 
     let mut planned = test_planned_update(id);
     planned.software.name = "cargo".to_string();
