@@ -1,11 +1,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/nickelpack/tauri/v2/crates/tauri-utils/schema/capability.json",
   "identifier": "default",
-  "description": "Default capability for the main window",
+  "description": "Default capability for the main window — scoped to app directories only (FR-015)",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "core:window:default",
-    "core:app:default"
+    "core:app:default",
+    "dialog:default",
+    "updater:default",
+    "autostart:default",
+    "window-state:default"
   ]
 }

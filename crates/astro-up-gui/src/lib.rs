@@ -1,9 +1,13 @@
 mod commands;
 mod state;
-mod tray;
+pub mod tray;
+
+use std::time::Duration;
 
 use state::AppState;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+use tauri_plugin_window_state::StateFlags;
 
 #[tauri::command]
 fn get_version() -> String {
@@ -42,6 +46,32 @@ async fn check_for_app_update(app: &AppHandle) {
     }
 }
 
+/// Spawn a periodic background update check timer.
+fn spawn_background_update_timer(app: &AppHandle) {
+    let handle = app.clone();
+    // TODO: read ui.check_interval from config (default 6h)
+    let interval = Duration::from_secs(6 * 60 * 60);
+
+    tauri::async_runtime::spawn(async move {
+        let mut ticker = tokio::time::interval(interval);
+        ticker.tick().await; // Skip first immediate tick (startup check already ran)
+
+        loop {
+            ticker.tick().await;
+            tracing::debug!("Background update check triggered");
+            check_for_app_update(&handle).await;
+
+            // Update tray badge with available update count
+            let count = tray::badge_count();
+            if count > 0 {
+                // If window is hidden, the update-available event already fired.
+                // The tray badge is already set by the update check.
+                tracing::debug!(count, "Updates available (badge already set)");
+            }
+        }
+    });
+}
+
 pub fn run() {
     let mut builder = tauri::Builder::default();
 
@@ -56,11 +86,16 @@ pub fn run() {
     }
 
     builder
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::all())
+                .build(),
+        )
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             get_version,
@@ -92,11 +127,27 @@ pub fn run() {
             tray::setup(app.handle())?;
             tracing::debug!("System tray created");
 
+            // Wire autostart to config (T032)
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_autostart::ManagerExt;
+                let autostart = app.autolaunch();
+                // TODO: read ui.autostart from config; enable/disable accordingly
+                // For now, leave autostart in its current state
+                tracing::debug!(
+                    enabled = autostart.is_enabled().unwrap_or(false),
+                    "Autostart status"
+                );
+            }
+
             // Startup self-update check (T029)
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 check_for_app_update(&handle).await;
             });
+
+            // Background periodic update check (T030)
+            spawn_background_update_timer(app.handle());
 
             tracing::info!(
                 version = astro_up_core::version().to_string().as_str(),
@@ -107,16 +158,58 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                // Default: minimize to tray instead of quitting.
-                // TODO: read ui.close_action from config; if "quit", don't prevent.
-                // TODO: if operations active, show cancel/background prompt (T017).
                 let app = window.app_handle();
                 let state = app.state::<AppState>();
-                if state.has_active_operations() {
-                    tracing::info!("Close requested with active operations — hiding to tray");
+
+                // TODO: read ui.close_action from config
+                // For now, default to "minimize"
+                let close_action = "minimize"; // will read from config when wired
+
+                if close_action == "quit" && !state.has_active_operations() {
+                    // Quit path: let the close proceed
+                    return;
                 }
+
+                // Prevent close — we'll handle it
                 api.prevent_close();
-                let _ = window.hide();
+
+                if state.has_active_operations() {
+                    // T017: Prompt user when operations are active
+                    let app_clone = app.clone();
+                    let window_clone = window.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let answer = app_clone
+                            .dialog()
+                            .message("Operations are still running. Cancel them and quit, or continue in the background?")
+                            .title("Active Operations")
+                            .buttons(MessageDialogButtons::OkCancelCustom(
+                                "Continue in Background".into(),
+                                "Cancel & Quit".into(),
+                            ))
+                            .blocking_show();
+
+                        if answer {
+                            // Continue in background — hide window
+                            let _ = window_clone.hide();
+                        } else {
+                            // Cancel all operations and quit
+                            let state = app_clone.state::<AppState>();
+                            let keys: Vec<String> = state
+                                .operations
+                                .iter()
+                                .map(|r| r.key().clone())
+                                .collect();
+                            for key in keys {
+                                state.cancel_operation(&key);
+                            }
+                            tracing::info!("All operations cancelled, exiting");
+                            app_clone.exit(0);
+                        }
+                    });
+                } else {
+                    // No active operations — minimize to tray (default behavior)
+                    let _ = window.hide();
+                }
             }
         })
         .build(tauri::generate_context!())
