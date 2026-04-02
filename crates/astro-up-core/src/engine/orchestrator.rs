@@ -476,7 +476,7 @@ where
         // 7. Verify: re-detect installed version and compare with target (FR-009)
         let final_status = if let Some(ref detection_config) = planned.software.detection {
             let resolver = crate::detect::PathResolver::new();
-            let detection = crate::detect::run_chain(detection_config, &resolver).await;
+            let detection = crate::detect::run_chain(detection_config, &resolver, None).await;
 
             match detection {
                 crate::detect::DetectionResult::Installed { version, .. } => {

@@ -98,8 +98,7 @@ async fn chain_pe_uses_ledger_path_fallback() {
     );
 
     // With ledger path pointing to real fixture: should find version
-    let result =
-        detect::run_chain(&config, &resolver, Some("tests/fixtures/test.exe")).await;
+    let result = detect::run_chain(&config, &resolver, Some("tests/fixtures/test.exe")).await;
     match result {
         DetectionResult::Installed { version, method } => {
             assert_eq!(version.raw, "3.2.1");

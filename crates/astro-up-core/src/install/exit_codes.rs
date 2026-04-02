@@ -55,6 +55,7 @@ pub fn interpret_exit_code(code: i32, config: &InstallConfig) -> ExitCodeOutcome
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn base_config() -> InstallConfig {
         InstallConfig::default()
     }
