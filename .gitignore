@@ -39,3 +39,9 @@ Thumbs.db
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Session handover files
+.claude/handover/
+
+# Embedding model cache
+.fastembed_cache/

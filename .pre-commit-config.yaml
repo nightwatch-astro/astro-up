@@ -9,6 +9,7 @@ repos:
         args: [--maxkb=2000]
       - id: check-json
       - id: check-yaml
+        exclude: \.specify/extensions/.*/tests/fixtures/
       - id: check-toml
       - id: detect-private-key
       - id: end-of-file-fixer

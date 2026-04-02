@@ -56,7 +56,7 @@ A user runs `astro-up update nina` or `astro-up update --all` to update packages
 
 1. **Given** NINA 3.0 installed with 3.1 available, **When** `update nina` runs, **Then** ratatui TUI shows download and install progress
 2. **Given** NINA is not installed, **When** `update nina` runs, **Then** "NINA is not installed. Use `install nina` instead."
-3. **Given** `update --all` with 3 outdated packages, **When** running, **Then** all 3 are updated in dependency order with progress
+3. **Given** `update --all` with 3 outdated packages, **When** running, **Then** an update plan table is shown (package, current → target), user confirms, all 3 are updated in dependency order with progress
 4. **Given** `--dry-run`, **When** updating, **Then** the plan is shown without executing
 5. **Given** `--all --json`, **When** updating, **Then** structured JSON output with per-package results
 
@@ -131,6 +131,7 @@ A user runs `astro-up config init` to generate a default config file, or `astro-
 - Terminal doesn't support colors: Detect and fall back to plain text
 - Piped output (not a TTY): Auto-disable colors and TUI, use plain text
 - `show` on first run with no cache: Auto-trigger `scan` first, then show results
+- First run with no catalog: Auto-download catalog with progress feedback, then proceed
 
 ## Requirements *(mandatory)*
 
@@ -140,7 +141,7 @@ A user runs `astro-up config init` to generate a default config file, or `astro-
 - **FR-002**: System MUST support `show` subvariants: `show` (all), `show installed`, `show outdated`, `show <package>`, `show backups [package]`
 - **FR-003**: System MUST support global flags: `--verbose`, `--quiet`, `--config <path>`, `--json`
 - **FR-004**: System MUST detect TTY vs pipe and auto-adjust output format
-- **FR-005**: System MUST show download/install progress via ratatui TUI in interactive mode
+- **FR-005**: System MUST show download/install progress visually in interactive mode (progress bars, status updates)
 - **FR-006**: System MUST support `--json` on ALL commands (both read and write) for CI/scripting
 - **FR-007**: System MUST exit with code 0 (success), 1 (error), 2 (user cancelled)
 - **FR-008**: System MUST support `--dry-run` on `install` and `update`
@@ -152,12 +153,15 @@ A user runs `astro-up config init` to generate a default config file, or `astro-
 - **FR-014**: `update` MUST error if the package is not installed (suggest `install`)
 - **FR-015**: `show` on first run with no cache MUST auto-trigger `scan`
 - **FR-016**: System MUST support `update --all --yes` for non-interactive bulk updates
+- **FR-017**: On first run with no catalog database, System MUST auto-download the catalog with visible progress feedback ("Downloading catalog..." with progress bar), then proceed with the requested command
+- **FR-018**: System MUST always write a structured log file to the data directory. `--verbose`/`--quiet` control terminal output verbosity only. On errors, the log file path MUST be shown to help users report issues.
+- **FR-019**: `update` and `install` without `--yes` MUST show an update plan table (package name, current version, target version) and require explicit confirmation before proceeding. `--yes` skips the confirmation prompt.
 
 ### Key Entities
 
 - **CliApp**: Top-level clap application with subcommand dispatch
 - **OutputMode**: Enum of Interactive (TUI), Plain (no colors), Json (machine-readable)
-- **ProgressRenderer**: ratatui-based TUI for download/install progress
+- **ProgressRenderer**: Visual TUI for download/install progress (progress bars, spinners, status)
 
 ## Command Summary
 
@@ -175,6 +179,15 @@ astro-up self-update [--dry-run]
 
 Global flags: `--verbose`, `--quiet`, `--config <path>`, `--json`
 
+## Clarifications
+
+### Session 2026-04-02
+
+- Q: How should the CLI handle first-run when no catalog database exists? → A: Auto-download catalog on first run with visible progress feedback ("Downloading catalog..."), then proceed with the requested command.
+- Q: Should the CLI write a log file for troubleshooting? → A: Always write a structured log file to data dir; `--verbose` controls terminal verbosity only. Log file path shown on errors.
+- Q: What should the confirmation flow look like for `update --all`? → A: Show update plan as a table (package, current version → target version), then ask for confirmation. `--yes` skips the prompt.
+- Q: How should errors be presented to users? → A: Styled error with context and actionable suggestion, plus log file path. Use tracing-subscriber with dual layers (human stderr + structured JSON file).
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
@@ -182,11 +195,12 @@ Global flags: `--verbose`, `--quiet`, `--config <path>`, `--json`
 - **SC-001**: All show/search commands complete in under 2 seconds for cached data
 - **SC-002**: JSON output is valid and parseable by `jq` for all commands
 - **SC-003**: TUI progress updates at least once per second during downloads
-- **SC-004**: CLI binary size is under 10MB
+- **SC-004**: CLI is a single self-contained binary with no external runtime dependencies
 
 ## Assumptions
 
 - Separate binary from the GUI (astro-up-cli vs astro-up-gui)
 - ratatui for progress bars and tables during long operations, not a persistent TUI app
 - All business logic shared with GUI via astro-up-core
+- Panic handler: human-panic for release builds (user-friendly crash reports instead of raw backtraces)
 - Depends on: spec 004 (config), spec 005 (catalog), spec 006 (detection), spec 010 (download), spec 011 (install), spec 012 (engine), spec 013 (backup)

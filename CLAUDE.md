@@ -111,6 +111,9 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - SQLite (existing, ledger entries via rusqlite) (011-installer-execution)
 - Rust 2024 edition (1.85+) + semver (existing), chrono (existing), sysinfo (existing from spec 005), regex (new — custom version format), rusqlite (existing — operations table), tokio (existing — async runtime), tokio-util (existing from spec 010/011 — CancellationToken) (012-install-orchestration)
 - SQLite — operations table in existing app database (012-install-orchestration)
+- Rust 2024 edition (1.85+) + clap 4 (derive), ratatui 0.29 (TUI), color-eyre 0.6 (errors), tracing-subscriber 0.3 (logging layers), tracing-appender 0.2 (file rotation), human-panic 2 (panic handler), dialoguer 0.11 (prompts), tabled 0.17 (tables) (015-cli-interface)
+- SQLite (existing — catalog, config, ledger via astro-up-core) (015-cli-interface)
 
 ## Recent Changes
+- 015-cli-interface: CLI scaffold — all 9 commands, dual-layer tracing, OutputMode, exit codes, JSON output, confirmation helpers
 - 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4
