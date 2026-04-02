@@ -1,0 +1,25 @@
+---
+source: crates/astro-up-cli/tests/cli_show.rs
+expression: stdout
+---
+Show software status
+
+Usage: astro-up-cli show [OPTIONS] [PACKAGE]
+       astro-up-cli show <COMMAND>
+
+Commands:
+  all        Show all catalog packages (default)
+  installed  Show only installed packages
+  outdated   Show packages with available updates
+  backups    Show backups
+  help       Print this message or the help of the given subcommand(s)
+
+Arguments:
+  [PACKAGE]  Show details for a specific package
+
+Options:
+      --json             Output format: JSON for scripting
+  -v, --verbose          Increase verbosity (show debug output)
+  -q, --quiet            Suppress non-error output
+      --config <CONFIG>  Path to config file
+  -h, --help             Print help
