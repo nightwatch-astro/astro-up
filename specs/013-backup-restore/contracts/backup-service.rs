@@ -54,6 +54,7 @@ pub struct BackupRequest {
 pub struct RestoreRequest {
     pub archive_path: PathBuf,
     pub path_filter: Option<String>,
+    pub current_version: Option<Version>,
     pub event_tx: broadcast::Sender<Event>,
 }
 

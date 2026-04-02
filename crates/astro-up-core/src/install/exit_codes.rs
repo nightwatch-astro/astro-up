@@ -55,8 +55,6 @@ pub fn interpret_exit_code(code: i32, config: &InstallConfig) -> ExitCodeOutcome
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
-
     fn base_config() -> InstallConfig {
         InstallConfig::default()
     }

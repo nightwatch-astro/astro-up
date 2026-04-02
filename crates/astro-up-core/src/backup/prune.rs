@@ -1,10 +1,11 @@
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::Path;
 
 use tracing::{info, warn};
 
-use crate::backup::types::{BackupListEntry, BackupMetadata};
+use crate::backup::archive::read_metadata_sync;
+use crate::backup::types::BackupListEntry;
 use crate::error::CoreError;
 
 /// Lists available backups for a package, sorted by date descending (newest first).
@@ -31,7 +32,7 @@ fn list_backups_sync(package_dir: &Path) -> Result<Vec<BackupListEntry>, CoreErr
         let path = dir_entry.path();
 
         if path.extension().is_some_and(|ext| ext == "zip") {
-            match read_metadata_from_archive(&path) {
+            match read_metadata_sync(&path) {
                 Ok(metadata) => {
                     entries.push(BackupListEntry {
                         archive_path: path,
@@ -52,19 +53,6 @@ fn list_backups_sync(package_dir: &Path) -> Result<Vec<BackupListEntry>, CoreErr
     // Sort by date descending (newest first)
     entries.sort_by(|a, b| b.created_at.cmp(&a.created_at));
     Ok(entries)
-}
-
-/// Reads metadata.json from a backup archive.
-fn read_metadata_from_archive(archive_path: &Path) -> Result<BackupMetadata, CoreError> {
-    let file = fs::File::open(archive_path)?;
-    let mut archive = zip::ZipArchive::new(file).map_err(|e| CoreError::Io(io::Error::other(e)))?;
-    let mut entry = archive
-        .by_name("metadata.json")
-        .map_err(|e| CoreError::Io(io::Error::other(e)))?;
-    let mut buf = String::new();
-    entry.read_to_string(&mut buf)?;
-    let metadata: BackupMetadata = serde_json::from_str(&buf)?;
-    Ok(metadata)
 }
 
 /// Deletes old backups beyond the retention count.

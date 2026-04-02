@@ -407,10 +407,12 @@ where
                     post_install: vec![],
                     switches: None,
                     known_exit_codes: std::collections::HashMap::new(),
-                    timeout_secs: None,
+                    timeout: None,
                 });
 
-        let timeout = std::time::Duration::from_secs(install_config.timeout_secs.unwrap_or(600));
+        let timeout = install_config
+            .timeout
+            .unwrap_or(std::time::Duration::from_secs(600));
 
         let install_request = crate::install::types::InstallRequest {
             package_id: pkg_id.to_string(),

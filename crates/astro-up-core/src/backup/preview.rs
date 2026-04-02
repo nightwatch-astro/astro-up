@@ -68,8 +68,35 @@ fn restore_preview_sync(archive_path: &Path) -> Result<FileChangeSummary, CoreEr
     }
 
     // Files on disk in the config paths but NOT in the archive = missing
-    // (We don't scan the full disk tree here — missing is only meaningful
-    // if the caller wants to know what won't be touched by the restore)
+    // (won't be touched by restore)
+    let archive_on_disk_paths: std::collections::HashSet<std::path::PathBuf> = metadata
+        .file_hashes
+        .keys()
+        .filter_map(|entry| resolve_on_disk_path(entry, &dir_to_path))
+        .collect();
+
+    for (dir_name, original_path) in &dir_to_path {
+        if !original_path.exists() {
+            continue;
+        }
+        for entry in walkdir::WalkDir::new(original_path).follow_links(true) {
+            let Ok(entry) = entry else { continue };
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            if !archive_on_disk_paths.contains(entry.path()) {
+                let relative = entry
+                    .path()
+                    .strip_prefix(original_path)
+                    .unwrap_or(entry.path());
+                summary.missing.push(format!(
+                    "{}/{}",
+                    dir_name,
+                    relative.to_string_lossy().replace('\\', "/")
+                ));
+            }
+        }
+    }
 
     Ok(summary)
 }
@@ -201,5 +228,42 @@ mod tests {
 
         let summary = restore_preview(&archive).await.unwrap();
         assert_eq!(summary.new_files.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn preview_detects_missing_file_on_disk_not_in_archive() {
+        let src = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(src.path().join("Config")).unwrap();
+        std::fs::write(src.path().join("Config/settings.toml"), "original").unwrap();
+
+        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+        let request = BackupRequest {
+            package_id: "test".into(),
+            version: Version::parse("1.0.0"),
+            config_paths: vec![src.path().join("Config")],
+            event_tx: tx,
+        };
+
+        create_backup(&request, backup_dir.path()).await.unwrap();
+
+        // Add a new file on disk that wasn't in the backup
+        std::fs::write(src.path().join("Config/extra.toml"), "new file").unwrap();
+
+        let archive = std::fs::read_dir(backup_dir.path().join("test"))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .next()
+            .unwrap()
+            .path();
+
+        let summary = restore_preview(&archive).await.unwrap();
+        assert_eq!(summary.missing.len(), 1, "expected 1 missing file");
+        assert!(
+            summary.missing[0].contains("extra.toml"),
+            "missing entry should reference extra.toml: {:?}",
+            summary.missing
+        );
+        assert_eq!(summary.unchanged.len(), 1);
     }
 }
