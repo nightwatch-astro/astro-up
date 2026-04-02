@@ -19,7 +19,7 @@ async fn main() -> ExitCode {
         .map(|dirs| dirs.data_dir().join("logs"))
         .unwrap_or_else(|| std::path::PathBuf::from("."));
 
-    let _log_guard = match astro_up_cli::logging::init(cli.verbose, &log_dir) {
+    let _log_guard = match astro_up_cli::logging::init(cli.verbose, cli.quiet, &log_dir) {
         Ok(guard) => guard,
         Err(e) => {
             eprintln!("error: failed to initialize logging: {e}");
@@ -36,14 +36,24 @@ async fn main() -> ExitCode {
         cancel_clone.cancel();
     });
 
-    match astro_up_cli::run(cli, cancel).await {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("{e:?}");
-            if let Some(log_path) = log_dir.join("astro-up.log").to_str() {
-                eprintln!("\nLog file: {log_path}");
+    let result = astro_up_cli::run(cli, cancel.clone()).await;
+
+    match result {
+        Ok(()) => {
+            if cancel.is_cancelled() {
+                ExitCode::from(2)
+            } else {
+                ExitCode::SUCCESS
             }
-            ExitCode::from(1)
+        }
+        Err(e) => {
+            if cancel.is_cancelled() {
+                ExitCode::from(2)
+            } else {
+                eprintln!("{e:?}");
+                eprintln!("\nLog directory: {}", log_dir.display());
+                ExitCode::from(1)
+            }
         }
     }
 }

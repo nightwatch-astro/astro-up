@@ -7,8 +7,10 @@ use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::Subs
 /// - file: JSON, daily rotation to `{log_dir}/`
 ///
 /// Returns the `WorkerGuard` which must be kept alive for the duration of the program.
-pub fn init(verbose: bool, log_dir: &std::path::Path) -> Result<WorkerGuard> {
-    let stderr_filter = if verbose {
+pub fn init(verbose: bool, quiet: bool, log_dir: &std::path::Path) -> Result<WorkerGuard> {
+    let stderr_filter = if quiet {
+        EnvFilter::new("error")
+    } else if verbose {
         EnvFilter::new("debug")
     } else {
         EnvFilter::new("info")
