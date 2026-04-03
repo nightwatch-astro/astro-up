@@ -14,7 +14,7 @@ import TechnicalTab from "../components/detail/TechnicalTab.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
 import { useSoftwareList, useVersions, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
-import { useOperations } from "../composables/useOperations";
+// useOperations not needed here — core events handle operation lifecycle
 import type { PackageWithStatus, VersionEntry } from "../types/package";
 
 const props = defineProps<{
@@ -27,7 +27,6 @@ const { data: versions } = useVersions(() => props.id);
 const installMutation = useInstallSoftware();
 const updateMutation = useUpdateSoftware();
 const backupMutation = useCreateBackup();
-const { startOperation } = useOperations();
 
 const showBackupConfirm = ref(false);
 const tabsReady = ref(false);
@@ -45,12 +44,12 @@ const pkg = computed<PackageWithStatus | undefined>(() => {
 
 
 function handleInstall() {
-  if (!pkg.value || !startOperation(pkg.value.id, `Installing ${pkg.value.name}`)) return;
+  if (!pkg.value) return;
   installMutation.mutate(pkg.value.id);
 }
 
 function handleUpdate() {
-  if (!pkg.value || !startOperation(pkg.value.id, `Updating ${pkg.value.name}`)) return;
+  if (!pkg.value) return;
   updateMutation.mutate(pkg.value.id);
 }
 

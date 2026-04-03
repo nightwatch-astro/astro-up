@@ -13,7 +13,7 @@ const { data: software } = useSoftwareList(() => "all");
 const { data: updates } = useUpdateCheck();
 const scanMutation = useScanInstalled();
 const updateAllMutation = useUpdateAll();
-const { startOperation, isRunning } = useOperations();
+const { isRunning } = useOperations();
 
 const showScanConfirm = ref(false);
 const showUpdateAllConfirm = ref(false);
@@ -35,12 +35,10 @@ const updatablePackages = computed<PackageWithStatus[]>(() => {
 });
 
 function confirmScan() {
-  if (!startOperation("scan", "Scanning installed software")) return;
   scanMutation.mutate();
 }
 
 function confirmUpdateAll() {
-  if (!startOperation("update-all", "Updating all packages")) return;
   updateAllMutation.mutate();
 }
 
