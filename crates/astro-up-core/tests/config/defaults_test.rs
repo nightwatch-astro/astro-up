@@ -18,7 +18,7 @@ fn load_config_with_empty_db_returns_defaults() {
 
     assert_eq!(
         config.catalog.url,
-        "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db"
+        "https://github.com/nightwatch-astro/astro-up-manifests/releases/download/catalog/latest/catalog.db"
     );
     assert_eq!(config.catalog.cache_ttl.as_secs(), 86400);
     assert_eq!(config.paths.download_dir, paths.download_dir);

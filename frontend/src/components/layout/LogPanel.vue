@@ -238,7 +238,6 @@ defineExpose({ addEntry, clearLog });
 .log-entry {
   display: flex;
   gap: 8px;
-  white-space: nowrap;
 }
 
 .log-time {
@@ -261,8 +260,7 @@ defineExpose({ addEntry, clearLog });
 
 .log-message {
   color: var(--p-surface-300);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .log-empty {

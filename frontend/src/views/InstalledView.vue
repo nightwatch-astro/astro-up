@@ -26,7 +26,9 @@ const showScanConfirm = ref(false);
 const pendingUpdatePkg = ref<PackageWithStatus | null>(null);
 
 const installed = computed<PackageWithStatus[]>(() =>
-  (software.value ?? []) as PackageWithStatus[],
+  ((software.value ?? []) as PackageWithStatus[]).filter(
+    (p) => p.detection?.type === "Installed" || p.detection?.type === "InstalledUnknownVersion",
+  ),
 );
 
 const filtered = computed(() => {

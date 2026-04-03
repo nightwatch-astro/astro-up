@@ -31,27 +31,29 @@ const scheduleOptions = [
         option-value="value"
       />
     </div>
-    <div class="field">
-      <label>Max backups per package (0 = unlimited)</label>
-      <InputNumber
-        v-model="config.max_per_package"
-        :min="0"
-      />
-    </div>
-    <div class="field">
-      <label>Max total size (MB, 0 = unlimited)</label>
-      <InputNumber
-        v-model="config.max_total_size_mb"
-        :min="0"
-      />
-    </div>
-    <div class="field">
-      <label>Max age (days, 0 = never expire)</label>
-      <InputNumber
-        v-model="config.max_age_days"
-        :min="0"
-      />
-    </div>
+    <template v-if="config.scheduled_enabled">
+      <div class="field">
+        <label>Max backups per package (0 = unlimited)</label>
+        <InputNumber
+          v-model="config.max_per_package"
+          :min="0"
+        />
+      </div>
+      <div class="field">
+        <label>Max total size (MB, 0 = unlimited)</label>
+        <InputNumber
+          v-model="config.max_total_size_mb"
+          :min="0"
+        />
+      </div>
+      <div class="field">
+        <label>Max age (days, 0 = never expire)</label>
+        <InputNumber
+          v-model="config.max_age_days"
+          :min="0"
+        />
+      </div>
+    </template>
   </div>
 </template>
 

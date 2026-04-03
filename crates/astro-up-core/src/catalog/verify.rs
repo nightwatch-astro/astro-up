@@ -4,8 +4,11 @@ use std::path::Path;
 
 use crate::error::CoreError;
 
-/// The production minisign public key, embedded at compile time.
-pub const MINISIGN_PUBLIC_KEY: &str = "RWQK6Ny4IewwF5A+6bI/YNv08w/kZ7hy3xVAv+SWPT11w+7RvatDV0bg";
+/// The production minisign public key, embedded at build time from minisign.pub.
+pub const MINISIGN_PUBLIC_KEY: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../minisign.pub.key"
+));
 
 /// Verify a catalog file against its minisign signature.
 ///
@@ -13,7 +16,7 @@ pub const MINISIGN_PUBLIC_KEY: &str = "RWQK6Ny4IewwF5A+6bI/YNv08w/kZ7hy3xVAv+SWP
 /// the embedded public key.
 #[tracing::instrument(skip_all, fields(catalog = %catalog_path.display()))]
 pub fn verify_catalog(catalog_path: &Path, sig_path: &Path) -> Result<(), CoreError> {
-    verify_catalog_with_key(catalog_path, sig_path, MINISIGN_PUBLIC_KEY)
+    verify_catalog_with_key(catalog_path, sig_path, MINISIGN_PUBLIC_KEY.trim())
 }
 
 /// Verify a catalog file against its minisign signature using the given public key.
@@ -53,7 +56,7 @@ pub fn verify_catalog_with_key(
 ///
 /// Used by CatalogManager to verify before saving, preserving the previous catalog on failure.
 pub fn verify_bytes(catalog_bytes: &[u8], sig_bytes: &[u8]) -> Result<(), CoreError> {
-    verify_bytes_with_key(catalog_bytes, sig_bytes, MINISIGN_PUBLIC_KEY)
+    verify_bytes_with_key(catalog_bytes, sig_bytes, MINISIGN_PUBLIC_KEY.trim())
 }
 
 /// Verify catalog bytes and signature bytes using the given public key.

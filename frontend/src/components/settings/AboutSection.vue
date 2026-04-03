@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import Button from "primevue/button";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { useConfigSnapshots } from "../../stores/configSnapshots";
 
 const version = __APP_VERSION__;
@@ -58,13 +59,12 @@ function formatDate(iso: string): string {
     />
 
     <div class="about-links">
-      <a
-        href="https://github.com/nightwatch-astro/astro-up"
-        target="_blank"
+      <button
         class="about-link"
+        @click="openUrl('https://github.com/nightwatch-astro/astro-up')"
       >
         <i class="pi pi-github" /> GitHub
-      </a>
+      </button>
     </div>
 
     <!-- Config Snapshots (FR-040) -->
@@ -116,6 +116,10 @@ function formatDate(iso: string): string {
   display: flex;
   align-items: center;
   gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 .about-link:hover { text-decoration: underline; }
 

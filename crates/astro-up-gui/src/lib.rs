@@ -161,6 +161,7 @@ pub fn run() {
     }
 
     builder
+        .plugin(tauri_plugin_shell::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::all())

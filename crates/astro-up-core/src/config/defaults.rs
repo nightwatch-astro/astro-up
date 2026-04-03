@@ -52,7 +52,7 @@ impl Default for BackupPolicyConfig {
 impl Default for CatalogConfig {
     fn default() -> Self {
         Self {
-            url: "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db".into(),
+            url: "https://github.com/nightwatch-astro/astro-up-manifests/releases/download/catalog/latest/catalog.db".into(),
             cache_ttl: Duration::from_secs(86400), // 24h
         }
     }

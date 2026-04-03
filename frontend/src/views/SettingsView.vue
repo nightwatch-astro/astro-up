@@ -44,21 +44,21 @@ const sections = [
 const defaultConfig: AppConfig = {
   ui: {
     theme: "system", font_size: "medium", auto_scan_on_launch: false,
-    default_install_scope: "user", default_install_method: "interactive",
-    auto_check_updates: true, check_interval: "24h",
+    default_install_scope: "user", default_install_method: "silent",
+    auto_check_updates: true, check_interval: "1day",
     auto_notify_updates: true, auto_install_updates: false,
   },
-  startup: { start_at_login: false, start_minimized: false, minimize_to_tray_on_close: true },
+  startup: { start_at_login: true, start_minimized: true, minimize_to_tray_on_close: true },
   notifications: {
     enabled: true, display_duration: 5,
     show_errors: true, show_warnings: true,
     show_update_available: true, show_operation_complete: true,
   },
   backup_policy: { scheduled_enabled: false, schedule: "weekly", max_per_package: 5, max_total_size_mb: 0, max_age_days: 0 },
-  catalog: { url: "https://github.com/nightwatch-astro/astro-up-catalog/releases/latest/download/catalog.db", cache_ttl: "24h" },
+  catalog: { url: "https://github.com/nightwatch-astro/astro-up-manifests/releases/download/catalog/latest/catalog.db", cache_ttl: "1day" },
   network: { proxy: null, connect_timeout: "10s", timeout: "30s", user_agent: "", download_speed_limit: 0 },
   paths: { download_dir: "", cache_dir: "", data_dir: "", keep_installers: false, purge_installers_after_days: 7 },
-  updates: { auto_check: true, check_interval: "24h" },
+  updates: { auto_check: true, check_interval: "1day" },
   logging: { level: "info", log_to_file: true, log_file: "" },
   telemetry: { enabled: false },
 };

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from "primevue/button";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 import PackageIcon from "../shared/PackageIcon.vue";
 import type { PackageWithStatus } from "../../types/package";
 
@@ -32,15 +33,14 @@ defineEmits<{
         >
           {{ pkg.publisher }}
         </span>
-        <a
+        <button
           v-if="pkg.homepage"
-          :href="pkg.homepage"
-          target="_blank"
           class="hero-link"
+          @click="openUrl(pkg.homepage!)"
         >
           <i class="pi pi-external-link" />
           Homepage
-        </a>
+        </button>
       </div>
       <p
         v-if="pkg.description"
