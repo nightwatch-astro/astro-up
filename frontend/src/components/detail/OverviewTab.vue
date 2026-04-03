@@ -6,10 +6,11 @@ defineProps<{
 }>();
 
 function detectionMethod(pkg: PackageWithStatus): string {
+  if (!pkg.detection) return "Not scanned";
   switch (pkg.detection.type) {
     case "Installed": return pkg.detection.method;
     case "InstalledUnknownVersion": return pkg.detection.method;
-    case "NotInstalled": return "—";
+    case "NotInstalled": return "Not installed";
     case "Unavailable": return pkg.detection.reason;
   }
 }

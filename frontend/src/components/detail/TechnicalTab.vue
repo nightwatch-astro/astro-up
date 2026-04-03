@@ -6,6 +6,7 @@ defineProps<{
 }>();
 
 function detectionDetails(pkg: PackageWithStatus): Record<string, string> {
+  if (!pkg.detection) return { Status: "Not scanned" };
   switch (pkg.detection.type) {
     case "Installed":
       return { Method: pkg.detection.method, Version: pkg.detection.version, Status: "Installed" };

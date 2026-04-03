@@ -21,15 +21,24 @@ const isResizing = ref(false);
 const filterOptions = [
   { label: "All", value: "all" },
   { label: "Error", value: "error" },
-  { label: "Warn", value: "warn" },
-  { label: "Info", value: "info" },
-  { label: "Debug", value: "debug" },
-  { label: "Trace", value: "trace" },
+  { label: "Warn+", value: "warn" },
+  { label: "Info+", value: "info" },
+  { label: "Debug+", value: "debug" },
+  { label: "Trace+", value: "trace" },
 ];
+
+const LOG_LEVELS: Record<string, number> = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  debug: 3,
+  trace: 4,
+};
 
 const filteredEntries = computed(() => {
   if (logFilter.value === "all") return entries.value;
-  return entries.value.filter((e) => e.level === logFilter.value);
+  const threshold = LOG_LEVELS[logFilter.value] ?? 4;
+  return entries.value.filter((e) => (LOG_LEVELS[e.level] ?? 4) <= threshold);
 });
 
 function addEntry(entry: LogEntry) {

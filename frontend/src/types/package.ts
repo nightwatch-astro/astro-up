@@ -56,8 +56,8 @@ export type DetectionResult =
   | { type: "Unavailable"; reason: string };
 
 export interface PackageWithStatus extends PackageSummary {
-  installed_version: string | null;
-  latest_version: string;
-  update_available: boolean;
-  detection: DetectionResult;
+  installed_version?: string | null;
+  latest_version?: string;
+  update_available?: boolean;
+  detection?: DetectionResult;
 }

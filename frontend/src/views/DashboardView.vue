@@ -23,7 +23,7 @@ const catalogCount = computed(() => software.value?.length ?? 0);
 const installedCount = computed(() => {
   if (!software.value) return 0;
   return (software.value as PackageWithStatus[]).filter(
-    (p) => p.detection.type === "Installed" || p.detection.type === "InstalledUnknownVersion",
+    (p) => p.detection?.type === "Installed" || p.detection?.type === "InstalledUnknownVersion",
   ).length;
 });
 
@@ -155,7 +155,7 @@ const activityIcons: Record<string, string> = {
               {{ pkg.name }}
             </div>
             <div class="upd-sub">
-              {{ pkg.category }} &middot; {{ pkg.detection.type !== 'NotInstalled' && pkg.detection.type !== 'Unavailable' ? pkg.detection.method : pkg.software_type }}
+              {{ pkg.category }} &middot; {{ pkg.detection?.type === 'Installed' || pkg.detection?.type === 'InstalledUnknownVersion' ? pkg.detection.method : pkg.software_type }}
             </div>
           </div>
           <div class="upd-arrow">

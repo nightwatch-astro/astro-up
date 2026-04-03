@@ -26,7 +26,7 @@ defineEmits<{
         {{ pkg.name }}
       </div>
       <div class="inst-sub">
-        {{ pkg.category }} &middot; {{ pkg.detection.type !== 'NotInstalled' && pkg.detection.type !== 'Unavailable' ? pkg.detection.method : pkg.software_type }}
+        {{ pkg.category }} &middot; {{ pkg.detection?.type === 'Installed' || pkg.detection?.type === 'InstalledUnknownVersion' ? pkg.detection.method : pkg.software_type }}
       </div>
     </div>
     <div class="inst-version">
