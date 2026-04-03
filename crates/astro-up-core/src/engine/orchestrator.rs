@@ -249,6 +249,7 @@ where
                     on_event(Event::PackageComplete {
                         package_id: pkg_id.clone(),
                         status: "cancelled".into(),
+                        error: None,
                     });
                     return PackageResult {
                         package_id: pkg_id.clone(),
@@ -307,6 +308,7 @@ where
             on_event(Event::PackageComplete {
                 package_id: pkg_id.clone(),
                 status: "failed".into(),
+                error: Some(format!("disk space check: {e}")),
             });
             return PackageResult {
                 package_id: pkg_id.clone(),
@@ -337,9 +339,11 @@ where
         {
             Ok(result) => result,
             Err(e) => {
+                let err_msg = format!("download failed: {e}");
                 on_event(Event::PackageComplete {
                     package_id: pkg_id.clone(),
                     status: "failed".into(),
+                    error: Some(err_msg.clone()),
                 });
                 return PackageResult {
                     package_id: pkg_id.clone(),
@@ -347,7 +351,7 @@ where
                     to_version: planned.target_version.clone(),
                     status: super::history::OperationStatus::Failed,
                     duration: start.elapsed(),
-                    error: Some(format!("download failed: {e}")),
+                    error: Some(err_msg),
                     backup_path: None,
                 };
             }
@@ -430,9 +434,11 @@ where
         let install_result = match self.installer.install(&install_request).await {
             Ok(result) => result,
             Err(e) => {
+                let err_msg = format!("install failed: {e}");
                 on_event(Event::PackageComplete {
                     package_id: pkg_id.clone(),
                     status: "failed".into(),
+                    error: Some(err_msg.clone()),
                 });
                 return PackageResult {
                     package_id: pkg_id.clone(),
@@ -440,7 +446,7 @@ where
                     to_version: planned.target_version.clone(),
                     status: super::history::OperationStatus::Failed,
                     duration: start.elapsed(),
-                    error: Some(format!("install failed: {e}")),
+                    error: Some(err_msg),
                     backup_path,
                 };
             }
@@ -455,6 +461,7 @@ where
                 on_event(Event::PackageComplete {
                     package_id: pkg_id.clone(),
                     status: "cancelled".into(),
+                    error: None,
                 });
                 return PackageResult {
                     package_id: pkg_id.clone(),
@@ -518,6 +525,7 @@ where
         on_event(Event::PackageComplete {
             package_id: pkg_id.clone(),
             status: status_str.into(),
+            error: None,
         });
 
         // 9. Record to operation history (best-effort — don't fail pipeline)

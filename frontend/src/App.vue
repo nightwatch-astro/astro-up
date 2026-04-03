@@ -91,7 +91,8 @@ useCoreEvents((event: CoreEvent) => {
     addStep("info", `${event.type}`);
   } else if (event.type === "package_complete") {
     if (event.data.status === "failed") {
-      failOperation(`Package ${event.data.package_id} failed`);
+      const reason = event.data.error ?? "unknown error";
+      failOperation(`${event.data.package_id}: ${reason}`);
     } else {
       completeOperation();
     }
