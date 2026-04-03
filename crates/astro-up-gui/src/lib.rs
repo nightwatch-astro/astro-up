@@ -183,6 +183,7 @@ pub fn run() {
             get_version,
             commands::sync_catalog,
             commands::list_software,
+            commands::get_versions,
             commands::search_catalog,
             commands::check_for_updates,
             commands::get_config,

@@ -19,6 +19,14 @@ export function useCatalogSearch(query: () => string) {
   });
 }
 
+export function useVersions(id: () => string) {
+  return useQuery({
+    queryKey: ["versions", id],
+    queryFn: () => invoke<unknown[]>("get_versions", { id: id() }),
+    enabled: () => id().length > 0,
+  });
+}
+
 export function useUpdateCheck() {
   return useQuery({
     queryKey: ["updates"],

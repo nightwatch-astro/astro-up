@@ -150,6 +150,19 @@ fn try_list_software(
 }
 
 #[tauri::command]
+pub async fn get_versions(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<serde_json::Value, CoreError> {
+    let reader = state.open_catalog_reader()?;
+    let pkg_id: astro_up_core::catalog::PackageId = id
+        .parse()
+        .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))?;
+    let versions = reader.versions(&pkg_id)?;
+    serde_json::to_value(&versions).map_err(|e| CoreError::from(e.to_string()))
+}
+
+#[tauri::command]
 pub async fn search_catalog(
     state: State<'_, AppState>,
     query: String,

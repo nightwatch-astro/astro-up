@@ -13,9 +13,9 @@ import BackupTab from "../components/detail/BackupTab.vue";
 import TechnicalTab from "../components/detail/TechnicalTab.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
-import { useSoftwareList, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
+import { useSoftwareList, useVersions, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
-import type { PackageWithStatus } from "../types/package";
+import type { PackageWithStatus, VersionEntry } from "../types/package";
 
 const props = defineProps<{
   id: string;
@@ -23,6 +23,7 @@ const props = defineProps<{
 
 const router = useRouter();
 const { data: software, isLoading } = useSoftwareList(() => "all");
+const { data: versions } = useVersions(() => props.id);
 const installMutation = useInstallSoftware();
 const updateMutation = useUpdateSoftware();
 const backupMutation = useCreateBackup();
@@ -32,7 +33,14 @@ const showBackupConfirm = ref(false);
 
 const pkg = computed<PackageWithStatus | undefined>(() => {
   if (!software.value) return undefined;
-  return (software.value as PackageWithStatus[]).find((p) => p.id === props.id);
+  const found = (software.value as PackageWithStatus[]).find((p) => p.id === props.id);
+  if (found && !found.latest_version && versions.value) {
+    const vList = versions.value as VersionEntry[];
+    if (vList.length > 0) {
+      found.latest_version = vList[0].version;
+    }
+  }
+  return found;
 });
 
 
@@ -111,7 +119,7 @@ function confirmBackup() {
             </TabPanel>
             <TabPanel value="1">
               <VersionsTab
-                :versions="[]"
+                :versions="(versions as VersionEntry[] | undefined) ?? []"
                 :installed-version="pkg.installed_version ?? null"
               />
             </TabPanel>
