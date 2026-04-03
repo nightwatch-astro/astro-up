@@ -44,7 +44,7 @@ const sections = [
 const defaultConfig: AppConfig = {
   ui: {
     theme: "system", font_size: "medium", auto_scan_on_launch: false,
-    default_install_scope: "user", default_install_method: "silent",
+    default_install_scope: "user", default_install_method: "interactive",
     auto_check_updates: true, check_interval: "24h",
     auto_notify_updates: true, auto_install_updates: false,
   },
@@ -74,11 +74,11 @@ watch(serverConfig, (data) => {
 
 // Apply theme and font size immediately when changed
 watch(() => config.ui.theme, (theme) => {
-  setTheme(theme);
-});
+  if (theme) setTheme(theme);
+}, { immediate: true });
 
 watch(() => config.ui.font_size, (size) => {
-  document.documentElement.dataset.fontSize = size;
+  if (size) document.documentElement.dataset.fontSize = size;
 }, { immediate: true });
 
 function validate(): boolean {

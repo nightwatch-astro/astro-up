@@ -39,7 +39,7 @@ body {
 #app {
   display: flex;
   min-height: 100vh;
-  min-width: 800px;
+  min-width: 1024px;
 }
 
 /* Page-level layout — matches mockup */
@@ -85,7 +85,7 @@ body {
 /* Min window size enforcement (FR-023) */
 @media (max-width: 800px) {
   body {
-    min-width: 800px;
+    min-width: 1024px;
     overflow-x: auto;
   }
 }

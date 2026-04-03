@@ -22,7 +22,7 @@ const updateCount = computed(() => updates.value?.length ?? 0);
 
 const lastSync = computed(() => {
   if (!software.value) return "Never";
-  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return "Ready";
 });
 </script>
 
@@ -49,7 +49,7 @@ const lastSync = computed(() => {
       <span class="status-separator" />
       <span class="status-item">
         <i class="pi pi-sync" />
-        {{ lastSync }}
+        Last scan: {{ lastSync }}
       </span>
       <template v-if="isRunning">
         <span class="status-separator" />

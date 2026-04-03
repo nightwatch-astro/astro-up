@@ -227,12 +227,26 @@ pub async fn save_config(
         for (section, values) in obj {
             if let Some(inner) = values.as_object() {
                 for (key, value) in inner {
+                    // Skip null values — they represent "use default"
+                    if value.is_null() {
+                        continue;
+                    }
                     let dotpath = format!("{section}.{key}");
                     let str_value = match value {
                         serde_json::Value::String(s) => s.clone(),
+                        serde_json::Value::Bool(b) => b.to_string(),
+                        serde_json::Value::Number(n) => n.to_string(),
                         other => other.to_string(),
                     };
-                    config::config_set(&store, &current, &dotpath, &str_value)?;
+                    // Skip empty strings for path-type fields
+                    if str_value.is_empty()
+                        && (dotpath.ends_with("_dir") || dotpath.ends_with("_file"))
+                    {
+                        continue;
+                    }
+                    if let Err(e) = config::config_set(&store, &current, &dotpath, &str_value) {
+                        tracing::warn!(key = dotpath, error = %e, "Failed to save config key");
+                    }
                 }
             }
         }
