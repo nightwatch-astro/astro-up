@@ -1,16 +1,16 @@
 /* Font size / UI scale (FR-035) —
-   Setting font-size on :root (html) scales all rem-based PrimeVue components. */
+   zoom on #app scales everything (fonts, spacing, icons) uniformly,
+   without needing to convert 100+ px values to rem. */
 :root {
   --ui-scale: 1;
-  font-size: calc(16px * var(--ui-scale));
 }
 
 :root[data-font-size="small"] {
-  --ui-scale: 0.875;
+  --ui-scale: 0.9;
 }
 
 :root[data-font-size="large"] {
-  --ui-scale: 1.125;
+  --ui-scale: 1.1;
 }
 
 *,
@@ -40,13 +40,13 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 0.875rem;
 }
 
 #app {
   display: flex;
   width: 100%;
   height: 100%;
+  zoom: var(--ui-scale);
 }
 
 /* Page-level layout — matches mockup */
