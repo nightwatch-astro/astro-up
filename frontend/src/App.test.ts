@@ -64,3 +64,60 @@ describe("App", () => {
     expect(wrapper.text()).toContain("Settings");
   });
 });
+
+describe("View smoke tests", () => {
+  it("Dashboard renders stats and activity", async () => {
+    const wrapper = mountApp();
+    await router.push("/");
+    await router.isReady();
+    expect(wrapper.text()).toContain("Dashboard");
+    expect(wrapper.text()).toContain("Installed");
+    expect(wrapper.text()).toContain("Updates");
+    expect(wrapper.text()).toContain("Recent Activity");
+  });
+
+  it("Catalog renders search and grid", async () => {
+    const wrapper = mountApp();
+    await router.push("/catalog");
+    await router.isReady();
+    expect(wrapper.text()).toContain("Catalog");
+    expect(wrapper.find("input").exists()).toBe(true);
+  });
+
+  it("Installed renders grouped sections", async () => {
+    const wrapper = mountApp();
+    await router.push("/installed");
+    await router.isReady();
+    expect(wrapper.text()).toContain("Installed");
+    expect(wrapper.text()).toContain("Re-scan");
+  });
+
+  it("Backup renders quick restore section", async () => {
+    const wrapper = mountApp();
+    await router.push("/backup");
+    await router.isReady();
+    expect(wrapper.text()).toContain("Backup");
+    expect(wrapper.text()).toContain("Quick Restore");
+  });
+
+  it("Settings renders sidebar nav with 9 sections", async () => {
+    const wrapper = mountApp();
+    await router.push("/settings");
+    await router.isReady();
+    expect(wrapper.text()).toContain("General");
+    expect(wrapper.text()).toContain("Startup");
+    expect(wrapper.text()).toContain("Notifications");
+    expect(wrapper.text()).toContain("Catalog");
+    expect(wrapper.text()).toContain("Network");
+    expect(wrapper.text()).toContain("Paths");
+    expect(wrapper.text()).toContain("Logging");
+    expect(wrapper.text()).toContain("About");
+  });
+
+  it("Package detail renders not-found for invalid ID", async () => {
+    const wrapper = mountApp();
+    await router.push("/catalog/nonexistent");
+    await router.isReady();
+    expect(wrapper.text()).toContain("Package not found");
+  });
+});
