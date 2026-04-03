@@ -5,7 +5,6 @@ import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import { useSoftwareList, useUpdateCheck, useScanInstalled, useUpdateSoftware } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
-import { mockActivity } from "../mocks";
 import type { PackageWithStatus } from "../types/package";
 
 const router = useRouter();
@@ -46,31 +45,7 @@ function confirmUpdateAll() {
   }
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
-const activityIconClass: Record<string, string> = {
-  install: "act-install",
-  update: "act-update",
-  scan: "act-scan",
-  backup: "act-install",
-  restore: "act-install",
-};
-
-const activityIcons: Record<string, string> = {
-  install: "pi-check",
-  update: "pi-arrow-up",
-  scan: "pi-search",
-  backup: "pi-database",
-  restore: "pi-replay",
-};
 </script>
 
 <template>
@@ -205,24 +180,17 @@ const activityIcons: Record<string, string> = {
       Recent Activity
     </div>
     <div class="card activity-card">
-      <div
-        v-for="entry in mockActivity"
-        :key="entry.id"
-        class="act-row"
-      >
-        <div :class="['act-icon', activityIconClass[entry.type] ?? 'act-scan']">
-          <i :class="['pi', activityIcons[entry.type] ?? 'pi-info-circle']" />
+      <div class="act-row">
+        <div class="act-icon act-scan">
+          <i class="pi pi-info-circle" />
         </div>
         <div class="act-text">
           <div class="act-name">
-            {{ entry.name }}
+            No activity yet
           </div>
           <div class="act-det">
-            {{ entry.detail }}
+            Run a scan to detect installed software
           </div>
-        </div>
-        <div class="act-time">
-          {{ relativeTime(entry.timestamp) }}
         </div>
       </div>
     </div>
