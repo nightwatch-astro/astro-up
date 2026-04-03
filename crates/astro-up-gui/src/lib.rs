@@ -52,8 +52,13 @@ pub(crate) async fn check_for_app_update(app: &AppHandle) {
 /// Spawn a periodic background update check timer.
 fn spawn_background_update_timer(app: &AppHandle) {
     let handle = app.clone();
-    // TODO: read ui.check_interval from config (default 6h)
-    let interval = Duration::from_secs(6 * 60 * 60);
+    let state = app.state::<state::AppState>();
+    let config = state.config.lock().unwrap();
+    let interval = if config.ui.auto_check_updates {
+        config.ui.check_interval
+    } else {
+        Duration::from_secs(24 * 60 * 60) // Check once a day even if auto-check disabled
+    };
 
     tauri::async_runtime::spawn(async move {
         let mut ticker = tokio::time::interval(interval);
@@ -70,6 +75,52 @@ fn spawn_background_update_timer(app: &AppHandle) {
                 // If window is hidden, the update-available event already fired.
                 // The tray badge is already set by the update check.
                 tracing::debug!(count, "Updates available (badge already set)");
+            }
+        }
+    });
+}
+
+/// Spawn a background task that runs scheduled backups and retention pruning (#507).
+fn spawn_backup_scheduler(app: &AppHandle) {
+    let handle = app.clone();
+
+    tauri::async_runtime::spawn(async move {
+        // Check every hour if scheduled backups are due
+        let mut ticker = tokio::time::interval(Duration::from_secs(3600));
+        ticker.tick().await; // Skip first immediate tick
+
+        loop {
+            ticker.tick().await;
+
+            let state = handle.state::<state::AppState>();
+            let policy = state.config.lock().unwrap().backup_policy.clone();
+
+            if !policy.scheduled_enabled {
+                continue;
+            }
+
+            tracing::debug!(schedule = %policy.schedule, "Backup scheduler tick");
+
+            // Prune old backups according to retention policy
+            if policy.max_per_package > 0 {
+                // List all known package IDs from the catalog and prune each
+                if let Ok(reader) = state.open_catalog_reader() {
+                    if let Ok(packages) = reader.list_all() {
+                        for pkg in &packages {
+                            if let Err(e) = state
+                                .backup_service
+                                .prune(pkg.id.as_ref(), policy.max_per_package as usize)
+                                .await
+                            {
+                                tracing::warn!(
+                                    package = %pkg.id,
+                                    error = %e,
+                                    "Failed to prune backups"
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
     });
@@ -172,6 +223,9 @@ pub fn run() {
 
             // Background periodic update check (T030)
             spawn_background_update_timer(app.handle());
+
+            // Background backup scheduler (#507)
+            spawn_backup_scheduler(app.handle());
 
             tracing::info!(
                 version = astro_up_core::version().to_string().as_str(),

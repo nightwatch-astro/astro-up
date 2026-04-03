@@ -277,6 +277,72 @@ pub async fn scan_installed(
     Ok(value)
 }
 
+/// Shared helper: create an orchestrator, plan for a single package, and execute.
+async fn run_orchestrated_operation(
+    app: &AppHandle,
+    state: &AppState,
+    id: &str,
+    op_id: &OperationId,
+    cancel_token: tokio_util::sync::CancellationToken,
+) -> Result<serde_json::Value, CoreError> {
+    use astro_up_core::backup::BackupService;
+    use astro_up_core::download::DownloadManager;
+    use astro_up_core::engine::orchestrator::{Orchestrator, UpdateRequest};
+    use astro_up_core::install::InstallerService;
+
+    let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+    let packages = CatalogPackageSource::new(catalog_path);
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+
+    let config = state.config.lock().unwrap().clone();
+    let (event_tx, rx) = broadcast::channel::<Event>(64);
+    forward_events(app.clone(), rx);
+
+    let downloader = DownloadManager::new(&config.network, event_tx)?;
+    let installer = InstallerService::new(
+        std::time::Duration::from_secs(600),
+        std::env::temp_dir().join("astro-up").join("installs"),
+    );
+    let backup_dir = state
+        .db_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("backups");
+    let backup = BackupService::new(backup_dir, 5);
+
+    let db_conn =
+        rusqlite::Connection::open(&state.db_path).map_err(|e| CoreError::from(e.to_string()))?;
+    let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
+    let lock_path = state
+        .db_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("orchestration.lock");
+
+    let orchestrator = astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
+        &lock_path, packages, ledger, downloader, installer, backup, db,
+    )?;
+
+    let pkg_id: astro_up_core::catalog::PackageId = id.parse().map_err(|e: CoreError| e)?;
+    let plan = orchestrator
+        .plan(UpdateRequest {
+            packages: vec![pkg_id],
+            allow_major: false,
+            allow_downgrade: false,
+            dry_run: false,
+            confirmed: true,
+        })
+        .await?;
+
+    let app_clone = app.clone();
+    let on_event: astro_up_core::engine::orchestrator::EventCallback = Box::new(move |event| {
+        emit_event(&app_clone, &event);
+    });
+
+    let result = orchestrator.execute(plan, on_event, cancel_token).await?;
+    serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
+}
+
 #[tauri::command]
 pub async fn install_software(
     app: AppHandle,
@@ -284,20 +350,43 @@ pub async fn install_software(
     id: String,
 ) -> Result<OperationId, CoreError> {
     let start = std::time::Instant::now();
-    let (op_id, _token) = state.register_operation();
+    let (op_id, token) = state.register_operation();
     tracing::debug!(
         command = "install_software",
         package = id,
         operation_id = op_id.id,
         "Command invoked"
     );
-    // TODO: needs Orchestrator with 5 trait implementations
-    let _ = &app;
+
+    let app_clone = app.clone();
+    let op_id_clone = op_id.clone();
+    let db_path = state.db_path.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let state_ref = app_clone.state::<AppState>();
+        match run_orchestrated_operation(&app_clone, &state_ref, &id, &op_id_clone, token).await {
+            Ok(_) => {
+                tracing::info!(command = "install_software", package = id, "Completed");
+            }
+            Err(e) => {
+                tracing::error!(command = "install_software", package = id, error = %e, "Failed");
+                emit_event(
+                    &app_clone,
+                    &Event::InstallFailed {
+                        id: id.clone(),
+                        error: e.message,
+                    },
+                );
+            }
+        }
+        state_ref.remove_operation(&op_id_clone.id);
+    });
+
     tracing::debug!(
         command = "install_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed (stub)"
+        "Command dispatched"
     );
     Ok(op_id)
 }
@@ -309,20 +398,42 @@ pub async fn update_software(
     id: String,
 ) -> Result<OperationId, CoreError> {
     let start = std::time::Instant::now();
-    let (op_id, _token) = state.register_operation();
+    let (op_id, token) = state.register_operation();
     tracing::debug!(
         command = "update_software",
         package = id,
         operation_id = op_id.id,
         "Command invoked"
     );
-    // TODO: needs Orchestrator with 5 trait implementations
-    let _ = &app;
+
+    let app_clone = app.clone();
+    let op_id_clone = op_id.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let state_ref = app_clone.state::<AppState>();
+        match run_orchestrated_operation(&app_clone, &state_ref, &id, &op_id_clone, token).await {
+            Ok(_) => {
+                tracing::info!(command = "update_software", package = id, "Completed");
+            }
+            Err(e) => {
+                tracing::error!(command = "update_software", package = id, error = %e, "Failed");
+                emit_event(
+                    &app_clone,
+                    &Event::InstallFailed {
+                        id: id.clone(),
+                        error: e.message,
+                    },
+                );
+            }
+        }
+        state_ref.remove_operation(&op_id_clone.id);
+    });
+
     tracing::debug!(
         command = "update_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed (stub)"
+        "Command dispatched"
     );
     Ok(op_id)
 }
