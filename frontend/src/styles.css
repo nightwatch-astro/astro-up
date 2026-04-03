@@ -1,3 +1,16 @@
+/* Font size / UI scale (FR-035) */
+:root {
+  --ui-scale: 1;
+}
+
+:root[data-font-size="small"] {
+  --ui-scale: 0.875;
+}
+
+:root[data-font-size="large"] {
+  --ui-scale: 1.125;
+}
+
 *,
 *::before,
 *::after {
@@ -20,11 +33,37 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: calc(14px * var(--ui-scale));
 }
 
 #app {
   display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
+  min-width: 800px;
+}
+
+/* Min window size enforcement (FR-023) */
+@media (max-width: 800px) {
+  body {
+    min-width: 800px;
+    overflow-x: auto;
+  }
+}
+
+/* Responsive grid column collapse (FR-024) */
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .dashboard-columns {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Table horizontal scroll on narrow viewports */
+@media (max-width: 700px) {
+  .p-datatable-wrapper {
+    overflow-x: auto;
+  }
 }
