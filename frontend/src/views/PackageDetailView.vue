@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import Tabs from "primevue/tabs";
 import TabList from "primevue/tablist";
@@ -30,6 +30,8 @@ const backupMutation = useCreateBackup();
 const { startOperation } = useOperations();
 
 const showBackupConfirm = ref(false);
+const tabsReady = ref(false);
+onMounted(() => { tabsReady.value = true; });
 
 const pkg = computed<PackageWithStatus | undefined>(() => {
   if (!software.value) return undefined;
@@ -93,7 +95,7 @@ function confirmBackup() {
       />
 
       <div class="detail-content">
-        <Tabs value="0">
+        <Tabs v-if="tabsReady" value="0">
           <TabList>
             <Tab value="0">
               Overview
