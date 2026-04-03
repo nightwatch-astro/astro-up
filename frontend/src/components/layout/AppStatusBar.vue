@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useSoftwareList, useUpdateCheck } from "../../composables/useInvoke";
 import { useOperations } from "../../composables/useOperations";
 
@@ -20,8 +21,37 @@ const installedCount = computed(() => {
 });
 const updateCount = computed(() => updates.value?.length ?? 0);
 
-// TODO: persist scan timestamp to show real "Last scan: 14:30" (#TBD)
-const lastSync = "Never";
+const lastScanTime = ref<Date | null>(null);
+let unlistenScan: UnlistenFn | null = null;
+let unlistenCatalog: UnlistenFn | null = null;
+
+onMounted(async () => {
+  try {
+    unlistenScan = await listen("core-event", (event) => {
+      const payload = event.payload as { type?: string };
+      if (payload.type === "scan_complete") {
+        lastScanTime.value = new Date();
+      }
+    });
+    unlistenCatalog = await listen("catalog-status", (event) => {
+      if (event.payload === "ready") {
+        lastScanTime.value = new Date();
+      }
+    });
+  } catch {
+    // Not running inside Tauri
+  }
+});
+
+onUnmounted(() => {
+  unlistenScan?.();
+  unlistenCatalog?.();
+});
+
+const lastSync = computed(() => {
+  if (!lastScanTime.value) return "Never";
+  return lastScanTime.value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+});
 </script>
 
 <template>
