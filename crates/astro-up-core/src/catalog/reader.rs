@@ -204,24 +204,91 @@ impl SqliteCatalogReader {
         &self,
         id: &PackageId,
     ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
-        let result: Option<String> = self
+        let result = self
             .conn
             .query_row(
-                "SELECT config_json FROM detection WHERE package_id = ?1",
+                "SELECT method, path, registry_key, registry_value,
+                        fallback_method, fallback_path
+                 FROM detection WHERE package_id = ?1",
                 params![id.as_ref()],
-                |row| row.get(0),
+                |row| {
+                    let method_str: String = row.get(0)?;
+                    let path: Option<String> = row.get(1)?;
+                    let registry_key: Option<String> = row.get(2)?;
+                    let registry_value: Option<String> = row.get(3)?;
+                    let fallback_method: Option<String> = row.get(4)?;
+                    let fallback_path: Option<String> = row.get(5)?;
+                    Ok((
+                        method_str,
+                        path,
+                        registry_key,
+                        registry_value,
+                        fallback_method,
+                        fallback_path,
+                    ))
+                },
             )
             .optional()
             .unwrap_or(None); // Table may not exist in old catalogs
 
-        match result {
-            Some(json) => {
-                let config: crate::types::DetectionConfig =
-                    serde_json::from_str(&json).map_err(|_| CoreError::CatalogCorrupted)?;
-                Ok(Some(config))
+        let Some((method_str, path, registry_key, registry_value, fallback_method, fallback_path)) =
+            result
+        else {
+            return Ok(None);
+        };
+
+        let method = match method_str.as_str() {
+            "registry" => crate::types::DetectionMethod::Registry,
+            "file" => crate::types::DetectionMethod::PeFile,
+            "wmi" => crate::types::DetectionMethod::Wmi,
+            "driver_store" => crate::types::DetectionMethod::DriverStore,
+            "ascom_profile" => crate::types::DetectionMethod::AscomProfile,
+            "file_exists" => crate::types::DetectionMethod::FileExists,
+            "config_file" => crate::types::DetectionMethod::ConfigFile,
+            _ => {
+                tracing::warn!(package = %id, method = %method_str, "unknown detection method");
+                return Ok(None);
             }
-            None => Ok(None),
-        }
+        };
+
+        let fallback = match (fallback_method, fallback_path) {
+            (Some(fm), fp) => {
+                let fb_method = match fm.as_str() {
+                    "registry" => crate::types::DetectionMethod::Registry,
+                    "file" => crate::types::DetectionMethod::PeFile,
+                    "file_exists" => crate::types::DetectionMethod::FileExists,
+                    _ => return Ok(None),
+                };
+                Some(Box::new(crate::types::DetectionConfig {
+                    method: fb_method,
+                    file_path: fp,
+                    registry_key: None,
+                    registry_value: None,
+                    version_regex: None,
+                    product_code: None,
+                    upgrade_code: None,
+                    inf_provider: None,
+                    device_class: None,
+                    inf_name: None,
+                    fallback: None,
+                }))
+            }
+            _ => None,
+        };
+
+        Ok(Some(crate::types::DetectionConfig {
+            method,
+            file_path: path,
+            registry_key,
+            registry_value,
+            version_regex: None,
+            product_code: None,
+            upgrade_code: None,
+            inf_provider: None,
+            device_class: None,
+            inf_name: None,
+            fallback,
+        }))
     }
 
     /// List all packages with their detection configs (for scanning).
