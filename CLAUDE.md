@@ -121,6 +121,7 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - localStorage for config snapshots, mock data layer for stubbed Tauri commands (022-vue-frontend)
 
 ## Recent Changes
+- 022-vue-frontend: Complete Vue 3 frontend — 6 views (Dashboard, Catalog, Installed, Detail, Backup, Settings), 30+ components, vue-router hash mode, valibot validation, mock data layer, keyboard shortcuts, operations dock + log panel
 - 016-tauri-app-shell: Tauri v2 shell — 11 commands (6 wired to core), system tray with badge, theme switching, error toasts, self-update check, close-during-operation prompt
 - 015-cli-interface: CLI scaffold — all 9 commands, dual-layer tracing, OutputMode, exit codes, JSON output, confirmation helpers
 - 003-core-domain-types: Added Rust 2024 edition + serde 1, serde_json 1, thiserror 2, strum 0.26, trait-variant 0.1, semver 1, chrono 0.4
