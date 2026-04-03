@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en" class="p-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Astro-Up — Frontend Mockups</title>
+  <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css">
+  <style>
+    :root {
+      --bg-base: #0b1121; --bg-surface: #111827; --bg-card: #1e293b; --bg-elevated: #0f172a;
+      --border: #1e293b; --border-hover: #334155;
+      --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-muted: #64748b; --text-dim: #475569;
+      --blue: #2563eb; --blue-hover: #1d4ed8; --blue-bg: #1e3a5f; --blue-text: #60a5fa;
+      --green: #34d399; --green-bg: #064e3b;
+      --yellow: #fbbf24; --yellow-text: #f59e0b; --yellow-bg: #451a03;
+      --red: #ef4444; --red-bg: #7f1d1d;
+      --purple: #a78bfa; --purple-bg: #4a1d96;
+      --teal: #5eead4; --teal-bg: #134e4a;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-base); color: var(--text-secondary); min-height: 100vh; }
+    a { color: var(--blue-text); text-decoration: none; }
+
+    .app { display: flex; height: 100vh; }
+    .sidebar { width: 220px; background: var(--bg-elevated); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar-header { padding: 20px 16px; border-bottom: 1px solid var(--border); }
+    .sidebar-header h1 { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+    .sidebar-header .ver { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .sidebar-nav { flex: 1; padding: 8px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); cursor: pointer; color: var(--text-secondary); font-size: 14px; transition: all .15s; user-select: none; }
+    .nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+    .nav-item.active { background: var(--blue-bg); color: var(--blue-text); }
+    .nav-item i { font-size: 16px; width: 20px; text-align: center; }
+    .nav-badge { margin-left: auto; background: var(--yellow-text); color: #000; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
+    .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+
+    .main { flex: 1; overflow-y: auto; padding-bottom: 28px; }
+    .page { display: none; padding: 24px 32px; max-width: 1200px; }
+    .page.active { display: block; }
+    .page-hdr h2 { font-size: 22px; font-weight: 600; color: var(--text-primary); }
+    .page-hdr p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .page-hdr { margin-bottom: 24px; }
+
+    .btn { padding: 8px 18px; border-radius: var(--radius); font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; white-space: nowrap; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-xs { padding: 3px 10px; font-size: 11px; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: var(--blue-hover); }
+    .btn-warning { background: #d97706; color: #fff; }
+    .btn-warning:hover { background: #b45309; }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-success { background: #059669; color: #fff; }
+    .btn-outline { border-color: var(--border-hover); background: transparent; color: var(--text-secondary); }
+    .btn-outline:hover { border-color: var(--blue-text); color: var(--blue-text); }
+    .btn-ghost { border: none; background: transparent; color: var(--text-secondary); padding: 6px; cursor: pointer; }
+    .icon-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border-hover); background: transparent; color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; transition: all .15s; }
+    .icon-btn:hover { border-color: var(--blue-text); color: var(--blue-text); }
+    .icon-btn.danger:hover { border-color: var(--red); color: var(--red); }
+    .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
+    .btn-danger:hover { background: #dc2626; }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-hover); border-radius: var(--radius-lg); }
+    .section-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+    .tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .3px; }
+    .tag-capture { background: var(--blue-bg); color: var(--blue-text); }
+    .tag-guiding { background: var(--green-bg); color: var(--green); }
+    .tag-platesolving { background: var(--purple-bg); color: var(--purple); }
+    .tag-driver { background: var(--yellow-bg); color: var(--yellow); }
+    .tag-focusing { background: var(--red-bg); color: #fca5a5; }
+    .tag-planetarium { background: var(--teal-bg); color: var(--teal); }
+    .tag-prerequisites { background: #1a1a2e; color: #9ca3af; }
+    .tag-usb { background: #1a1a2e; color: #9ca3af; }
+    .tag-viewers { background: #1a1a2e; color: #9ca3af; }
+    .tag-equipment { background: #1a1a2e; color: #9ca3af; }
+
+    .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .status-dot.installed { background: var(--green); }
+    .status-dot.update { background: var(--yellow); }
+    .status-dot.none { background: var(--text-dim); }
+
+    .search-box { position: relative; }
+    .search-box input { width: 100%; padding: 9px 12px 9px 34px; border-radius: var(--radius); border: 1px solid var(--border-hover); background: var(--bg-card); color: var(--text-primary); font-size: 13px; outline: none; }
+    .search-box input:focus { border-color: var(--blue); }
+    .search-box i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px; }
+
+    .chip { padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border-hover); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all .15s; user-select: none; }
+    .chip:hover { border-color: var(--blue-text); color: var(--blue-text); }
+    .chip.active { background: var(--blue-bg); border-color: var(--blue); color: var(--blue-text); }
+
+    .toggle { width: 38px; height: 20px; border-radius: 10px; background: var(--border-hover); position: relative; cursor: pointer; transition: background .2s; flex-shrink: 0; }
+    .toggle.on { background: var(--blue); }
+    .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+    .toggle.on::after { transform: translateX(18px); }
+
+    .progress-bar { height: 5px; background: var(--border-hover); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+    .progress-fill.blue { background: var(--blue); }
+    .progress-fill.green { background: var(--green); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 14px; height: 14px; border: 2px solid var(--border-hover); border-top-color: var(--blue-text); border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
+
+    .ops-dock { position: fixed; bottom: 0; left: 220px; right: 0; background: var(--bg-elevated); border-top: 1px solid var(--border-hover); z-index: 50; }
+    .ops-dock.hidden { display: none; }
+    .ops-bar { display: flex; align-items: center; gap: 12px; padding: 10px 24px; }
+    .ops-bar .label { font-size: 13px; color: var(--text-primary); flex: 1; }
+    .ops-bar .pct { font-size: 12px; color: var(--text-muted); min-width: 36px; text-align: right; }
+    .ops-bar .cancel { font-size: 11px; color: var(--red); cursor: pointer; margin-left: 8px; }
+
+    /* Dashboard */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat { padding: 18px; }
+    .stat .lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+    .stat .val { font-size: 28px; font-weight: 700; color: var(--text-primary); margin-top: 2px; }
+    .stat .sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+    .stat.warn .val { color: var(--yellow-text); }
+    .stat.warn { cursor: pointer; }
+    .upd-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
+    .upd-row:last-child { border-bottom: none; }
+    .upd-row:hover { background: rgba(255,255,255,.02); }
+    .upd-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--border-hover); display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--blue-text); flex-shrink: 0; }
+    .upd-name { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+    .upd-ver { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .upd-arrow { color: var(--yellow-text); font-size: 12px; }
+    .quick-actions { display: flex; gap: 10px; margin-bottom: 24px; }
+    .act-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--border); }
+    .act-row:last-child { border-bottom: none; }
+    .act-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+    .act-icon.install { background: var(--green-bg); color: var(--green); }
+    .act-icon.update { background: var(--yellow-bg); color: var(--yellow); }
+    .act-icon.scan { background: #1e1b4b; color: #818cf8; }
+    .act-text .name { font-size: 13px; color: var(--text-primary); }
+    .act-text .det { font-size: 11px; color: var(--text-muted); }
+    .act-time { font-size: 11px; color: var(--text-dim); margin-left: auto; }
+
+    /* Catalog */
+    .catalog-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+    .sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .sw-card { padding: 18px; cursor: pointer; transition: all .15s; }
+    .sw-card:hover { border-color: var(--text-dim); transform: translateY(-1px); }
+    .sw-card-hdr { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+    .sw-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--border-hover); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--blue-text); flex-shrink: 0; }
+    .sw-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .sw-pub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .sw-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .sw-foot { display: flex; align-items: center; justify-content: space-between; }
+    .sw-status { font-size: 11px; }
+
+    /* Installed */
+    .inst-group-hdr { padding: 10px 16px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+    .inst-group-hdr.warn { background: var(--yellow-bg); color: var(--yellow); }
+    .inst-group-hdr.ok { background: var(--bg-elevated); color: var(--green); }
+    .inst-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
+    .inst-row:last-child { border-bottom: none; }
+    .inst-row:hover { background: rgba(255,255,255,.02); }
+    .inst-row .sw-icon { width: 38px; height: 38px; font-size: 15px; }
+    .inst-info { flex: 1; min-width: 0; }
+    .inst-name { font-size: 14px; color: var(--text-primary); font-weight: 500; }
+    .inst-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .inst-version { font-size: 12px; min-width: 120px; text-align: right; margin-right: 8px; }
+    .inst-actions { display: flex; gap: 6px; align-items: center; }
+
+    /* Detail */
+    .detail-hero { display: flex; gap: 24px; margin-bottom: 28px; }
+    .detail-icon { width: 72px; height: 72px; border-radius: 14px; background: var(--border-hover); display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--blue-text); flex-shrink: 0; }
+    .detail-name { font-size: 26px; font-weight: 700; color: var(--text-primary); }
+    .detail-pub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .detail-desc { font-size: 13px; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+    .detail-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-hover); margin-bottom: 20px; }
+    .tab { padding: 10px 18px; font-size: 13px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; user-select: none; }
+    .tab:hover { color: var(--text-primary); }
+    .tab.active { color: var(--blue-text); border-bottom-color: var(--blue); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .info-item { background: var(--bg-card); padding: 14px; border-radius: var(--radius); border: 1px solid var(--border); }
+    .info-item .lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+    .info-item .val { font-size: 13px; color: var(--text-primary); margin-top: 3px; }
+    .ver-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .ver-table th { text-align: left; padding: 9px 16px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border-hover); }
+    .ver-table td { padding: 10px 16px; font-size: 13px; color: var(--text-primary); border-bottom: 1px solid var(--border); }
+    .ver-table tr:hover td { background: var(--bg-card); }
+    .ver-current { background: rgba(37,99,235,.08); }
+    .ver-badge { font-size: 10px; color: var(--green); background: var(--green-bg); padding: 2px 6px; border-radius: 4px; margin-left: 6px; text-transform: uppercase; font-weight: 600; }
+
+    /* Backup */
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+    .form-group select, .form-group input[type="text"] { padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--border-hover); background: var(--bg-card); color: var(--text-primary); font-size: 13px; outline: none; min-width: 200px; }
+    .form-group select:focus { border-color: var(--blue); }
+    .backup-list-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .backup-list-item:last-child { border-bottom: none; }
+    .bk-icon { width: 38px; height: 38px; border-radius: 8px; background: var(--border-hover); display: flex; align-items: center; justify-content: center; color: var(--blue-text); font-size: 14px; flex-shrink: 0; }
+    .bk-info { flex: 1; }
+    .bk-name { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+    .bk-det { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Settings */
+    .settings-layout { display: flex; gap: 24px; }
+    .settings-nav { width: 180px; flex-shrink: 0; }
+    .sn-item { padding: 7px 12px; border-radius: 6px; font-size: 13px; color: var(--text-secondary); cursor: pointer; margin-bottom: 2px; user-select: none; }
+    .sn-item:hover { background: var(--bg-card); color: var(--text-primary); }
+    .sn-item.active { background: var(--blue-bg); color: var(--blue-text); }
+    .settings-section { padding: 20px; margin-bottom: 14px; }
+    .settings-section h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 14px; }
+    .s-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); gap: 16px; }
+    .s-row:last-child { border-bottom: none; }
+    .s-label { font-size: 13px; color: var(--text-primary); }
+    .s-hint { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .s-input input, .s-input select { padding: 7px 11px; border-radius: 6px; border: 1px solid var(--border-hover); background: var(--bg-elevated); color: var(--text-primary); font-size: 13px; outline: none; }
+
+    /* Status bar */
+    .status-bar { position: fixed; bottom: 0; left: 220px; right: 0; height: 26px; background: var(--bg-elevated); border-top: 1px solid var(--border-hover); display: flex; align-items: center; gap: 16px; padding: 0 16px; font-size: 11px; color: var(--text-muted); z-index: 60; }
+    .status-bar .sep { color: var(--border-hover); }
+    .status-bar .log-toggle { margin-left: auto; background: transparent; border: 1px solid var(--border-hover); border-radius: 4px; color: var(--text-muted); font-size: 11px; padding: 1px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .status-bar .log-toggle:hover { border-color: var(--blue-text); color: var(--blue-text); }
+    .status-bar .log-toggle.active { border-color: var(--blue); color: var(--blue-text); }
+
+    /* Log panel */
+    .log-panel { position: fixed; bottom: 26px; left: 220px; right: 0; height: 220px; background: #0a0e1a; border-top: 1px solid var(--border-hover); z-index: 55; display: flex; flex-direction: column; }
+    .log-panel.hidden { display: none; }
+    .log-panel-header { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+    .log-panel-header select { padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-hover); background: var(--bg-elevated); color: var(--text-primary); font-size: 11px; outline: none; }
+    .log-panel-body { flex: 1; overflow-y: auto; padding: 6px 12px; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 11px; line-height: 1.7; }
+    .log-line { white-space: nowrap; }
+    .log-line .ts { color: var(--text-dim); }
+    .log-line .lvl-info { color: var(--blue-text); }
+    .log-line .lvl-warn { color: var(--yellow-text); }
+    .log-line .lvl-error { color: var(--red); }
+    .log-line .lvl-debug { color: var(--text-muted); }
+    .log-line .lvl-trace { color: var(--text-dim); }
+    .log-line .msg { color: var(--text-secondary); }
+
+    /* Styled selects */
+    select { padding: 7px 11px; border-radius: 6px; border: 1px solid var(--border-hover); background: var(--bg-elevated); color: var(--text-primary); font-size: 13px; outline: none; }
+    select:focus { border-color: var(--blue); }
+
+    @media (max-width: 900px) { .stats { grid-template-columns: repeat(2, 1fr); } .info-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ==== DATA ====
+const PACKAGES = [
+  { id:'nina', name:'N.I.N.A.', pub:'Stefan Berg', cat:'capture', icon:'pi-camera', desc:'Nighttime Imaging \'N\' Astronomy \u2014 advanced imaging suite with sequencer, plate solving, and equipment control.', installed:'3.1.2', latest:'3.2.0', method:'InnoSetup', homepage:'nighttime-imaging.eu', license:'MPL-2.0', deps:'.NET 8.0 Desktop Runtime, ASCOM Platform', backupPaths:'%LOCALAPPDATA%\\NINA\\Profiles\\*.json', detection:'Registry (HKLM\\SOFTWARE\\NINA)', hasBackup:true },
+  { id:'phd2', name:'PHD2', pub:'OpenPHD', cat:'guiding', icon:'pi-compass', desc:'Push Here Dummy guiding software. The most popular free auto-guiding solution for astrophotography.', installed:'2.6.13', latest:'2.6.13', method:'InnoSetup', homepage:'openphdguiding.org', license:'BSD-3', deps:'None', backupPaths:'%APPDATA%\\PHDGuiding2\\*.cfg', detection:'Registry', hasBackup:true },
+  { id:'astap', name:'ASTAP', pub:'Han Kleijn', cat:'platesolving', icon:'pi-star', desc:'Astrometric STAcking Program \u2014 plate solver and FITS viewer with stacking capabilities.', installed:'2024.12.28', latest:'2024.12.28', method:'InnoSetup', homepage:'hnsky.org', license:'Freeware', deps:'None', backupPaths:'%APPDATA%\\astap\\*.cfg', detection:'PE File', hasBackup:true },
+  { id:'stellarium', name:'Stellarium', pub:'Stellarium Developers', cat:'planetarium', icon:'pi-globe', desc:'Free open source planetarium. Shows a realistic 3D sky as seen with the naked eye, binoculars or a telescope.', installed:null, latest:'24.4', method:'InnoSetup', homepage:'stellarium.org', license:'GPL-2.0', deps:'None', backupPaths:null, detection:'Registry', hasBackup:false },
+  { id:'ascom', name:'ASCOM Platform', pub:'ASCOM Initiative', cat:'prerequisites', icon:'pi-cog', desc:'Standard interface for astronomy device communication. Required by most capture and guiding software.', installed:'6.6 SP2', latest:'6.6 SP2', method:'MSI', homepage:'ascom-standards.org', license:'Freeware', deps:'None', backupPaths:'ASCOM Profile registry export', detection:'Registry', hasBackup:true },
+  { id:'ftdi', name:'FTDI CDM Driver', pub:'FTDI', cat:'driver', icon:'pi-bolt', desc:'Combined Driver Model for FTDI USB devices. Required for many mount and focuser USB connections.', installed:'2.12.36', latest:'2.12.38', method:'Exe', homepage:'ftdichip.com', license:'Proprietary', deps:'None', backupPaths:null, detection:'DriverStore', hasBackup:false },
+  { id:'sharpcap', name:'SharpCap', pub:'Robin Glover', cat:'capture', icon:'pi-eye', desc:'Astronomy camera capture tool for Windows. Live stacking, polar alignment, and sensor analysis.', installed:'4.1.0', latest:'4.2.1', method:'InnoSetup', homepage:'sharpcap.co.uk', license:'Freeware', deps:'None', backupPaths:'%APPDATA%\\SharpCap\\*.xml', detection:'Registry', hasBackup:true },
+  { id:'kstars', name:'KStars / Ekos', pub:'KDE', cat:'capture', icon:'pi-sun', desc:'Desktop planetarium with Ekos astrophotography suite. Cross-platform INDI-based equipment control.', installed:null, latest:'3.7.4', method:'Exe', homepage:'kstars.kde.org', license:'GPL-2.0', deps:'None', backupPaths:null, detection:'FileExists', hasBackup:false },
+  { id:'greenswamp', name:'Green Swamp Server', pub:'GreenSwamp', cat:'equipment', icon:'pi-server', desc:'ASCOM Remote server for network equipment sharing across imaging applications.', installed:null, latest:'1.2.0', method:'MSI', homepage:null, license:'Freeware', deps:'ASCOM Platform', backupPaths:null, detection:'Registry', hasBackup:false },
+  { id:'focusmax', name:'FocusMax', pub:'FocusMax', cat:'focusing', icon:'pi-bullseye', desc:'Automated telescope focusing software using V-curve and half-flux diameter methods.', installed:'4.0.57', latest:'4.0.57', method:'InnoSetup', homepage:null, license:'Freeware', deps:'ASCOM Platform', backupPaths:null, detection:'Registry', hasBackup:false },
+  { id:'siril', name:'Siril', pub:'Free-Astro', cat:'viewers', icon:'pi-images', desc:'Free astronomical image processing tool. Registration, stacking, and post-processing for deep-sky images.', installed:null, latest:'1.2.4', method:'Exe', homepage:'siril.org', license:'GPL-3.0', deps:'None', backupPaths:null, detection:'FileExists', hasBackup:false },
+  { id:'cp210x', name:'Silicon Labs CP210x', pub:'Silicon Labs', cat:'usb', icon:'pi-bolt', desc:'USB to UART bridge driver for CP210x chipsets. Used by many astronomy USB accessories.', installed:'11.3.0', latest:'11.3.0', method:'Exe', homepage:'silabs.com', license:'Proprietary', deps:'None', backupPaths:null, detection:'DriverStore', hasBackup:false },
+];
+
+const BACKUPS = [
+  { pkg:'nina', ver:'3.1.2', files:12, size:'2.4 MB', date:'Today 12:30' },
+  { pkg:'phd2', ver:'2.6.13', files:3, size:'48 KB', date:'Yesterday' },
+  { pkg:'nina', ver:'3.1.1', files:11, size:'2.1 MB', date:'Mar 20' },
+  { pkg:'ascom', ver:'6.6', files:1, size:'340 KB', date:'Mar 15' },
+  { pkg:'nina', ver:'3.1.0', files:10, size:'1.9 MB', date:'Feb 28' },
+];
+
+const BACKUP_PACKAGES = [...new Set(BACKUPS.map(b => b.pkg))];
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.textContent; }
+function getPkg(id) { return PACKAGES.find(p => p.id === id); }
+function isUpdate(p) { return p.installed && p.installed !== p.latest; }
+function getInstalled() { return PACKAGES.filter(p => p.installed); }
+function getUpdatable() { return PACKAGES.filter(isUpdate); }
+function pkgSearchText(p) { return [p.id, p.name, p.desc, p.pub, p.cat, p.method, p.license, p.deps].join(' ').toLowerCase(); }
+
+// ==== GENERIC CONFIRM DIALOG ====
+function showConfirmDialog({ title, icon, iconColor, message, detailHTML, confirmText, confirmClass, onConfirm }) {
+  const existing = document.getElementById('confirm-overlay');
+  if (existing) existing.remove();
+  const ov = document.createElement('div');
+  ov.id = 'confirm-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center';
+  const dlg = document.createElement('div');
+  dlg.style.cssText = 'background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius-lg);padding:24px;width:500px;max-width:90vw;max-height:80vh;overflow-y:auto';
+  const hdr = document.createElement('div'); hdr.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:16px';
+  if (icon) { const ic = document.createElement('i'); ic.className = 'pi ' + icon; ic.style.cssText = 'font-size:18px;color:' + (iconColor || 'var(--blue-text)'); hdr.appendChild(ic); }
+  const tt = document.createElement('span'); tt.style.cssText = 'font-size:16px;font-weight:600;color:var(--text-primary)'; tt.textContent = title; hdr.appendChild(tt);
+  dlg.appendChild(hdr);
+  if (message) { const msg = document.createElement('div'); msg.style.cssText = 'font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.5'; msg.textContent = message; dlg.appendChild(msg); }
+  if (detailHTML) { const det = document.createElement('div'); det.style.cssText = 'margin-bottom:16px'; det.innerHTML = detailHTML; dlg.appendChild(det); }
+  const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:8px;justify-content:flex-end';
+  const cancelBtn = document.createElement('button'); cancelBtn.className = 'btn btn-outline btn-sm'; cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => ov.remove());
+  const okBtn = document.createElement('button'); okBtn.className = 'btn btn-sm ' + (confirmClass || 'btn-primary');
+  okBtn.textContent = confirmText || 'Confirm';
+  okBtn.addEventListener('click', () => { ov.remove(); if (onConfirm) onConfirm(); });
+  btns.appendChild(cancelBtn); btns.appendChild(okBtn); dlg.appendChild(btns);
+  ov.appendChild(dlg);
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
+function showInfoDialog({ title, icon, iconColor, detailHTML }) {
+  const existing = document.getElementById('confirm-overlay');
+  if (existing) existing.remove();
+  const ov = document.createElement('div');
+  ov.id = 'confirm-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center';
+  const dlg = document.createElement('div');
+  dlg.style.cssText = 'background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius-lg);padding:24px;width:500px;max-width:90vw;max-height:80vh;overflow-y:auto';
+  const hdr = document.createElement('div'); hdr.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:16px';
+  if (icon) { const ic = document.createElement('i'); ic.className = 'pi ' + icon; ic.style.cssText = 'font-size:18px;color:' + (iconColor || 'var(--blue-text)'); hdr.appendChild(ic); }
+  const tt = document.createElement('span'); tt.style.cssText = 'font-size:16px;font-weight:600;color:var(--text-primary)'; tt.textContent = title; hdr.appendChild(tt);
+  dlg.appendChild(hdr);
+  if (detailHTML) { const det = document.createElement('div'); det.innerHTML = detailHTML; dlg.appendChild(det); }
+  const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:16px';
+  const closeBtn = document.createElement('button'); closeBtn.className = 'btn btn-outline btn-sm'; closeBtn.textContent = 'Close';
+  closeBtn.addEventListener('click', () => ov.remove());
+  btns.appendChild(closeBtn); dlg.appendChild(btns);
+  ov.appendChild(dlg);
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
+// Mock file data for restore/preview
+const MOCK_FILES = [
+  { name:'Profiles/Default.json', action:'overwrite', curSize:'12.4 KB', curDate:'Mar 30 14:22', bkSize:'11.8 KB', bkDate:'Mar 15 09:10' },
+  { name:'Profiles/Imaging.json', action:'overwrite', curSize:'8.2 KB', curDate:'Mar 28 22:15', bkSize:'7.9 KB', bkDate:'Mar 15 09:10' },
+  { name:'Profiles/Guiding.json', action:'overwrite', curSize:'3.1 KB', curDate:'Mar 25 18:00', bkSize:'3.1 KB', bkDate:'Mar 15 09:10' },
+  { name:'Settings/dock-layout.xml', action:'unchanged', curSize:'2.1 KB', curDate:'Feb 20', bkSize:'2.1 KB', bkDate:'Feb 20' },
+  { name:'Settings/filters.xml', action:'unchanged', curSize:'1.8 KB', curDate:'Feb 18', bkSize:'1.8 KB', bkDate:'Feb 18' },
+  { name:'Settings/equipment.xml', action:'unchanged', curSize:'4.5 KB', curDate:'Feb 15', bkSize:'4.5 KB', bkDate:'Feb 15' },
+  { name:'Settings/sequences.xml', action:'unchanged', curSize:'890 B', curDate:'Feb 10', bkSize:'890 B', bkDate:'Feb 10' },
+  { name:'Settings/camera.xml', action:'unchanged', curSize:'1.2 KB', curDate:'Feb 10', bkSize:'1.2 KB', bkDate:'Feb 10' },
+  { name:'Settings/guider.xml', action:'unchanged', curSize:'980 B', curDate:'Feb 10', bkSize:'980 B', bkDate:'Feb 10' },
+  { name:'Settings/focuser.xml', action:'unchanged', curSize:'760 B', curDate:'Feb 10', bkSize:'760 B', bkDate:'Feb 10' },
+  { name:'HorizonDefinitions/home.hrz', action:'new', curSize:null, curDate:null, bkSize:'1.4 KB', bkDate:'Mar 15 09:10' },
+  { name:'Templates/narrowband.json', action:'new', curSize:null, curDate:null, bkSize:'4.2 KB', bkDate:'Mar 15 09:10' },
+];
+
+function fileTableHTML(files, showAction) {
+  const actionColor = { overwrite:'var(--yellow-text)', unchanged:'var(--text-muted)', new:'var(--green)' };
+  const actionLabel = { overwrite:'Overwrite', unchanged:'Unchanged', new:'New' };
+  const thStyle = 'text-align:left;padding:6px 10px;font-size:10px;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border-hover)';
+  const tdStyle = 'font-size:11px;padding:6px 10px;border-bottom:1px solid var(--border)';
+  let headers = showAction
+    ? `<th style="${thStyle}">File</th><th style="${thStyle}">Action</th><th style="${thStyle}">Current</th><th style="${thStyle}">Backup</th>`
+    : `<th style="${thStyle}">File</th><th style="${thStyle}">Size</th><th style="${thStyle}">Modified</th>`;
+  let rows = files.map(f => {
+    if (showAction) {
+      const cur = f.curSize ? `${esc(f.curSize)}, ${esc(f.curDate)}` : '\u2014';
+      return `<tr><td style="${tdStyle};font-family:monospace;color:var(--text-primary)">${esc(f.name)}</td><td style="${tdStyle};color:${actionColor[f.action]}">${actionLabel[f.action]}</td><td style="${tdStyle};color:var(--text-secondary)">${cur}</td><td style="${tdStyle};color:var(--text-secondary)">${esc(f.bkSize)}, ${esc(f.bkDate)}</td></tr>`;
+    } else {
+      return `<tr><td style="${tdStyle};font-family:monospace;color:var(--text-primary)">${esc(f.name)}</td><td style="${tdStyle};color:var(--text-secondary)">${esc(f.bkSize)}</td><td style="${tdStyle};color:var(--text-secondary)">${esc(f.bkDate)}</td></tr>`;
+    }
+  }).join('');
+  return `<div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function showScanConfirm() {
+  showConfirmDialog({ title:'Scan Installed Software', icon:'pi-search', iconColor:'#818cf8', message:'Scan your system for installed astrophotography software? This may take a moment.', confirmText:'Scan', confirmClass:'btn-primary', onConfirm: () => startOp('Scanning installed software...') });
+}
+function showUpdateAllConfirm() {
+  const upd = getUpdatable();
+  const listHTML = upd.map(p => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px;color:var(--text-primary);flex:1">${esc(p.name)}</span><span style="font-size:12px;color:var(--yellow-text)">${esc(p.installed)} \u2192 ${esc(p.latest)}</span></div>`).join('');
+  showConfirmDialog({ title:'Update All', icon:'pi-download', iconColor:'var(--yellow-text)', message:`Update ${upd.length} package${upd.length>1?'s':''}?`, detailHTML: `<div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:4px 12px">${listHTML}</div>`, confirmText:`Update All (${upd.length})`, confirmClass:'btn-warning', onConfirm: () => startOp(`Updating ${upd.length} packages...`) });
+}
+function showUpdateConfirm(pkg) {
+  showConfirmDialog({ title:'Update ' + pkg.name, icon:'pi-download', iconColor:'var(--yellow-text)', message:`Update ${pkg.name} from ${pkg.installed} to ${pkg.latest}?`, confirmText:'Update', confirmClass:'btn-warning', onConfirm: () => startOp(`Updating ${pkg.name} to ${pkg.latest}...`) });
+}
+function showDeleteBackupConfirm(backup) {
+  const pkg = getPkg(backup.pkg);
+  showConfirmDialog({ title:'Delete Backup', icon:'pi-trash', iconColor:'var(--red)', message:`Delete backup for ${pkg.name} v${backup.ver}? This cannot be undone.`, confirmText:'Delete', confirmClass:'btn-danger', onConfirm: () => {} });
+}
+function showRestoreConfirm(backup) {
+  const pkg = getPkg(backup.pkg);
+  const overwrites = MOCK_FILES.filter(f => f.action === 'overwrite').length;
+  const summary = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:12px;margin-bottom:12px"><div><span style="color:var(--yellow-text);font-weight:600">${overwrites}</span> <span style="color:var(--text-muted)">overwritten</span></div><div><span style="color:var(--green);font-weight:600">${MOCK_FILES.filter(f=>f.action==='new').length}</span> <span style="color:var(--text-muted)">new</span></div><div><span style="color:var(--text-secondary);font-weight:600">${MOCK_FILES.filter(f=>f.action==='unchanged').length}</span> <span style="color:var(--text-muted)">unchanged</span></div></div>`;
+  showConfirmDialog({ title:`Restore ${pkg.name} v${backup.ver}`, icon:'pi-replay', iconColor:'var(--green)', message: null, detailHTML: summary + fileTableHTML(MOCK_FILES, true), confirmText:'Restore', confirmClass:'btn-danger', onConfirm: () => startOp(`Restoring ${pkg.name} backup v${backup.ver}...`) });
+}
+function showRestoreFinalConfirm(backup) {
+  const pkg = getPkg(backup.pkg);
+  const overwrites = MOCK_FILES.filter(f => f.action === 'overwrite').length;
+  showConfirmDialog({ title:`Restore ${pkg.name} v${backup.ver}`, icon:'pi-exclamation-triangle', iconColor:'var(--yellow-text)', message:`This will overwrite ${overwrites} file${overwrites>1?'s':''}. This action cannot be undone.`, confirmText:'Restore', confirmClass:'btn-danger', onConfirm: () => startOp(`Restoring ${pkg.name} backup v${backup.ver}...`) });
+}
+function showPreviewContents(backup) {
+  const pkg = getPkg(backup.pkg);
+  const meta = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${esc(pkg.name)} v${esc(backup.ver)} \u2014 ${backup.files} files \u2014 ${esc(backup.size)} \u2014 ${esc(backup.date)}</div>`;
+  showInfoDialog({ title:`Backup Contents: ${pkg.name}`, icon:'pi-eye', detailHTML: meta + fileTableHTML(MOCK_FILES, false) });
+}
+function showCheckAppUpdate() {
+  const existing = document.getElementById('confirm-overlay');
+  if (existing) existing.remove();
+  const ov = document.createElement('div');
+  ov.id = 'confirm-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center';
+  const dlg = document.createElement('div');
+  dlg.style.cssText = 'background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius-lg);padding:24px;width:400px;max-width:90vw;text-align:center';
+  dlg.innerHTML = '<div class="spinner" style="margin:0 auto 12px"></div><div style="font-size:13px;color:var(--text-secondary)">Checking for updates...</div>';
+  ov.appendChild(dlg);
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  setTimeout(() => {
+    dlg.innerHTML = '<div style="margin-bottom:16px"><i class="pi pi-check-circle" style="font-size:32px;color:var(--green)"></i></div><div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Astro-Up is up to date</div><div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">You are running v0.1.0 (latest)</div><div style="display:flex;justify-content:center"><button class="btn btn-outline btn-sm" onclick="document.getElementById(\'confirm-overlay\').remove()">Close</button></div>';
+  }, 1500);
+}
+function showResetDefaultsConfirm() {
+  showConfirmDialog({ title:'Reset to Defaults', icon:'pi-refresh', iconColor:'var(--yellow-text)', message:'Reset all settings to defaults? Your current configuration will be lost.', confirmText:'Reset', confirmClass:'btn-danger', onConfirm: () => {} });
+}
+
+// ==== RENDERING ====
+let currentPage = 'dashboard';
+let detailPkg = null;
+let backFromPage = 'catalog';
+
+function render() {
+  const el = document.getElementById('app');
+  const updatable = getUpdatable();
+  const installed = getInstalled();
+
+  el.textContent = '';
+  el.appendChild(createFromHTML(`
+    <nav class="sidebar">
+      <div class="sidebar-header"><h1>Astro-Up</h1><div class="ver">v0.1.0</div></div>
+      <div class="sidebar-nav" id="sidebar-nav">
+        <div class="nav-item ${currentPage==='dashboard'?'active':''}" data-nav="dashboard"><i class="pi pi-home"></i> Dashboard</div>
+        <div class="nav-item ${currentPage==='catalog'?'active':''}" data-nav="catalog"><i class="pi pi-th-large"></i> Catalog</div>
+        <div class="nav-item ${currentPage==='installed'||currentPage==='detail'?'active':''}" data-nav="installed"><i class="pi pi-check-circle"></i> Installed ${updatable.length?'<span class="nav-badge">'+updatable.length+'</span>':''}</div>
+        <div class="nav-item ${currentPage==='backup'?'active':''}" data-nav="backup"><i class="pi pi-database"></i> Backup</div>
+        <div class="nav-item ${currentPage==='settings'?'active':''}" data-nav="settings"><i class="pi pi-cog"></i> Settings</div>
+      </div>
+      <div class="sidebar-footer">v0.1.0</div>
+    </nav>
+  `));
+
+  const main = document.createElement('div');
+  main.className = 'main';
+
+  if (currentPage === 'dashboard') main.appendChild(renderDashboard());
+  else if (currentPage === 'catalog') main.appendChild(renderCatalog());
+  else if (currentPage === 'installed') main.appendChild(renderInstalled());
+  else if (currentPage === 'detail') main.appendChild(renderDetail());
+  else if (currentPage === 'backup') main.appendChild(renderBackup());
+  else if (currentPage === 'settings') main.appendChild(renderSettings());
+
+  el.appendChild(main);
+  el.appendChild(renderLogPanel());
+  el.appendChild(renderStatusBar());
+  el.appendChild(renderOpsDock());
+  bindNav();
+}
+
+function createFromHTML(html) {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstChild;
+}
+
+function renderDashboard() {
+  const updatable = getUpdatable();
+  const installed = getInstalled();
+  const page = document.createElement('div');
+  page.className = 'page active';
+
+  let updatesHTML = updatable.map(p => `
+    <div class="upd-row" data-detail="${esc(p.id)}">
+      <div class="upd-icon" ${p.cat==='driver'||p.cat==='usb'?'style="color:var(--yellow)"':''}><i class="pi ${esc(p.icon)}"></i></div>
+      <div style="flex:1;min-width:0"><div class="upd-name">${esc(p.name)}</div><div class="upd-ver">${esc(p.cat)} &middot; ${esc(p.method)}</div></div>
+      <div class="upd-arrow">${esc(p.installed)} &rarr; ${esc(p.latest)}</div>
+      <button class="btn btn-warning btn-sm update-pkg-btn" data-pkg-id="${esc(p.id)}">Update</button>
+    </div>
+  `).join('');
+
+  page.appendChild(createFromHTML(`<div>
+    <div class="page-hdr"><h2>Dashboard</h2><p>Overview of your astrophotography software</p></div>
+
+    <div class="stats">
+      <div class="stat card"><div class="lbl">Installed</div><div class="val">${installed.length}</div><div class="sub">of ${PACKAGES.length} in catalog</div></div>
+      <div class="stat card warn" data-nav="installed"><div class="lbl">Updates Available</div><div class="val">${updatable.length}</div><div class="sub">Review and install</div></div>
+      <div class="stat card"><div class="lbl">Last Scan</div><div class="val" style="font-size:18px">Today 14:30</div><div class="sub">${installed.length} packages detected</div></div>
+      <div class="stat card" data-nav="backup" style="cursor:pointer"><div class="lbl">Backups</div><div class="val">${BACKUPS.length}</div><div class="sub">124 MB total</div></div>
+    </div>
+
+    ${updatable.length ? `
+    <div class="section-title"><i class="pi pi-exclamation-circle" style="color:var(--yellow-text);margin-right:6px;font-size:13px"></i>Updates Available</div>
+    <div class="card" style="margin-bottom:24px">
+      ${updatesHTML}
+      <div style="padding:10px 16px;text-align:right">
+        <button class="btn btn-outline btn-sm" data-nav="installed"><i class="pi pi-arrow-right" style="font-size:11px"></i> View all installed</button>
+      </div>
+    </div>` : ''}
+
+    <div class="quick-actions">
+      <button class="btn btn-primary scan-btn"><i class="pi pi-refresh"></i> Scan Installed</button>
+      ${updatable.length ? '<button class="btn btn-outline update-all-btn"><i class="pi pi-download"></i> Update All ('+updatable.length+')</button>' : ''}
+    </div>
+
+    <div class="section-title">Recent Activity</div>
+    <div class="card">
+      <div class="act-row"><div class="act-icon update"><i class="pi pi-arrow-up"></i></div><div class="act-text"><div class="name">N.I.N.A. updated to 3.2.0</div><div class="det">Capture &middot; Silent install</div></div><div class="act-time">2 hours ago</div></div>
+      <div class="act-row"><div class="act-icon install"><i class="pi pi-check"></i></div><div class="act-text"><div class="name">PHD2 installed (2.6.13)</div><div class="det">Guiding &middot; InnoSetup</div></div><div class="act-time">Yesterday</div></div>
+      <div class="act-row"><div class="act-icon scan"><i class="pi pi-search"></i></div><div class="act-text"><div class="name">Full scan completed</div><div class="det">${installed.length} packages found, ${updatable.length} updates available</div></div><div class="act-time">Yesterday</div></div>
+      <div class="act-row"><div class="act-icon install"><i class="pi pi-check"></i></div><div class="act-text"><div class="name">ASCOM Platform installed (6.6 SP2)</div><div class="det">Prerequisites &middot; MSI</div></div><div class="act-time">3 days ago</div></div>
+    </div>
+  </div>`));
+  return page;
+}
+
+function renderCatalog() {
+  const page = document.createElement('div');
+  page.className = 'page active';
+
+  const cats = ['All','Capture','Guiding','Platesolving','Focusing','Planetarium','Viewers','Drivers','Prerequisites','USB','Equipment'];
+  const chipsHTML = cats.map((c,i) => `<div class="chip ${i===0?'active':''}" data-filter="${esc(c)}">${esc(c)}</div>`).join('');
+
+  page.appendChild(createFromHTML(`<div>
+    <div class="page-hdr"><h2>Software Catalog</h2><p>Browse and install astrophotography software</p></div>
+    <div class="catalog-bar">
+      <div class="search-box" style="flex:1"><i class="pi pi-search"></i><input placeholder="Search packages..." id="catalog-search"></div>
+      <div style="display:flex;gap:2px;background:var(--bg-card);border-radius:var(--radius);padding:2px">
+        <button class="btn-ghost" style="border-radius:6px;background:var(--border-hover);color:var(--text-primary)"><i class="pi pi-th-large"></i></button>
+        <button class="btn-ghost" style="border-radius:6px"><i class="pi pi-list"></i></button>
+      </div>
+    </div>
+    <div class="filter-row" id="filter-row">${chipsHTML}</div>
+    <div class="sw-grid" id="catalog-grid"></div>
+  </div>`));
+
+  let catalogFilter = 'all';
+  const searchInput = page.querySelector('#catalog-search');
+
+  function applyCatalogFilters() {
+    const q = searchInput.value.toLowerCase();
+    const f = catalogFilter;
+    let filtered = f === 'all' ? PACKAGES :
+      f === 'drivers' ? PACKAGES.filter(p => p.cat === 'driver') :
+      PACKAGES.filter(p => p.cat === f);
+    if (q) filtered = filtered.filter(p => pkgSearchText(p).includes(q));
+    renderCatalogGrid(page.querySelector('#catalog-grid'), filtered);
+  }
+
+  applyCatalogFilters();
+
+  page.querySelectorAll('.chip[data-filter]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      page.querySelectorAll('.chip[data-filter]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      catalogFilter = chip.dataset.filter.toLowerCase();
+      applyCatalogFilters();
+    });
+  });
+
+  searchInput.addEventListener('input', applyCatalogFilters);
+
+  return page;
+}
+
+function renderCatalogGrid(container, packages) {
+  container.textContent = '';
+  packages.forEach(pkg => {
+    let statusHTML;
+    if (isUpdate(pkg)) statusHTML = `<span class="status-dot update"></span><span style="color:var(--yellow-text)">${esc(pkg.installed)} &rarr; ${esc(pkg.latest)}</span>`;
+    else if (pkg.installed) statusHTML = `<span class="status-dot installed"></span><span style="color:var(--green)">${esc(pkg.installed)}</span>`;
+    else statusHTML = `<span class="status-dot none"></span><span style="color:var(--text-dim)">Not installed</span>`;
+
+    const card = createFromHTML(`<div class="sw-card card" data-detail="${esc(pkg.id)}">
+      <div class="sw-card-hdr">
+        <div class="sw-icon" ${pkg.cat==='driver'||pkg.cat==='usb'?'style="color:var(--yellow)"':''}><i class="pi ${esc(pkg.icon)}"></i></div>
+        <div><div class="sw-name">${esc(pkg.name)}</div><div class="sw-pub">${esc(pkg.pub)}</div></div>
+      </div>
+      <div class="sw-desc">${esc(pkg.desc)}</div>
+      <div class="sw-foot">
+        <span class="tag tag-${esc(pkg.cat)}">${esc(pkg.cat)}</span>
+        <div class="sw-status">${statusHTML}</div>
+      </div>
+    </div>`);
+    card.addEventListener('click', () => { backFromPage = 'catalog'; goDetail(pkg.id); });
+    container.appendChild(card);
+  });
+}
+
+function renderInstalled() {
+  const page = document.createElement('div');
+  page.className = 'page active';
+  const updatable = getUpdatable();
+  const upToDate = getInstalled().filter(p => !isUpdate(p));
+
+  function instRow(p) {
+    const hasUpd = isUpdate(p);
+    const verHTML = hasUpd
+      ? `<span style="color:var(--yellow-text)">${esc(p.installed)} &rarr; ${esc(p.latest)}</span>`
+      : `<span style="color:var(--green)">${esc(p.installed)} <i class="pi pi-check" style="font-size:10px"></i></span>`;
+    const actionsHTML = [
+      p.hasBackup ? `<button class="btn btn-outline btn-xs backup-now-btn" title="Backup now" data-pkg-id="${esc(p.id)}"><i class="pi pi-database"></i> Backup Now</button>` : '',
+      hasUpd ? `<button class="btn btn-warning btn-xs update-pkg-btn" data-pkg-id="${esc(p.id)}">Update</button>` : ''
+    ].join('');
+    return `<div class="inst-row" data-detail="${esc(p.id)}">
+      <div class="sw-icon" ${p.cat==='driver'||p.cat==='usb'?'style="color:var(--yellow)"':''}><i class="pi ${esc(p.icon)}"></i></div>
+      <div class="inst-info"><div class="inst-name">${esc(p.name)}</div><div class="inst-sub">${esc(p.cat)} &middot; ${esc(p.method)}</div></div>
+      <div class="inst-version">${verHTML}</div>
+      <div class="inst-actions">${actionsHTML}</div>
+    </div>`;
+  }
+
+  page.appendChild(createFromHTML(`<div>
+    <div class="page-hdr"><h2>Installed Software</h2><p>${getInstalled().length} installed &middot; ${updatable.length} updates available</p></div>
+    <div class="catalog-bar" style="margin-bottom:20px">
+      <div class="search-box" style="flex:1"><i class="pi pi-search"></i><input placeholder="Filter installed..." id="installed-search"></div>
+      ${updatable.length ? `<button class="btn btn-warning btn-sm update-all-btn"><i class="pi pi-download"></i> Update All (${updatable.length})</button>` : ''}
+      <button class="btn btn-outline btn-sm scan-btn"><i class="pi pi-refresh"></i> Re-scan</button>
+    </div>
+    <div class="card" style="overflow:hidden" id="installed-list">
+      ${updatable.length ? `<div class="inst-group-hdr warn"><i class="pi pi-exclamation-triangle"></i> Updates Available (${updatable.length})</div>` : ''}
+      ${updatable.map(instRow).join('')}
+      <div class="inst-group-hdr ok"><i class="pi pi-check-circle"></i> Up to Date (${upToDate.length})</div>
+      ${upToDate.map(instRow).join('')}
+    </div>
+  </div>`));
+
+  // Search filter
+  const searchInput = page.querySelector('#installed-search');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.toLowerCase();
+    page.querySelectorAll('.inst-row').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+
+  // Row clicks
+  page.querySelectorAll('.inst-row[data-detail]').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('.btn, .icon-btn')) return;
+      backFromPage = 'installed';
+      goDetail(row.dataset.detail);
+    });
+  });
+
+
+  return page;
+}
+
+function renderDetail() {
+  const p = detailPkg;
+  if (!p) return document.createElement('div');
+  const page = document.createElement('div');
+  page.className = 'page active';
+
+  let actionHTML;
+  if (isUpdate(p)) {
+    actionHTML = `<button class="btn btn-warning update-pkg-btn" data-pkg-id="${esc(p.id)}"><i class="pi pi-download"></i> Update to ${esc(p.latest)}</button>`;
+  } else if (p.installed) {
+    actionHTML = `<button class="btn btn-outline" disabled style="opacity:.5"><i class="pi pi-check"></i> Installed (${esc(p.installed)})</button>`;
+  } else {
+    actionHTML = `<button class="btn btn-primary" data-op="Installing ${esc(p.name)} ${esc(p.latest)}"><i class="pi pi-download"></i> Install ${esc(p.latest)}</button>`;
+  }
+  if (p.hasBackup) actionHTML += `<button class="btn btn-outline backup-now-btn" data-pkg-id="${esc(p.id)}"><i class="pi pi-database"></i> Backup Now</button>`;
+  if (p.homepage) actionHTML += `<button class="btn btn-outline"><i class="pi pi-external-link"></i> Homepage</button>`;
+
+  page.appendChild(createFromHTML(`<div>
+    <div class="breadcrumb" data-nav="${esc(backFromPage)}"><i class="pi pi-arrow-left"></i> Back to ${backFromPage==='installed'?'Installed':'Catalog'}</div>
+
+    <div class="detail-hero">
+      <div class="detail-icon" ${p.cat==='driver'||p.cat==='usb'?'style="color:var(--yellow)"':''}><i class="pi ${esc(p.icon)}"></i></div>
+      <div class="detail-meta">
+        <div class="detail-name">${esc(p.name)}</div>
+        <div class="detail-pub">by ${esc(p.pub)}${p.homepage ? ' &middot; <a href="#">'+esc(p.homepage)+'</a>' : ''}</div>
+        <div class="detail-desc">${esc(p.desc)}</div>
+        <div class="detail-actions">${actionHTML}</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="detail-tabs">
+      <div class="tab active" data-tab="overview">Overview</div>
+      <div class="tab" data-tab="versions">Versions</div>
+      ${p.hasBackup ? '<div class="tab" data-tab="backup">Backup</div>' : ''}
+      <div class="tab" data-tab="technical">Technical Details</div>
+    </div>
+
+    <div class="tab-content active" id="tab-overview">
+      <div class="info-grid">
+        ${p.installed ? `<div class="info-item"><div class="lbl">Installed Version</div><div class="val" ${isUpdate(p)?'style="color:var(--yellow-text)"':''}>${esc(p.installed)} ${isUpdate(p)?'<span style="font-size:11px;color:var(--text-muted)">(update available)</span>':''}</div></div>` : '<div class="info-item"><div class="lbl">Status</div><div class="val" style="color:var(--text-muted)">Not installed</div></div>'}
+        <div class="info-item"><div class="lbl">Latest Version</div><div class="val">${esc(p.latest)}</div></div>
+        <div class="info-item"><div class="lbl">Category</div><div class="val"><span class="tag tag-${esc(p.cat)}" style="font-size:12px;padding:3px 10px">${esc(p.cat)}</span></div></div>
+        <div class="info-item"><div class="lbl">Install Method</div><div class="val">${esc(p.method)}</div></div>
+        <div class="info-item"><div class="lbl">Detection</div><div class="val">${esc(p.detection)}</div></div>
+        <div class="info-item"><div class="lbl">License</div><div class="val">${esc(p.license)}</div></div>
+        <div class="info-item"><div class="lbl">Dependencies</div><div class="val">${esc(p.deps)}</div></div>
+        ${p.backupPaths ? `<div class="info-item"><div class="lbl">Backup Paths</div><div class="val" style="font-size:12px;font-family:monospace">${esc(p.backupPaths)}</div></div>` : ''}
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-versions">
+      <div class="card" style="overflow:hidden">
+        <table class="ver-table">
+          <thead><tr><th>Version</th><th>Discovered</th><th>Pre-release</th><th></th></tr></thead>
+          <tbody>
+            ${isUpdate(p) ? `<tr><td><strong>${esc(p.latest)}</strong></td><td>2026-03-28</td><td style="color:var(--text-muted)">No</td><td><button class="btn btn-warning btn-xs update-pkg-btn" data-pkg-id="${esc(p.id)}">Update</button></td></tr>` : ''}
+            ${p.installed ? `<tr class="ver-current"><td><strong>${esc(p.installed)}</strong><span class="ver-badge">installed</span></td><td>2026-02-15</td><td style="color:var(--text-muted)">No</td><td style="color:var(--text-muted);font-size:12px">Current</td></tr>` : `<tr><td><strong>${esc(p.latest)}</strong></td><td>2026-03-28</td><td style="color:var(--text-muted)">No</td><td><button class="btn btn-primary btn-xs" data-op="Installing ${esc(p.name)} ${esc(p.latest)}">Install</button></td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    ${p.hasBackup ? `<div class="tab-content" id="tab-backup">
+      <div class="card settings-section" style="margin-bottom:16px">
+        <h3>Backup Paths</h3>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Files and directories included in backups for ${esc(p.name)}.</div>
+        <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)">
+            <span style="font-family:monospace;font-size:12px;color:var(--text-primary)">${esc(p.backupPaths)}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:10px;color:var(--blue-text);background:var(--blue-bg);padding:2px 6px;border-radius:4px">MANIFEST</span>
+              <span style="font-size:10px;color:var(--green);background:var(--green-bg);padding:2px 6px;border-radius:4px">ACTIVE</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:8px">Custom Paths</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Add additional paths to include in backups. Manifest paths cannot be removed.</div>
+          <div id="custom-paths-list" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)">
+              <span style="font-family:monospace;font-size:12px;color:var(--text-primary);flex:1">%USERPROFILE%\\Documents\\NINA\\SequenceTemplates\\*</span>
+              <span style="font-size:10px;color:var(--text-muted);background:var(--border-hover);padding:2px 6px;border-radius:4px">CUSTOM</span>
+              <button class="icon-btn danger" style="width:24px;height:24px;font-size:11px" title="Remove"><i class="pi pi-times"></i></button>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <div class="search-box" style="flex:1"><i class="pi pi-folder-open" style="font-size:12px"></i><input placeholder="Add path (e.g. %APPDATA%\\MyApp\\*.cfg)" style="font-family:monospace;font-size:12px"></div>
+            <button class="btn btn-outline btn-sm"><i class="pi pi-plus"></i> Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="card settings-section" style="margin-bottom:16px">
+        <h3>Auto-backup</h3>
+        <div class="s-row"><div><div class="s-label">Backup before update</div><div class="s-hint">Automatically create a backup before updating ${esc(p.name)}</div></div><div class="toggle on"></div></div>
+        <div class="s-row"><div><div class="s-label">Include in scheduled backups</div><div class="s-hint">Include in periodic backup schedule (configured in Settings &gt; Backup)</div></div><div class="toggle on"></div></div>
+      </div>
+      <div class="card settings-section" style="margin-bottom:16px">
+        <h3>History</h3>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${BACKUPS.filter(b => b.pkg === p.id).length} backups stored</div>
+        ${BACKUPS.filter(b => b.pkg === p.id).length ? BACKUPS.filter(b => b.pkg === p.id).map(b => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1"><div style="font-size:13px;color:var(--text-primary)">v${esc(b.ver)}</div><div style="font-size:11px;color:var(--text-muted)">${b.files} files &middot; ${esc(b.size)} &middot; ${esc(b.date)}</div></div>
+            <button class="icon-btn" title="Restore"><i class="pi pi-replay"></i></button>
+            <button class="icon-btn danger" title="Delete"><i class="pi pi-trash"></i></button>
+          </div>
+        `).join('') : '<div style="font-size:12px;color:var(--text-muted)">No backups yet.</div>'}
+      </div>
+      <button class="btn btn-primary" data-op="Backing up ${esc(p.name)} config"><i class="pi pi-database"></i> Backup Now</button>
+    </div>` : ''}
+
+    <div class="tab-content" id="tab-technical">
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px">Detection</div>
+      <div class="info-grid" style="margin-bottom:20px">
+        <div class="info-item"><div class="lbl">Detection Method</div><div class="val">${esc(p.detection.split('(')[0].trim())}</div></div>
+        <div class="info-item"><div class="lbl">Detection Details</div><div class="val" style="font-family:monospace;font-size:12px">${esc(p.detection)}</div></div>
+        <div class="info-item"><div class="lbl">Last Result</div><div class="val">${p.installed ? 'Installed &middot; '+esc(p.installed) : 'Not installed'}</div></div>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:10px">Installation</div>
+      <div class="info-grid">
+        <div class="info-item"><div class="lbl">Install Method</div><div class="val">${esc(p.method)}</div></div>
+        <div class="info-item"><div class="lbl">Scope</div><div class="val">Machine</div></div>
+        <div class="info-item"><div class="lbl">Elevation</div><div class="val">Required</div></div>
+        <div class="info-item"><div class="lbl">Upgrade Behavior</div><div class="val">Install (over existing)</div></div>
+      </div>
+    </div>
+  </div>`));
+
+  // Tab switching
+  function switchTab(name) {
+    page.querySelectorAll('#detail-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    page.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + name));
+  }
+  page.querySelectorAll('#detail-tabs .tab').forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  });
+
+  // Auto-switch to tab if requested
+  if (detailInitTab) {
+    switchTab(detailInitTab);
+    detailInitTab = null;
+  }
+
+  // Toggles in backup tab
+  page.querySelectorAll('.toggle').forEach(t => {
+    t.addEventListener('click', () => t.classList.toggle('on'));
+  });
+
+  return page;
+}
+
+function renderBackup() {
+  const page = document.createElement('div');
+  page.className = 'page active';
+
+  const pkgOptions = BACKUP_PACKAGES.map(id => {
+    const p = getPkg(id);
+    return `<option value="${esc(id)}">${esc(p.name)}</option>`;
+  }).join('');
+
+  const firstPkgBackups = BACKUPS.filter(b => b.pkg === BACKUP_PACKAGES[0]);
+  const backupOptions = firstPkgBackups.map((b,i) => `<option value="${i}">v${esc(b.ver)} \u2014 ${esc(b.date)} (${b.files} files, ${esc(b.size)})</option>`).join('');
+
+  function buildBackupList(filterPkg) {
+    const filtered = filterPkg === 'all' ? BACKUPS : BACKUPS.filter(b => b.pkg === filterPkg);
+    // Group by package
+    const groups = {};
+    filtered.forEach((b, origIdx) => {
+      if (!groups[b.pkg]) groups[b.pkg] = [];
+      groups[b.pkg].push({ ...b, idx: BACKUPS.indexOf(b) });
+    });
+    let html = '';
+    for (const [pkgId, items] of Object.entries(groups)) {
+      const p = getPkg(pkgId);
+      html += `<div style="padding:10px 16px;background:var(--bg-elevated);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+        <div class="bk-icon" style="width:28px;height:28px;font-size:12px" ${p.cat==='driver'||p.cat==='usb'?'style="color:var(--yellow)"':''}><i class="pi ${esc(p.icon)}"></i></div>
+        <span style="font-size:13px;font-weight:600;color:var(--text-primary)">${esc(p.name)}</span>
+        <span style="font-size:11px;color:var(--text-muted)">${items.length} backup${items.length>1?'s':''}</span>
+      </div>`;
+      items.forEach(b => {
+        html += `<div class="backup-list-item" style="padding-left:56px">
+          <div class="bk-info"><div class="bk-name">v${esc(b.ver)}</div><div class="bk-det">${b.files} files &middot; ${esc(b.size)} &middot; ${esc(b.date)}</div></div>
+          <div style="display:flex;gap:6px">
+            <button class="icon-btn preview-backup-btn" data-bk-idx="${b.idx}" title="Preview contents"><i class="pi pi-eye"></i></button>
+            <button class="icon-btn danger delete-backup-btn" data-bk-idx="${b.idx}" title="Delete"><i class="pi pi-trash"></i></button>
+          </div>
+        </div>`;
+      });
+    }
+    return html;
+  }
+
+  const allPkgFilterOptions = '<option value="all">All Applications</option>' + BACKUP_PACKAGES.map(id => { const p = getPkg(id); return `<option value="${esc(id)}">${esc(p.name)}</option>`; }).join('');
+
+  page.appendChild(createFromHTML(`<div>
+    <div class="page-hdr"><h2>Backup & Restore</h2><p>Protect your astrophotography software configurations</p></div>
+
+    <div class="section-title">Quick Restore</div>
+    <div class="card" style="padding:20px;margin-bottom:24px">
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group">
+          <label>Application</label>
+          <select id="restore-pkg">${pkgOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Backup</label>
+          <select id="restore-ver">${backupOptions}</select>
+        </div>
+        <button class="btn btn-success" id="restore-preview-btn"><i class="pi pi-replay"></i> Preview & Restore</button>
+      </div>
+      <div id="restore-preview" style="margin-top:16px;display:none">
+        <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+          <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:8px">Restore Preview</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:12px;margin-bottom:12px">
+            <div><span style="color:var(--yellow-text);font-weight:600">3</span> <span style="color:var(--text-muted)">overwritten</span></div>
+            <div><span style="color:var(--green);font-weight:600">2</span> <span style="color:var(--text-muted)">new</span></div>
+            <div><span style="color:var(--text-secondary);font-weight:600">7</span> <span style="color:var(--text-muted)">unchanged</span></div>
+          </div>
+          ${fileTableHTML(MOCK_FILES, true)}
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn btn-danger btn-sm confirm-restore-btn"><i class="pi pi-check"></i> Confirm Restore</button>
+            <button class="btn btn-outline btn-sm" id="restore-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="section-title" style="margin-bottom:0">All Backups</div>
+      <div class="form-group" style="min-width:180px">
+        <select id="backup-filter">${allPkgFilterOptions}</select>
+      </div>
+    </div>
+    <div class="card" style="overflow:hidden" id="backup-list-container">${buildBackupList('all')}</div>
+  </div>`));
+
+  // Restore preview toggle
+  page.querySelector('#restore-preview-btn').addEventListener('click', () => {
+    page.querySelector('#restore-preview').style.display = '';
+  });
+  page.querySelector('#restore-cancel').addEventListener('click', () => {
+    page.querySelector('#restore-preview').style.display = 'none';
+  });
+
+  // Update backup dropdown when package changes
+  page.querySelector('#restore-pkg').addEventListener('change', e => {
+    const sel = page.querySelector('#restore-ver');
+    sel.textContent = '';
+    BACKUPS.filter(b => b.pkg === e.target.value).forEach((b,i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `v${b.ver} \u2014 ${b.date} (${b.files} files, ${b.size})`;
+      sel.appendChild(opt);
+    });
+    page.querySelector('#restore-preview').style.display = 'none';
+  });
+
+  // Backup list filter
+  page.querySelector('#backup-filter').addEventListener('change', e => {
+    page.querySelector('#backup-list-container').innerHTML = buildBackupList(e.target.value);
+  });
+
+  return page;
+}
+
+function renderSettings() {
+  const page = document.createElement('div');
+  page.className = 'page active';
+
+  const sections = ['general','startup','notifications','backup','catalog','network','paths','logging','about'];
+  const labels = ['General','Startup & Window','Notifications','Backup','Catalog','Network','Paths','Logging','About'];
+
+  page.appendChild(createFromHTML(`<div>
+    <div class="page-hdr"><h2>Settings</h2><p>Configure Astro-Up behavior</p></div>
+    <div class="settings-layout">
+      <div class="settings-nav" id="settings-nav">
+        ${sections.map((s,i) => `<div class="sn-item ${i===0?'active':''}" data-section="${s}">${labels[i]}</div>`).join('')}
+      </div>
+      <div class="settings-panel">
+        <div class="settings-section-page" id="sec-general">
+          <div class="card settings-section">
+            <h3>General</h3>
+            <div class="s-row"><div><div class="s-label">Theme</div><div class="s-hint">Application color scheme</div></div><div class="s-input"><select><option>Dark</option><option>Light</option><option selected>System</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Font size</div><div class="s-hint">UI text size</div></div><div class="s-input"><select><option>Small</option><option selected>Medium</option><option>Large</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Auto-scan on launch</div><div class="s-hint">Scan for installed software when Astro-Up starts</div></div><div class="toggle"></div></div>
+            <div class="s-row"><div><div class="s-label">Default install scope</div><div class="s-hint">Preferred installation scope for new packages</div></div><div class="s-input"><select><option selected>User</option><option>Machine</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Default install method</div><div class="s-hint">Preferred installation mode</div></div><div class="s-input"><select><option selected>Silent</option><option>Interactive</option></select></div></div>
+          </div>
+          <div class="card settings-section">
+            <h3>Updates</h3>
+            <div class="s-row"><div><div class="s-label">Auto-check for updates</div><div class="s-hint">Periodically check for new software versions</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Check interval</div><div class="s-hint">How often to check for updates</div></div><div class="s-input"><select><option>Every 30 minutes</option><option>Every hour</option><option selected>Every 6 hours</option><option>Every 24 hours</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Auto-notify for updates</div><div class="s-hint">Show a notification when updates are available</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Auto-install updates</div><div class="s-hint">Automatically install updates without confirmation</div></div><div class="toggle"></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-startup" style="display:none">
+          <div class="card settings-section">
+            <h3>Startup & Window</h3>
+            <div class="s-row"><div><div class="s-label">Start with Windows</div><div class="s-hint">Launch Astro-Up when Windows starts</div></div><div class="toggle"></div></div>
+            <div class="s-row"><div><div class="s-label">Start minimized to tray</div><div class="s-hint">Start in the system tray instead of a window</div></div><div class="toggle"></div></div>
+            <div class="s-row"><div><div class="s-label">Close to tray</div><div class="s-hint">Keep running in the system tray when window is closed</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Restore window position</div><div class="s-hint">Remember window size and position between sessions</div></div><div class="toggle on"></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-notifications" style="display:none">
+          <div class="card settings-section">
+            <h3>Notifications</h3>
+            <div class="s-row"><div><div class="s-label">Desktop notifications</div><div class="s-hint">Show system notifications for events</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Notify on update available</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Notify on backup complete</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Notify on operation failure</div></div><div class="toggle on"></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-backup" style="display:none">
+          <div class="card settings-section">
+            <h3>Scheduled Backup</h3>
+            <div class="s-row"><div><div class="s-label">Scheduled backup</div><div class="s-hint">Periodically backup all opted-in packages</div></div><div class="toggle"></div></div>
+            <div class="s-row"><div><div class="s-label">Schedule</div><div class="s-hint">How often to run scheduled backups</div></div><div class="s-input"><select><option>Daily</option><option selected>Weekly</option><option>Monthly</option></select></div></div>
+          </div>
+          <div class="card settings-section">
+            <h3>Retention</h3>
+            <div class="s-row"><div><div class="s-label">Max backups per package</div><div class="s-hint">Oldest backups are deleted when limit is reached</div></div><div class="s-input"><select><option>Unlimited</option><option>3</option><option selected>5</option><option>10</option><option>20</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Max total backup size</div><div class="s-hint">0 = unlimited</div></div><div class="s-input"><input type="number" value="500" style="width:80px"> <span style="font-size:11px;color:var(--text-muted);margin-left:6px">MB</span></div></div>
+            <div class="s-row"><div><div class="s-label">Delete backups older than</div><div class="s-hint">0 = never expire</div></div><div class="s-input"><input type="number" value="90" style="width:80px"> <span style="font-size:11px;color:var(--text-muted);margin-left:6px">days</span></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-catalog" style="display:none">
+          <div class="card settings-section">
+            <h3>Catalog Source</h3>
+            <div class="s-row"><div><div class="s-label">Catalog URL</div><div class="s-hint">Source for software package definitions</div></div><div class="s-input"><input value="https://github.com/nightwatch-astro/catalog/releases/latest" style="width:360px"></div></div>
+            <div class="s-row"><div><div class="s-label">Cache TTL</div></div><div class="s-input"><select><option>1 hour</option><option selected>6 hours</option><option>24 hours</option><option>7 days</option></select></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-network" style="display:none">
+          <div class="card settings-section">
+            <h3>Network</h3>
+            <div class="s-row"><div><div class="s-label">HTTP Proxy</div><div class="s-hint">Leave empty for direct connection</div></div><div class="s-input"><input placeholder="http://proxy:8080" value="" style="width:240px"></div></div>
+            <div class="s-row"><div><div class="s-label">Connection timeout</div></div><div class="s-input"><input value="30s" style="width:100px"></div></div>
+            <div class="s-row"><div><div class="s-label">Request timeout</div></div><div class="s-input"><input value="300s" style="width:100px"></div></div>
+            <div class="s-row"><div><div class="s-label">Download speed limit</div><div class="s-hint">0 = unlimited</div></div><div class="s-input"><input value="0" style="width:100px"> <span style="font-size:11px;color:var(--text-muted);margin-left:6px">bytes/s</span></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-paths" style="display:none">
+          <div class="card settings-section">
+            <h3>Storage Paths</h3>
+            <div class="s-row"><div><div class="s-label">Download directory</div></div><div class="s-input" style="display:flex;gap:6px;align-items:center"><input value="C:\\Users\\User\\AppData\\Local\\AstroUp\\downloads" style="width:340px"><button class="icon-btn" title="Browse"><i class="pi pi-folder-open"></i></button></div></div>
+            <div class="s-row"><div><div class="s-label">Cache directory</div></div><div class="s-input" style="display:flex;gap:6px;align-items:center"><input value="C:\\Users\\User\\AppData\\Local\\AstroUp\\cache" style="width:340px"><button class="icon-btn" title="Browse"><i class="pi pi-folder-open"></i></button></div></div>
+            <div class="s-row"><div><div class="s-label">Keep installers</div><div class="s-hint">Retain downloaded installer files</div></div><div class="toggle"></div></div>
+            <div class="s-row"><div><div class="s-label">Purge after</div></div><div class="s-input"><input type="number" value="30" style="width:80px"> <span style="font-size:11px;color:var(--text-muted);margin-left:6px">days</span></div></div>
+          </div>
+          <div class="card settings-section">
+            <h3>Cleanup</h3>
+            <div class="s-row"><div><div class="s-label">Clear Cache</div><div class="s-hint">Remove cached catalog data and temporary files</div></div><button class="btn btn-outline btn-sm clear-cache-btn"><i class="pi pi-trash"></i> Clear Cache <span style="color:var(--text-dim);margin-left:4px">(12.4 MB)</span></button></div>
+            <div class="s-row"><div><div class="s-label">Clear Downloads</div><div class="s-hint">Remove downloaded installer files</div></div><button class="btn btn-outline btn-sm clear-downloads-btn"><i class="pi pi-trash"></i> Clear Downloads <span style="color:var(--text-dim);margin-left:4px">(248 MB)</span></button></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-logging" style="display:none">
+          <div class="card settings-section">
+            <h3>Logging</h3>
+            <div class="s-row"><div><div class="s-label">Log level</div></div><div class="s-input"><select><option>Error</option><option>Warn</option><option selected>Info</option><option>Debug</option><option>Trace</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Log to file</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Log file path</div></div><div class="s-input"><input value="C:\\Users\\User\\AppData\\Local\\AstroUp\\logs\\astro-up.log" style="width:380px"></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-about" style="display:none">
+          <div class="card settings-section">
+            <h3>About Astro-Up</h3>
+            <div class="s-row"><div><div class="s-label">Version</div></div><div style="font-size:13px;color:var(--text-primary)">0.1.0</div></div>
+            <div class="s-row"><div><div class="s-label">Catalog version</div></div><div style="font-size:13px;color:var(--text-primary)">2026.04.01 (42 packages)</div></div>
+            <div class="s-row"><div><div class="s-label">Database</div></div><div style="font-size:13px;color:var(--text-primary)">SQLite 3.45.0</div></div>
+            <div class="s-row"><div><div class="s-label">License</div></div><div style="font-size:13px;color:var(--text-primary)">Apache-2.0</div></div>
+            <div class="s-row"><div><div class="s-label">Links</div></div><div style="display:flex;gap:12px"><a href="#" style="font-size:13px">GitHub</a><a href="#" style="font-size:13px">Docs</a><a href="#" style="font-size:13px">Report Issue</a></div></div>
+          </div>
+          <div class="card settings-section">
+            <h3>Config Snapshots</h3>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Auto-saved configuration snapshots. Restore to revert settings changes.</div>
+            <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+              <div style="display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)">
+                <div style="flex:1"><div style="font-size:12px;color:var(--text-primary)">config-2026-04-02T14:30.toml</div><div style="font-size:11px;color:var(--text-muted)">Today 14:30 &mdash; 2.1 KB</div></div>
+                <button class="btn btn-outline btn-xs restore-config-btn">Restore</button>
+              </div>
+              <div style="display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)">
+                <div style="flex:1"><div style="font-size:12px;color:var(--text-primary)">config-2026-04-01T09:15.toml</div><div style="font-size:11px;color:var(--text-muted)">Yesterday 09:15 &mdash; 2.0 KB</div></div>
+                <button class="btn btn-outline btn-xs restore-config-btn">Restore</button>
+              </div>
+              <div style="display:flex;align-items:center;padding:10px 12px">
+                <div style="flex:1"><div style="font-size:12px;color:var(--text-primary)">config-2026-03-28T20:45.toml</div><div style="font-size:11px;color:var(--text-muted)">Mar 28 20:45 &mdash; 1.9 KB</div></div>
+                <button class="btn btn-outline btn-xs restore-config-btn">Restore</button>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px"><button class="btn btn-outline check-updates-btn"><i class="pi pi-refresh"></i> Check for App Updates</button></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-primary">Save Changes</button><button class="btn btn-outline reset-defaults-btn">Reset to Defaults</button></div>
+      </div>
+    </div>
+  </div>`));
+
+  // Settings nav
+  page.querySelectorAll('.sn-item[data-section]').forEach(item => {
+    item.addEventListener('click', () => {
+      page.querySelectorAll('.sn-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      page.querySelectorAll('.settings-section-page').forEach(s => s.style.display = 'none');
+      page.querySelector('#sec-' + item.dataset.section).style.display = '';
+    });
+  });
+
+  // Toggles
+  page.querySelectorAll('.toggle').forEach(t => {
+    t.addEventListener('click', () => t.classList.toggle('on'));
+  });
+
+  return page;
+}
+
+function renderLogPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'log-panel hidden';
+  panel.id = 'log-panel';
+  const MOCK_LOGS = [
+    { ts:'14:30:01.234', lvl:'info', msg:'Application started — v0.1.0' },
+    { ts:'14:30:01.890', lvl:'info', msg:'Loading configuration from %LOCALAPPDATA%\\AstroUp\\config.toml' },
+    { ts:'14:30:02.012', lvl:'debug', msg:'Database opened: catalog.db (42 packages, 5 backups)' },
+    { ts:'14:30:02.340', lvl:'info', msg:'Catalog sync started — source: github.com/nightwatch-astro/catalog' },
+    { ts:'14:30:03.567', lvl:'info', msg:'Catalog sync complete — 0 new, 2 updated, 0 removed' },
+    { ts:'14:30:04.001', lvl:'info', msg:'System scan initiated — checking registry, PE files, driver store' },
+    { ts:'14:30:04.123', lvl:'debug', msg:'Registry scan: found 7 entries in HKLM\\SOFTWARE' },
+    { ts:'14:30:04.456', lvl:'debug', msg:'PE detection: scanning Program Files directories' },
+    { ts:'14:30:05.789', lvl:'info', msg:'Scan complete — 8 installed, 2 updates available' },
+    { ts:'14:30:05.890', lvl:'warn', msg:'FTDI CDM Driver: installed 2.12.36, latest 2.12.38 — update recommended' },
+    { ts:'14:30:05.901', lvl:'warn', msg:'N.I.N.A.: installed 3.1.2, latest 3.2.0 — update available' },
+    { ts:'14:30:06.100', lvl:'debug', msg:'Tray icon initialized — badge count: 2' },
+    { ts:'14:30:06.200', lvl:'info', msg:'Ready — dashboard loaded in 4.97s' },
+    { ts:'14:32:15.100', lvl:'info', msg:'User navigated to Catalog page' },
+    { ts:'14:35:22.300', lvl:'debug', msg:'Backup check: 3 packages opted-in, last backup 2h ago' },
+    { ts:'14:35:22.400', lvl:'trace', msg:'SQLite query: SELECT * FROM backups ORDER BY created_at DESC LIMIT 50' },
+  ];
+  const levelOrder = { error:0, warn:1, info:2, debug:3, trace:4 };
+  let filterLevel = 'info';
+
+  function renderLines() {
+    const body = panel.querySelector('.log-panel-body');
+    if (!body) return;
+    body.textContent = '';
+    MOCK_LOGS.filter(l => levelOrder[l.lvl] <= levelOrder[filterLevel]).forEach(l => {
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="ts">${l.ts}</span> <span class="lvl-${l.lvl}">${l.lvl.toUpperCase().padEnd(5)}</span> <span class="msg">${esc(l.msg)}</span>`;
+      body.appendChild(line);
+    });
+    body.scrollTop = body.scrollHeight;
+  }
+
+  panel.innerHTML = `<div class="log-panel-header">
+    <span>Log Output</span>
+    <select id="log-level-filter">
+      <option value="error">Error</option>
+      <option value="warn">Warn</option>
+      <option value="info" selected>Info</option>
+      <option value="debug">Debug</option>
+      <option value="trace">Trace</option>
+    </select>
+    <span style="flex:1"></span>
+    <span id="log-line-count" style="color:var(--text-dim)"></span>
+  </div><div class="log-panel-body"></div>`;
+
+  setTimeout(() => {
+    renderLines();
+    const sel = panel.querySelector('#log-level-filter');
+    if (sel) sel.addEventListener('change', e => { filterLevel = e.target.value; renderLines(); });
+  }, 0);
+
+  return panel;
+}
+
+function renderStatusBar() {
+  const bar = document.createElement('div');
+  bar.className = 'status-bar';
+  bar.id = 'status-bar';
+  bar.innerHTML = `<span>Catalog: ${PACKAGES.length} packages</span><span class="sep">|</span><span>Synced 2h ago</span><span class="sep">|</span><span>${getInstalled().length} installed</span><span class="sep">|</span><span style="color:var(--yellow-text)">${getUpdatable().length} updates</span><span style="flex:1"></span><span>0 operations</span><button class="log-toggle" id="log-toggle-btn" title="Toggle log panel (Ctrl+L)"><i class="pi pi-chevron-up" style="font-size:9px"></i> Log</button>`;
+  setTimeout(() => {
+    const btn = document.getElementById('log-toggle-btn');
+    if (btn) btn.addEventListener('click', toggleLogPanel);
+  }, 0);
+  return bar;
+}
+
+function toggleLogPanel() {
+  const panel = document.getElementById('log-panel');
+  const btn = document.getElementById('log-toggle-btn');
+  if (!panel) return;
+  const isHidden = panel.classList.toggle('hidden');
+  if (btn) {
+    btn.classList.toggle('active', !isHidden);
+    btn.querySelector('i').className = isHidden ? 'pi pi-chevron-up' : 'pi pi-chevron-down';
+    btn.querySelector('i').style.fontSize = '9px';
+  }
+  // Adjust main padding
+  const main = document.querySelector('.main');
+  if (main) main.style.paddingBottom = isHidden ? '28px' : '248px';
+}
+
+function renderOpsDock() {
+  const dock = document.createElement('div');
+  dock.className = 'ops-dock hidden';
+  dock.id = 'ops-dock';
+  dock.appendChild(createFromHTML(`<div class="ops-bar">
+    <div class="spinner"></div>
+    <div class="label" id="ops-label"></div>
+    <div class="progress-bar" style="flex:1;max-width:180px"><div class="progress-fill blue" id="ops-fill" style="width:0%"></div></div>
+    <div class="pct" id="ops-pct">0%</div>
+    <div class="cancel" id="ops-cancel">Cancel</div>
+  </div>`));
+  dock.querySelector('#ops-cancel').addEventListener('click', hideOps);
+  return dock;
+}
+
+// ==== NAVIGATION (single document-level handler) ====
+function bindNav() {}  // no-op, handled by global handler below
+
+document.addEventListener('click', function(e) {
+  // 1. Backup now buttons
+  const backupBtn = e.target.closest('.backup-now-btn');
+  if (backupBtn) { e.stopImmediatePropagation(); e.preventDefault(); const pkg = getPkg(backupBtn.getAttribute('data-pkg-id')); if (pkg) showBackupConfirm(pkg); return; }
+
+  // 2. Update individual package (with confirm)
+  const updBtn = e.target.closest('.update-pkg-btn');
+  if (updBtn) { e.stopPropagation(); const pkg = getPkg(updBtn.getAttribute('data-pkg-id')); if (pkg) showUpdateConfirm(pkg); return; }
+
+  // 3. Scan / Update All
+  if (e.target.closest('.scan-btn')) { e.stopPropagation(); showScanConfirm(); return; }
+  if (e.target.closest('.update-all-btn')) { e.stopPropagation(); showUpdateAllConfirm(); return; }
+
+  // 4. Backup list actions
+  const previewBtn = e.target.closest('.preview-backup-btn');
+  if (previewBtn) { e.stopPropagation(); showPreviewContents(BACKUPS[parseInt(previewBtn.getAttribute('data-bk-idx'))]); return; }
+  const deleteBtn = e.target.closest('.delete-backup-btn');
+  if (deleteBtn) { e.stopPropagation(); showDeleteBackupConfirm(BACKUPS[parseInt(deleteBtn.getAttribute('data-bk-idx'))]); return; }
+
+  // 5. Confirm restore (in restore preview — already seen files, just "are you sure")
+  if (e.target.closest('.confirm-restore-btn')) { e.stopPropagation(); showRestoreFinalConfirm(BACKUPS[0]); return; }
+
+  // 6. Settings actions
+  if (e.target.closest('.check-updates-btn')) { e.stopPropagation(); showCheckAppUpdate(); return; }
+  if (e.target.closest('.reset-defaults-btn')) { e.stopPropagation(); showResetDefaultsConfirm(); return; }
+  if (e.target.closest('.clear-cache-btn')) { e.stopPropagation(); showConfirmDialog({ title:'Clear Cache', icon:'pi-trash', iconColor:'var(--yellow-text)', message:'Delete all cached catalog data and temporary files (12.4 MB)?', confirmText:'Clear Cache', confirmClass:'btn-danger', onConfirm:()=>{} }); return; }
+  if (e.target.closest('.clear-downloads-btn')) { e.stopPropagation(); showConfirmDialog({ title:'Clear Downloads', icon:'pi-trash', iconColor:'var(--yellow-text)', message:'Delete all downloaded installer files (248 MB)? You will need to re-download installers for future updates.', confirmText:'Clear Downloads', confirmClass:'btn-danger', onConfirm:()=>{} }); return; }
+  if (e.target.closest('.restore-config-btn')) { e.stopPropagation(); showConfirmDialog({ title:'Restore Config Snapshot', icon:'pi-replay', iconColor:'var(--yellow-text)', message:'Restore this configuration snapshot? Your current settings will be overwritten.', confirmText:'Restore', confirmClass:'btn-danger', onConfirm:()=>{} }); return; }
+
+  // 7. Operation buttons (install from detail, backup-now from detail tab)
+  const opBtn = e.target.closest('[data-op]');
+  if (opBtn) { e.stopPropagation(); startOp(opBtn.dataset.op); return; }
+
+  // 8. Skip row navigation if clicking any button
+  if (e.target.closest('.btn, .icon-btn')) {
+    const navBtn = e.target.closest('[data-nav]');
+    if (navBtn) { currentPage = navBtn.dataset.nav; render(); }
+    return;
+  }
+
+  // 9. Detail row navigation
+  const detailRow = e.target.closest('[data-detail]');
+  if (detailRow) { goDetail(detailRow.dataset.detail); return; }
+
+  // 10. Page navigation
+  const navEl = e.target.closest('[data-nav]');
+  if (navEl) { currentPage = navEl.dataset.nav; render(); return; }
+});
+
+let detailInitTab = null;
+
+function showBackupConfirm(pkg) {
+  // Remove any existing dialog
+  const existing = document.getElementById('backup-confirm-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'backup-confirm-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center';
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = 'background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius-lg);padding:24px;width:420px;max-width:90vw';
+
+  const title = document.createElement('div');
+  title.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:16px';
+  title.textContent = '';
+  const icon = document.createElement('i');
+  icon.className = 'pi pi-database';
+  icon.style.cssText = 'color:var(--blue-text);font-size:18px';
+  const titleText = document.createElement('span');
+  titleText.style.cssText = 'font-size:16px;font-weight:600;color:var(--text-primary)';
+  titleText.textContent = 'Backup ' + pkg.name;
+  title.appendChild(icon);
+  title.appendChild(titleText);
+
+  const desc = document.createElement('div');
+  desc.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:12px';
+  desc.textContent = 'The following paths will be backed up:';
+
+  const pathBox = document.createElement('div');
+  pathBox.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:16px';
+  const pathText = document.createElement('div');
+  pathText.style.cssText = 'font-family:monospace;font-size:12px;color:var(--text-primary);line-height:1.8';
+  pathText.textContent = pkg.backupPaths;
+  pathBox.appendChild(pathText);
+
+  const meta = document.createElement('div');
+  meta.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:16px';
+  meta.textContent = 'Version: ' + (pkg.installed || pkg.latest);
+
+  const buttons = document.createElement('div');
+  buttons.style.cssText = 'display:flex;gap:8px;justify-content:flex-end';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-outline btn-sm';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => overlay.remove());
+
+  const proceedBtn = document.createElement('button');
+  proceedBtn.className = 'btn btn-primary btn-sm';
+  proceedBtn.style.cssText = 'display:flex;align-items:center;gap:6px';
+  const proceedIcon = document.createElement('i');
+  proceedIcon.className = 'pi pi-database';
+  proceedBtn.appendChild(proceedIcon);
+  const proceedText = document.createTextNode(' Proceed');
+  proceedBtn.appendChild(proceedText);
+  proceedBtn.addEventListener('click', () => {
+    overlay.remove();
+    startOp('Backing up ' + pkg.name + ' config');
+  });
+
+  buttons.appendChild(cancelBtn);
+  buttons.appendChild(proceedBtn);
+
+  dialog.appendChild(title);
+  dialog.appendChild(desc);
+  dialog.appendChild(pathBox);
+  dialog.appendChild(meta);
+  dialog.appendChild(buttons);
+  overlay.appendChild(dialog);
+
+  // Close on overlay click
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  document.body.appendChild(overlay);
+}
+
+function goDetail(id) {
+  detailPkg = getPkg(id);
+  detailInitTab = null;
+  currentPage = 'detail';
+  render();
+}
+
+function goDetailTab(id, tab) {
+  detailPkg = getPkg(id);
+  detailInitTab = tab;
+  currentPage = 'detail';
+  render();
+}
+
+// ==== OPERATIONS DOCK ====
+let opsInterval;
+function startOp(label) {
+  const dock = document.getElementById('ops-dock');
+  dock.classList.remove('hidden');
+  document.getElementById('ops-label').textContent = label;
+  document.getElementById('ops-fill').style.width = '0%';
+  document.getElementById('ops-fill').className = 'progress-fill blue';
+  document.getElementById('ops-pct').textContent = '0%';
+  let pct = 0;
+  clearInterval(opsInterval);
+  opsInterval = setInterval(() => {
+    pct += Math.random() * 4 + 1;
+    if (pct >= 100) {
+      pct = 100; clearInterval(opsInterval);
+      document.getElementById('ops-fill').className = 'progress-fill green';
+      document.getElementById('ops-label').textContent = label.replace('...', '') + ' \u2014 Complete!';
+      setTimeout(hideOps, 2000);
+    }
+    document.getElementById('ops-fill').style.width = pct + '%';
+    document.getElementById('ops-pct').textContent = Math.round(pct) + '%';
+  }, 200);
+}
+function hideOps() {
+  clearInterval(opsInterval);
+  document.getElementById('ops-dock').classList.add('hidden');
+}
+
+// Expose to inline handlers
+window.showBackupConfirm = showBackupConfirm;
+window.getPkg = getPkg;
+window.startOp = startOp;
+
+// ==== KEYBOARD SHORTCUTS ====
+document.addEventListener('keydown', function(e) {
+  const mod = e.metaKey || e.ctrlKey;
+
+  // Ctrl/Cmd+F: focus search box on current page
+  if (mod && e.key === 'f') {
+    const searchInput = document.querySelector('.page.active .search-box input') || document.querySelector('.page.active input[type="text"]');
+    if (searchInput) { e.preventDefault(); searchInput.focus(); }
+  }
+
+  // Escape: close dialog or collapse log panel
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('confirm-overlay') || document.getElementById('backup-confirm-overlay');
+    if (overlay) { overlay.remove(); return; }
+    const logPanel = document.getElementById('log-panel');
+    if (logPanel && !logPanel.classList.contains('hidden')) { toggleLogPanel(); }
+  }
+
+  // Ctrl/Cmd+1-5: navigate pages
+  if (mod && e.key >= '1' && e.key <= '5') {
+    e.preventDefault();
+    const pages = ['dashboard','catalog','installed','backup','settings'];
+    currentPage = pages[parseInt(e.key) - 1];
+    render();
+  }
+
+  // Ctrl/Cmd+L: toggle log panel
+  if (mod && e.key === 'l') {
+    e.preventDefault();
+    toggleLogPanel();
+  }
+});
+
+// ==== INIT ====
+render();
+</script>
+</body>
+</html>

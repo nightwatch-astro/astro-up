@@ -1,0 +1,182 @@
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+import Tabs from "primevue/tabs";
+import TabList from "primevue/tablist";
+import Tab from "primevue/tab";
+import TabPanels from "primevue/tabpanels";
+import TabPanel from "primevue/tabpanel";
+import DetailHero from "../components/detail/DetailHero.vue";
+import OverviewTab from "../components/detail/OverviewTab.vue";
+import VersionsTab from "../components/detail/VersionsTab.vue";
+import BackupTab from "../components/detail/BackupTab.vue";
+import TechnicalTab from "../components/detail/TechnicalTab.vue";
+import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
+import EmptyState from "../components/shared/EmptyState.vue";
+import { useSoftwareList, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
+import { useOperations } from "../composables/useOperations";
+import type { PackageWithStatus } from "../types/package";
+
+const props = defineProps<{
+  id: string;
+}>();
+
+const router = useRouter();
+const { data: software, isLoading } = useSoftwareList(() => "all");
+const installMutation = useInstallSoftware();
+const updateMutation = useUpdateSoftware();
+const backupMutation = useCreateBackup();
+const { startOperation } = useOperations();
+
+const showBackupConfirm = ref(false);
+
+const pkg = computed<PackageWithStatus | undefined>(() => {
+  if (!software.value) return undefined;
+  return (software.value as PackageWithStatus[]).find((p) => p.id === props.id);
+});
+
+
+function handleInstall() {
+  if (!pkg.value || !startOperation(pkg.value.id, `Installing ${pkg.value.name}`)) return;
+  installMutation.mutate(pkg.value.id);
+}
+
+function handleUpdate() {
+  if (!pkg.value || !startOperation(pkg.value.id, `Updating ${pkg.value.name}`)) return;
+  updateMutation.mutate(pkg.value.id);
+}
+
+function handleBackup() {
+  showBackupConfirm.value = true;
+}
+
+function confirmBackup() {
+  if (!pkg.value) return;
+  backupMutation.mutate([]);
+}
+</script>
+
+<template>
+  <div class="detail-view">
+    <div class="detail-breadcrumb">
+      <button
+        class="breadcrumb-back"
+        @click="router.push('/catalog')"
+      >
+        <i class="pi pi-arrow-left" />
+        Catalog
+      </button>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">{{ pkg?.name ?? id }}</span>
+    </div>
+
+    <EmptyState
+      v-if="!isLoading && !pkg"
+      icon="pi-question-circle"
+      message="Package not found."
+      action-label="Back to Catalog"
+      @action="router.push('/catalog')"
+    />
+
+    <template v-else-if="pkg">
+      <DetailHero
+        :pkg="pkg"
+        @install="handleInstall"
+        @update="handleUpdate"
+        @backup="handleBackup"
+      />
+
+      <div class="detail-content">
+        <Tabs value="0">
+          <TabList>
+            <Tab value="0">
+              Overview
+            </Tab>
+            <Tab value="1">
+              Versions
+            </Tab>
+            <Tab value="2">
+              Backup
+            </Tab>
+            <Tab value="3">
+              Technical
+            </Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel value="0">
+              <OverviewTab :pkg="pkg" />
+            </TabPanel>
+            <TabPanel value="1">
+              <VersionsTab
+                :versions="[]"
+                :installed-version="pkg.installed_version"
+              />
+            </TabPanel>
+            <TabPanel value="2">
+              <BackupTab
+                :package-id="pkg.id"
+                @backup="handleBackup"
+              />
+            </TabPanel>
+            <TabPanel value="3">
+              <TechnicalTab :pkg="pkg" />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </div>
+    </template>
+
+    <ConfirmDialog
+      v-model:visible="showBackupConfirm"
+      title="Backup Now"
+      :message="`Create a backup of ${pkg?.name ?? 'this package'}?`"
+      icon="pi-database"
+      confirm-label="Backup"
+      @confirm="confirmBackup"
+    />
+  </div>
+</template>
+
+<style scoped>
+.detail-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--p-surface-800);
+}
+
+.breadcrumb-back {
+  background: none;
+  border: none;
+  color: var(--p-primary-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  padding: 0;
+}
+
+.breadcrumb-back:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  color: var(--p-surface-500);
+}
+
+.breadcrumb-current {
+  color: var(--p-surface-300);
+}
+
+.detail-content {
+  padding: 0 24px 24px;
+}
+</style>

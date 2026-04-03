@@ -1,0 +1,111 @@
+<script setup lang="ts">
+import type { PackageWithStatus } from "../../types/package";
+
+defineProps<{
+  pkg: PackageWithStatus;
+}>();
+
+function detectionDetails(pkg: PackageWithStatus): Record<string, string> {
+  switch (pkg.detection.type) {
+    case "Installed":
+      return { Method: pkg.detection.method, Version: pkg.detection.version, Status: "Installed" };
+    case "InstalledUnknownVersion":
+      return { Method: pkg.detection.method, Status: "Installed (version unknown)" };
+    case "NotInstalled":
+      return { Status: "Not installed" };
+    case "Unavailable":
+      return { Status: "Unavailable", Reason: pkg.detection.reason };
+  }
+}
+</script>
+
+<template>
+  <div class="technical-tab">
+    <section class="tech-section">
+      <h3 class="section-title">
+        Detection
+      </h3>
+      <div class="tech-grid">
+        <div
+          v-for="(value, key) in detectionDetails(pkg)"
+          :key="key"
+          class="tech-item"
+        >
+          <span class="tech-label">{{ key }}</span>
+          <span class="tech-value">{{ value }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="tech-section">
+      <h3 class="section-title">
+        Installation
+      </h3>
+      <div class="tech-grid">
+        <div class="tech-item">
+          <span class="tech-label">Type</span>
+          <span class="tech-value">{{ pkg.software_type }}</span>
+        </div>
+        <div class="tech-item">
+          <span class="tech-label">Manifest Version</span>
+          <span class="tech-value">{{ pkg.manifest_version }}</span>
+        </div>
+        <div
+          v-if="pkg.aliases.length > 0"
+          class="tech-item"
+        >
+          <span class="tech-label">Aliases</span>
+          <span class="tech-value">{{ pkg.aliases.join(", ") }}</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.technical-tab {
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tech-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--p-surface-200);
+}
+
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.tech-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tech-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--p-surface-400);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tech-value {
+  font-size: 14px;
+  color: var(--p-surface-200);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+</style>
