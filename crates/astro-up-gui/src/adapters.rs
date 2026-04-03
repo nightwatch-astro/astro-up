@@ -25,6 +25,17 @@ impl PackageSource for CatalogPackageSource {
             .list_all_with_detection()
             .map_err(|e| DetectionError::CatalogError(e.to_string()))
     }
+
+    fn latest_version(
+        &self,
+        id: &astro_up_core::catalog::PackageId,
+    ) -> Result<Option<astro_up_core::catalog::VersionEntry>, DetectionError> {
+        let reader = SqliteCatalogReader::open(&self.catalog_path)
+            .map_err(|e| DetectionError::CatalogError(e.to_string()))?;
+        reader
+            .latest_version(id)
+            .map_err(|e| DetectionError::CatalogError(e.to_string()))
+    }
 }
 
 /// Adapter: SQLite → LedgerStore trait for the scanner.

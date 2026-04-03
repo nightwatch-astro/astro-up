@@ -638,16 +638,17 @@ where
                     .map(|e| e.version)
             });
 
-            // Placeholder version entry — full catalog version lookup requires
-            // CatalogReader integration (deferred to wiring task)
-            let ve = crate::catalog::VersionEntry {
-                package_id: sw.id.clone(),
-                version: String::new(),
-                url: String::new(),
-                sha256: None,
-                discovered_at: chrono::Utc::now(),
-                release_notes_url: None,
-                pre_release: false,
+            // Look up the latest version entry from the catalog
+            let ve = match self
+                .catalog
+                .latest_version(&sw.id)
+                .map_err(|e| CoreError::Database(format!("catalog version lookup: {e}")))?
+            {
+                Some(ve) => ve,
+                None => {
+                    tracing::debug!(package = %sw.id, "no version entries in catalog, skipping");
+                    continue;
+                }
             };
 
             let version_format: VersionFormat = sw
