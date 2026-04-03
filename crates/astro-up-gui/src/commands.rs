@@ -92,28 +92,61 @@ pub async fn list_software(
     let start = std::time::Instant::now();
     tracing::debug!(command = "list_software", filter, "Command invoked");
 
+    let query_result = try_list_software(&state, &filter);
+
+    match query_result {
+        Ok(value) => {
+            tracing::debug!(
+                command = "list_software",
+                duration_ms = start.elapsed().as_millis() as u64,
+                "Command completed"
+            );
+            Ok(value)
+        }
+        Err(e) => {
+            // Catalog may be corrupt or have old schema — delete and re-sync
+            tracing::warn!(command = "list_software", error = %e, "Query failed, attempting catalog recovery");
+            let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+            if catalog_path.exists() {
+                let _ = std::fs::remove_file(&catalog_path);
+                // Also remove sidecar so ensure_catalog fetches fresh
+                let meta_path = catalog_path.with_extension("db.meta");
+                let _ = std::fs::remove_file(&meta_path);
+                tracing::info!(
+                    command = "list_software",
+                    "Deleted corrupt catalog, will re-sync on next attempt"
+                );
+            }
+            Err(e.into())
+        }
+    }
+}
+
+/// Try to open the catalog and run the list query.
+fn try_list_software(
+    state: &AppState,
+    filter: &str,
+) -> Result<serde_json::Value, astro_up_core::error::CoreError> {
     let reader = state.open_catalog_reader()?;
-    let result = match filter.as_str() {
-        "all" => serde_json::to_value(reader.list_all()?),
+    let packages = match filter {
+        "all" => reader.list_all()?,
         f if f.starts_with("category:") => {
             let category = f.strip_prefix("category:").unwrap();
             let cat_filter = CatalogFilter {
                 category: category.parse().ok(),
                 ..CatalogFilter::default()
             };
-            serde_json::to_value(reader.filter(&cat_filter)?)
+            reader.filter(&cat_filter)?
         }
-        // "installed" and "outdated" need detect module — stub for now
-        _ => serde_json::to_value(reader.list_all()?),
-    }
-    .map_err(|e| CoreError::from(e.to_string()))?;
-
+        _ => reader.list_all()?,
+    };
     tracing::debug!(
         command = "list_software",
-        duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed"
+        count = packages.len(),
+        "Query OK"
     );
-    Ok(result)
+    serde_json::to_value(&packages)
+        .map_err(|e| astro_up_core::error::CoreError::Database(format!("serialization error: {e}")))
 }
 
 #[tauri::command]
