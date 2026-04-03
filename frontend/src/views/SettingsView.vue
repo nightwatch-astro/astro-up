@@ -62,10 +62,10 @@ const defaultConfig: AppConfig = {
 const config = reactive<AppConfig>(structuredClone(defaultConfig));
 let initialized = false;
 
-// Load server config when available
+// Load server config when available (JSON round-trip strips VueQuery's readonly proxy)
 watch(serverConfig, (data) => {
   if (data) {
-    Object.assign(config, data as unknown as AppConfig);
+    Object.assign(config, JSON.parse(JSON.stringify(data)) as AppConfig);
     initialized = true;
   }
 }, { immediate: true });
