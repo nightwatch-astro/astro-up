@@ -14,11 +14,15 @@ Sidebar (220px fixed) + main content area. Sidebar contains:
 - App title + version
 - Navigation: Dashboard, Catalog, Installed, Backup, Settings
 - Badge on Installed showing update count
-- Footer: catalog package count + last sync time
+- No footer stats (moved to status bar)
 
-Bottom-docked operations panel appears during long-running operations (install, update, backup, restore, scan). Shows spinner, label, progress bar, percentage, cancel button. Auto-dismisses on completion.
+Bottom-docked operations panel appears during long-running operations (install, update, backup, restore, scan). Shows spinner, label, progress bar, percentage, cancel button. Auto-dismisses on completion. Expandable to show step-by-step operation detail.
 
-## Responsive Behavior
+Persistent status bar at the very bottom: connection status, last sync time, running ops count, log panel toggle button.
+
+Collapsible bottom panel (above status bar, below main content): log viewer with live application logs, session-level log level filter dropdown, resizable height. Accessible anytime via status bar toggle, independent of operations. When operations dock is active, it appears between the main content and the log panel.
+
+## Responsive Startup & Window
 
 At minimum width (800px), the main content area is ~580px (800 - 220 sidebar). Design targets:
 - Catalog grid: `auto-fill, minmax(280px, 1fr)` — collapses to 2 columns at min width, 1 column not expected
@@ -32,7 +36,7 @@ At minimum width (800px), the main content area is ~580px (800 - 220 sidebar). D
 
 ### Dashboard
 
-| Element | Behavior |
+| Element | Startup & Window |
 |---------|----------|
 | Stats grid (4 cards) | Installed count, Updates available (clickable -> Installed), Last scan time, Backups count + size |
 | Updates preview | Lists each updatable package: icon, name, category, version arrow, individual Update button |
@@ -43,7 +47,7 @@ At minimum width (800px), the main content area is ~580px (800 - 220 sidebar). D
 
 ### Catalog
 
-| Element | Behavior |
+| Element | Startup & Window |
 |---------|----------|
 | Search box | Filters against: id, name, description, publisher, category, method, license, dependencies. Case-insensitive. Interacts with category filter (both applied simultaneously) |
 | Grid/List toggle | Visual only (grid implemented) |
@@ -53,7 +57,7 @@ At minimum width (800px), the main content area is ~580px (800 - 220 sidebar). D
 
 ### Installed
 
-| Element | Behavior |
+| Element | Startup & Window |
 |---------|----------|
 | Search box | Filters installed list by text match |
 | Update All button | Confirmation dialog listing packages -> ops dock |
@@ -86,7 +90,7 @@ Reached from Catalog or Installed. Breadcrumb returns to origin page.
 
 ### Backup & Restore
 
-| Element | Behavior |
+| Element | Startup & Window |
 |---------|----------|
 | Quick Restore | Two dropdowns: Application (packages with backups) + Backup (versions for selected app, updates on app change). "Preview & Restore" button shows file-level detail table |
 | Restore preview table | Columns: File (monospace), Action (color-coded: yellow=Overwrite, gray=Unchanged, green=New), Current (size + date), Backup (size + date). Summary counts above table |
@@ -99,19 +103,34 @@ Reached from Catalog or Installed. Breadcrumb returns to origin page.
 
 ### Settings
 
-Sidebar navigation: General, Backup, Catalog, Network, Paths, Logging, About.
+Sidebar navigation: General, Startup & Window, Notifications, Backup, Catalog, Network, Paths, Logging, About.
+
+All dropdown/select controls use styled PrimeVue dropdowns (consistent with Quick Restore style), not native browser selects.
 
 | Section | Fields |
 |---------|--------|
-| General | Auto-check for updates (toggle), Check interval (dropdown: 30min/1h/6h/24h) |
+| General | Theme (dark/light/system), Font size / UI scale, Auto-scan on launch (toggle, off by default), Default install scope (user/machine), Default install method (silent/interactive), Auto-check for catalog updates (toggle), Check interval (dropdown: 30min/1h/6h/24h), Auto-notify for package updates (toggle), Auto-install package updates (toggle) |
+| Startup & Window | Start at login (toggle), Start minimized (toggle), Minimize to tray on close (toggle) |
+| Notifications | Enable toast notifications (toggle), Toast display duration (dropdown: 3s/5s/10s/never auto-dismiss), Show errors (toggle), Show warnings (toggle), Show update available (toggle), Show operation complete (toggle) |
 | Backup | Scheduled backup (toggle + schedule: daily/weekly/monthly). Retention: max backups per package (dropdown: unlimited/3/5/10/20), max total size (MB input), delete after N days |
 | Catalog | Catalog URL (text), Cache TTL (dropdown: 1h/6h/24h/7d) |
 | Network | HTTP Proxy (text), Connection timeout, Request timeout, Download speed limit |
-| Paths | Download directory (with browse), Cache directory (with browse), Keep installers (toggle), Purge after N days |
+| Paths | Download directory (with browse), Cache directory (with browse), Keep installers (toggle), Purge after N days, Clear cache (action + size), Clear downloads (action + size) |
 | Logging | Log level (dropdown: Error-Trace), Log to file (toggle), Log file path |
-| About | Version, Catalog version, Database, License, Links (GitHub/Docs/Report Issue), Check for App Updates button |
+| About | Version, Catalog version, Database, License, Links, Check for App Updates, Config backup/restore (auto-save last N configs, restore any snapshot) |
 
-| Action | Behavior |
+Keyboard shortcuts (global):
+
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+F / Cmd+F | Focus search box on current page |
+| Escape | Close dialog / collapse log panel |
+| Ctrl+, / Cmd+, | Open Settings |
+| Ctrl+1-5 / Cmd+1-5 | Navigate to page (1=Dashboard, 2=Catalog, 3=Installed, 4=Backup, 5=Settings) |
+| Ctrl+L / Cmd+L | Toggle log panel |
+| Ctrl+J / Cmd+J | Toggle operations dock |
+
+| Action | Startup & Window |
 |--------|----------|
 | Save Changes | (mock only) |
 | Reset to Defaults | Confirmation: "Reset all settings to defaults? Configuration will be lost." |

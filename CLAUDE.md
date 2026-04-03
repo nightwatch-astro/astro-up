@@ -117,6 +117,9 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - Vue 3 + PrimeVue 4 (Aura), @tanstack/vue-query 5, @tauri-apps/{api,plugin-window-state,plugin-autostart,plugin-updater} 2, TypeScript 5 (016-tauri-app-shell)
 - SQLite (existing — catalog + config via astro-up-core, rusqlite 0.39) (016-tauri-app-shell)
 
+- Vue 3 + vue-router 4 (hash mode), PrimeVue 4 (Aura), @tanstack/vue-query 5, @vueuse/core 14, valibot 1, TypeScript 5 (022-vue-frontend)
+- localStorage for config snapshots, mock data layer for stubbed Tauri commands (022-vue-frontend)
+
 ## Recent Changes
 - 016-tauri-app-shell: Tauri v2 shell — 11 commands (6 wired to core), system tray with badge, theme switching, error toasts, self-update check, close-during-operation prompt
 - 015-cli-interface: CLI scaffold — all 9 commands, dual-layer tracing, OutputMode, exit codes, JSON output, confirmation helpers

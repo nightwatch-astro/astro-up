@@ -35,7 +35,7 @@
     .nav-badge { margin-left: auto; background: var(--yellow-text); color: #000; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
     .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); line-height: 1.6; }
 
-    .main { flex: 1; overflow-y: auto; }
+    .main { flex: 1; overflow-y: auto; padding-bottom: 28px; }
     .page { display: none; padding: 24px 32px; max-width: 1200px; }
     .page.active { display: block; }
     .page-hdr h2 { font-size: 22px; font-weight: 600; color: var(--text-primary); }
@@ -211,6 +211,32 @@
     .s-label { font-size: 13px; color: var(--text-primary); }
     .s-hint { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
     .s-input input, .s-input select { padding: 7px 11px; border-radius: 6px; border: 1px solid var(--border-hover); background: var(--bg-elevated); color: var(--text-primary); font-size: 13px; outline: none; }
+
+    /* Status bar */
+    .status-bar { position: fixed; bottom: 0; left: 220px; right: 0; height: 26px; background: var(--bg-elevated); border-top: 1px solid var(--border-hover); display: flex; align-items: center; gap: 16px; padding: 0 16px; font-size: 11px; color: var(--text-muted); z-index: 60; }
+    .status-bar .sep { color: var(--border-hover); }
+    .status-bar .log-toggle { margin-left: auto; background: transparent; border: 1px solid var(--border-hover); border-radius: 4px; color: var(--text-muted); font-size: 11px; padding: 1px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .status-bar .log-toggle:hover { border-color: var(--blue-text); color: var(--blue-text); }
+    .status-bar .log-toggle.active { border-color: var(--blue); color: var(--blue-text); }
+
+    /* Log panel */
+    .log-panel { position: fixed; bottom: 26px; left: 220px; right: 0; height: 220px; background: #0a0e1a; border-top: 1px solid var(--border-hover); z-index: 55; display: flex; flex-direction: column; }
+    .log-panel.hidden { display: none; }
+    .log-panel-header { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+    .log-panel-header select { padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-hover); background: var(--bg-elevated); color: var(--text-primary); font-size: 11px; outline: none; }
+    .log-panel-body { flex: 1; overflow-y: auto; padding: 6px 12px; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 11px; line-height: 1.7; }
+    .log-line { white-space: nowrap; }
+    .log-line .ts { color: var(--text-dim); }
+    .log-line .lvl-info { color: var(--blue-text); }
+    .log-line .lvl-warn { color: var(--yellow-text); }
+    .log-line .lvl-error { color: var(--red); }
+    .log-line .lvl-debug { color: var(--text-muted); }
+    .log-line .lvl-trace { color: var(--text-dim); }
+    .log-line .msg { color: var(--text-secondary); }
+
+    /* Styled selects */
+    select { padding: 7px 11px; border-radius: 6px; border: 1px solid var(--border-hover); background: var(--bg-elevated); color: var(--text-primary); font-size: 13px; outline: none; }
+    select:focus { border-color: var(--blue); }
 
     @media (max-width: 900px) { .stats { grid-template-columns: repeat(2, 1fr); } .info-grid { grid-template-columns: 1fr; } }
   </style>
@@ -408,7 +434,7 @@ function render() {
         <div class="nav-item ${currentPage==='backup'?'active':''}" data-nav="backup"><i class="pi pi-database"></i> Backup</div>
         <div class="nav-item ${currentPage==='settings'?'active':''}" data-nav="settings"><i class="pi pi-cog"></i> Settings</div>
       </div>
-      <div class="sidebar-footer">Catalog: ${PACKAGES.length} packages<br>Last sync: 2 hours ago</div>
+      <div class="sidebar-footer">v0.1.0</div>
     </nav>
   `));
 
@@ -423,6 +449,8 @@ function render() {
   else if (currentPage === 'settings') main.appendChild(renderSettings());
 
   el.appendChild(main);
+  el.appendChild(renderLogPanel());
+  el.appendChild(renderStatusBar());
   el.appendChild(renderOpsDock());
   bindNav();
 }
@@ -455,7 +483,7 @@ function renderDashboard() {
       <div class="stat card"><div class="lbl">Installed</div><div class="val">${installed.length}</div><div class="sub">of ${PACKAGES.length} in catalog</div></div>
       <div class="stat card warn" data-nav="installed"><div class="lbl">Updates Available</div><div class="val">${updatable.length}</div><div class="sub">Review and install</div></div>
       <div class="stat card"><div class="lbl">Last Scan</div><div class="val" style="font-size:18px">Today 14:30</div><div class="sub">${installed.length} packages detected</div></div>
-      <div class="stat card"><div class="lbl">Backups</div><div class="val">${BACKUPS.length}</div><div class="sub">124 MB total</div></div>
+      <div class="stat card" data-nav="backup" style="cursor:pointer"><div class="lbl">Backups</div><div class="val">${BACKUPS.length}</div><div class="sub">124 MB total</div></div>
     </div>
 
     ${updatable.length ? `
@@ -884,8 +912,8 @@ function renderSettings() {
   const page = document.createElement('div');
   page.className = 'page active';
 
-  const sections = ['general','backup','catalog','network','paths','logging','about'];
-  const labels = ['General','Backup','Catalog','Network','Paths','Logging','About'];
+  const sections = ['general','startup','notifications','backup','catalog','network','paths','logging','about'];
+  const labels = ['General','Startup & Window','Notifications','Backup','Catalog','Network','Paths','Logging','About'];
 
   page.appendChild(createFromHTML(`<div>
     <div class="page-hdr"><h2>Settings</h2><p>Configure Astro-Up behavior</p></div>
@@ -896,9 +924,37 @@ function renderSettings() {
       <div class="settings-panel">
         <div class="settings-section-page" id="sec-general">
           <div class="card settings-section">
+            <h3>General</h3>
+            <div class="s-row"><div><div class="s-label">Theme</div><div class="s-hint">Application color scheme</div></div><div class="s-input"><select><option>Dark</option><option>Light</option><option selected>System</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Font size</div><div class="s-hint">UI text size</div></div><div class="s-input"><select><option>Small</option><option selected>Medium</option><option>Large</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Auto-scan on launch</div><div class="s-hint">Scan for installed software when Astro-Up starts</div></div><div class="toggle"></div></div>
+            <div class="s-row"><div><div class="s-label">Default install scope</div><div class="s-hint">Preferred installation scope for new packages</div></div><div class="s-input"><select><option selected>User</option><option>Machine</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Default install method</div><div class="s-hint">Preferred installation mode</div></div><div class="s-input"><select><option selected>Silent</option><option>Interactive</option></select></div></div>
+          </div>
+          <div class="card settings-section">
             <h3>Updates</h3>
             <div class="s-row"><div><div class="s-label">Auto-check for updates</div><div class="s-hint">Periodically check for new software versions</div></div><div class="toggle on"></div></div>
             <div class="s-row"><div><div class="s-label">Check interval</div><div class="s-hint">How often to check for updates</div></div><div class="s-input"><select><option>Every 30 minutes</option><option>Every hour</option><option selected>Every 6 hours</option><option>Every 24 hours</option></select></div></div>
+            <div class="s-row"><div><div class="s-label">Auto-notify for updates</div><div class="s-hint">Show a notification when updates are available</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Auto-install updates</div><div class="s-hint">Automatically install updates without confirmation</div></div><div class="toggle"></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-startup" style="display:none">
+          <div class="card settings-section">
+            <h3>Startup & Window</h3>
+            <div class="s-row"><div><div class="s-label">Start with Windows</div><div class="s-hint">Launch Astro-Up when Windows starts</div></div><div class="toggle"></div></div>
+            <div class="s-row"><div><div class="s-label">Start minimized to tray</div><div class="s-hint">Start in the system tray instead of a window</div></div><div class="toggle"></div></div>
+            <div class="s-row"><div><div class="s-label">Close to tray</div><div class="s-hint">Keep running in the system tray when window is closed</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Restore window position</div><div class="s-hint">Remember window size and position between sessions</div></div><div class="toggle on"></div></div>
+          </div>
+        </div>
+        <div class="settings-section-page" id="sec-notifications" style="display:none">
+          <div class="card settings-section">
+            <h3>Notifications</h3>
+            <div class="s-row"><div><div class="s-label">Desktop notifications</div><div class="s-hint">Show system notifications for events</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Notify on update available</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Notify on backup complete</div></div><div class="toggle on"></div></div>
+            <div class="s-row"><div><div class="s-label">Notify on operation failure</div></div><div class="toggle on"></div></div>
           </div>
         </div>
         <div class="settings-section-page" id="sec-backup" style="display:none">
@@ -938,6 +994,11 @@ function renderSettings() {
             <div class="s-row"><div><div class="s-label">Keep installers</div><div class="s-hint">Retain downloaded installer files</div></div><div class="toggle"></div></div>
             <div class="s-row"><div><div class="s-label">Purge after</div></div><div class="s-input"><input type="number" value="30" style="width:80px"> <span style="font-size:11px;color:var(--text-muted);margin-left:6px">days</span></div></div>
           </div>
+          <div class="card settings-section">
+            <h3>Cleanup</h3>
+            <div class="s-row"><div><div class="s-label">Clear Cache</div><div class="s-hint">Remove cached catalog data and temporary files</div></div><button class="btn btn-outline btn-sm clear-cache-btn"><i class="pi pi-trash"></i> Clear Cache <span style="color:var(--text-dim);margin-left:4px">(12.4 MB)</span></button></div>
+            <div class="s-row"><div><div class="s-label">Clear Downloads</div><div class="s-hint">Remove downloaded installer files</div></div><button class="btn btn-outline btn-sm clear-downloads-btn"><i class="pi pi-trash"></i> Clear Downloads <span style="color:var(--text-dim);margin-left:4px">(248 MB)</span></button></div>
+          </div>
         </div>
         <div class="settings-section-page" id="sec-logging" style="display:none">
           <div class="card settings-section">
@@ -955,6 +1016,24 @@ function renderSettings() {
             <div class="s-row"><div><div class="s-label">Database</div></div><div style="font-size:13px;color:var(--text-primary)">SQLite 3.45.0</div></div>
             <div class="s-row"><div><div class="s-label">License</div></div><div style="font-size:13px;color:var(--text-primary)">Apache-2.0</div></div>
             <div class="s-row"><div><div class="s-label">Links</div></div><div style="display:flex;gap:12px"><a href="#" style="font-size:13px">GitHub</a><a href="#" style="font-size:13px">Docs</a><a href="#" style="font-size:13px">Report Issue</a></div></div>
+          </div>
+          <div class="card settings-section">
+            <h3>Config Snapshots</h3>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Auto-saved configuration snapshots. Restore to revert settings changes.</div>
+            <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+              <div style="display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)">
+                <div style="flex:1"><div style="font-size:12px;color:var(--text-primary)">config-2026-04-02T14:30.toml</div><div style="font-size:11px;color:var(--text-muted)">Today 14:30 &mdash; 2.1 KB</div></div>
+                <button class="btn btn-outline btn-xs restore-config-btn">Restore</button>
+              </div>
+              <div style="display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)">
+                <div style="flex:1"><div style="font-size:12px;color:var(--text-primary)">config-2026-04-01T09:15.toml</div><div style="font-size:11px;color:var(--text-muted)">Yesterday 09:15 &mdash; 2.0 KB</div></div>
+                <button class="btn btn-outline btn-xs restore-config-btn">Restore</button>
+              </div>
+              <div style="display:flex;align-items:center;padding:10px 12px">
+                <div style="flex:1"><div style="font-size:12px;color:var(--text-primary)">config-2026-03-28T20:45.toml</div><div style="font-size:11px;color:var(--text-muted)">Mar 28 20:45 &mdash; 1.9 KB</div></div>
+                <button class="btn btn-outline btn-xs restore-config-btn">Restore</button>
+              </div>
+            </div>
           </div>
           <div style="margin-top:12px"><button class="btn btn-outline check-updates-btn"><i class="pi pi-refresh"></i> Check for App Updates</button></div>
         </div>
@@ -979,6 +1058,93 @@ function renderSettings() {
   });
 
   return page;
+}
+
+function renderLogPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'log-panel hidden';
+  panel.id = 'log-panel';
+  const MOCK_LOGS = [
+    { ts:'14:30:01.234', lvl:'info', msg:'Application started — v0.1.0' },
+    { ts:'14:30:01.890', lvl:'info', msg:'Loading configuration from %LOCALAPPDATA%\\AstroUp\\config.toml' },
+    { ts:'14:30:02.012', lvl:'debug', msg:'Database opened: catalog.db (42 packages, 5 backups)' },
+    { ts:'14:30:02.340', lvl:'info', msg:'Catalog sync started — source: github.com/nightwatch-astro/catalog' },
+    { ts:'14:30:03.567', lvl:'info', msg:'Catalog sync complete — 0 new, 2 updated, 0 removed' },
+    { ts:'14:30:04.001', lvl:'info', msg:'System scan initiated — checking registry, PE files, driver store' },
+    { ts:'14:30:04.123', lvl:'debug', msg:'Registry scan: found 7 entries in HKLM\\SOFTWARE' },
+    { ts:'14:30:04.456', lvl:'debug', msg:'PE detection: scanning Program Files directories' },
+    { ts:'14:30:05.789', lvl:'info', msg:'Scan complete — 8 installed, 2 updates available' },
+    { ts:'14:30:05.890', lvl:'warn', msg:'FTDI CDM Driver: installed 2.12.36, latest 2.12.38 — update recommended' },
+    { ts:'14:30:05.901', lvl:'warn', msg:'N.I.N.A.: installed 3.1.2, latest 3.2.0 — update available' },
+    { ts:'14:30:06.100', lvl:'debug', msg:'Tray icon initialized — badge count: 2' },
+    { ts:'14:30:06.200', lvl:'info', msg:'Ready — dashboard loaded in 4.97s' },
+    { ts:'14:32:15.100', lvl:'info', msg:'User navigated to Catalog page' },
+    { ts:'14:35:22.300', lvl:'debug', msg:'Backup check: 3 packages opted-in, last backup 2h ago' },
+    { ts:'14:35:22.400', lvl:'trace', msg:'SQLite query: SELECT * FROM backups ORDER BY created_at DESC LIMIT 50' },
+  ];
+  const levelOrder = { error:0, warn:1, info:2, debug:3, trace:4 };
+  let filterLevel = 'info';
+
+  function renderLines() {
+    const body = panel.querySelector('.log-panel-body');
+    if (!body) return;
+    body.textContent = '';
+    MOCK_LOGS.filter(l => levelOrder[l.lvl] <= levelOrder[filterLevel]).forEach(l => {
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="ts">${l.ts}</span> <span class="lvl-${l.lvl}">${l.lvl.toUpperCase().padEnd(5)}</span> <span class="msg">${esc(l.msg)}</span>`;
+      body.appendChild(line);
+    });
+    body.scrollTop = body.scrollHeight;
+  }
+
+  panel.innerHTML = `<div class="log-panel-header">
+    <span>Log Output</span>
+    <select id="log-level-filter">
+      <option value="error">Error</option>
+      <option value="warn">Warn</option>
+      <option value="info" selected>Info</option>
+      <option value="debug">Debug</option>
+      <option value="trace">Trace</option>
+    </select>
+    <span style="flex:1"></span>
+    <span id="log-line-count" style="color:var(--text-dim)"></span>
+  </div><div class="log-panel-body"></div>`;
+
+  setTimeout(() => {
+    renderLines();
+    const sel = panel.querySelector('#log-level-filter');
+    if (sel) sel.addEventListener('change', e => { filterLevel = e.target.value; renderLines(); });
+  }, 0);
+
+  return panel;
+}
+
+function renderStatusBar() {
+  const bar = document.createElement('div');
+  bar.className = 'status-bar';
+  bar.id = 'status-bar';
+  bar.innerHTML = `<span>Catalog: ${PACKAGES.length} packages</span><span class="sep">|</span><span>Synced 2h ago</span><span class="sep">|</span><span>${getInstalled().length} installed</span><span class="sep">|</span><span style="color:var(--yellow-text)">${getUpdatable().length} updates</span><span style="flex:1"></span><span>0 operations</span><button class="log-toggle" id="log-toggle-btn" title="Toggle log panel (Ctrl+L)"><i class="pi pi-chevron-up" style="font-size:9px"></i> Log</button>`;
+  setTimeout(() => {
+    const btn = document.getElementById('log-toggle-btn');
+    if (btn) btn.addEventListener('click', toggleLogPanel);
+  }, 0);
+  return bar;
+}
+
+function toggleLogPanel() {
+  const panel = document.getElementById('log-panel');
+  const btn = document.getElementById('log-toggle-btn');
+  if (!panel) return;
+  const isHidden = panel.classList.toggle('hidden');
+  if (btn) {
+    btn.classList.toggle('active', !isHidden);
+    btn.querySelector('i').className = isHidden ? 'pi pi-chevron-up' : 'pi pi-chevron-down';
+    btn.querySelector('i').style.fontSize = '9px';
+  }
+  // Adjust main padding
+  const main = document.querySelector('.main');
+  if (main) main.style.paddingBottom = isHidden ? '28px' : '248px';
 }
 
 function renderOpsDock() {
@@ -1024,6 +1190,9 @@ document.addEventListener('click', function(e) {
   // 6. Settings actions
   if (e.target.closest('.check-updates-btn')) { e.stopPropagation(); showCheckAppUpdate(); return; }
   if (e.target.closest('.reset-defaults-btn')) { e.stopPropagation(); showResetDefaultsConfirm(); return; }
+  if (e.target.closest('.clear-cache-btn')) { e.stopPropagation(); showConfirmDialog({ title:'Clear Cache', icon:'pi-trash', iconColor:'var(--yellow-text)', message:'Delete all cached catalog data and temporary files (12.4 MB)?', confirmText:'Clear Cache', confirmClass:'btn-danger', onConfirm:()=>{} }); return; }
+  if (e.target.closest('.clear-downloads-btn')) { e.stopPropagation(); showConfirmDialog({ title:'Clear Downloads', icon:'pi-trash', iconColor:'var(--yellow-text)', message:'Delete all downloaded installer files (248 MB)? You will need to re-download installers for future updates.', confirmText:'Clear Downloads', confirmClass:'btn-danger', onConfirm:()=>{} }); return; }
+  if (e.target.closest('.restore-config-btn')) { e.stopPropagation(); showConfirmDialog({ title:'Restore Config Snapshot', icon:'pi-replay', iconColor:'var(--yellow-text)', message:'Restore this configuration snapshot? Your current settings will be overwritten.', confirmText:'Restore', confirmClass:'btn-danger', onConfirm:()=>{} }); return; }
 
   // 7. Operation buttons (install from detail, backup-now from detail tab)
   const opBtn = e.target.closest('[data-op]');
@@ -1169,6 +1338,39 @@ function hideOps() {
 window.showBackupConfirm = showBackupConfirm;
 window.getPkg = getPkg;
 window.startOp = startOp;
+
+// ==== KEYBOARD SHORTCUTS ====
+document.addEventListener('keydown', function(e) {
+  const mod = e.metaKey || e.ctrlKey;
+
+  // Ctrl/Cmd+F: focus search box on current page
+  if (mod && e.key === 'f') {
+    const searchInput = document.querySelector('.page.active .search-box input') || document.querySelector('.page.active input[type="text"]');
+    if (searchInput) { e.preventDefault(); searchInput.focus(); }
+  }
+
+  // Escape: close dialog or collapse log panel
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('confirm-overlay') || document.getElementById('backup-confirm-overlay');
+    if (overlay) { overlay.remove(); return; }
+    const logPanel = document.getElementById('log-panel');
+    if (logPanel && !logPanel.classList.contains('hidden')) { toggleLogPanel(); }
+  }
+
+  // Ctrl/Cmd+1-5: navigate pages
+  if (mod && e.key >= '1' && e.key <= '5') {
+    e.preventDefault();
+    const pages = ['dashboard','catalog','installed','backup','settings'];
+    currentPage = pages[parseInt(e.key) - 1];
+    render();
+  }
+
+  // Ctrl/Cmd+L: toggle log panel
+  if (mod && e.key === 'l') {
+    e.preventDefault();
+    toggleLogPanel();
+  }
+});
 
 // ==== INIT ====
 render();
