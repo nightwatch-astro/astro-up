@@ -33,6 +33,41 @@ export function useConfig() {
   });
 }
 
+// --- Backup queries (mock data until backend commands exist) ---
+
+export function useBackupList() {
+  return useQuery({
+    queryKey: ["backups"],
+    queryFn: async () => {
+      const { mockBackups } = await import("../mocks");
+      return mockBackups;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useBackupContents(archive: () => string | null) {
+  return useQuery({
+    queryKey: ["backup-contents", archive],
+    queryFn: async () => {
+      const { mockBackupContents } = await import("../mocks");
+      return mockBackupContents;
+    },
+    enabled: () => archive() !== null,
+  });
+}
+
+export function useBackupPreview(archive: () => string | null) {
+  return useQuery({
+    queryKey: ["backup-preview", archive],
+    queryFn: async () => {
+      const { mockRestorePreview } = await import("../mocks");
+      return mockRestorePreview;
+    },
+    enabled: () => archive() !== null,
+  });
+}
+
 // --- Mutations ---
 
 export function useSaveConfig() {

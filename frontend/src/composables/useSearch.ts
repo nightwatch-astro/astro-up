@@ -17,20 +17,30 @@ export function useSearch<T extends PackageSummary>(items: Ref<T[] | undefined>)
 
     // Text search with relevance ranking (FR-053)
     const query = searchText.value.trim().toLowerCase();
-    if (!query) return result;
+    if (!query) {
+      // Browse mode: sort alphabetically by name
+      return [...result].sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     return result
       .map((p) => {
         let rank = 0;
+        const id = p.id.toLowerCase();
         const name = p.name.toLowerCase();
         const desc = (p.description ?? "").toLowerCase();
         const tags = p.tags.map((t) => t.toLowerCase());
         const aliases = p.aliases.map((a) => a.toLowerCase());
+        const deps = p.dependencies.map((d) => d.toLowerCase());
+        const license = (p.license ?? "").toLowerCase();
 
-        // Exact name match = highest
-        if (name === query) rank = 100;
+        // Exact ID match = highest (FR-053)
+        if (id === query) rank = 110;
+        // Exact name match
+        else if (name === query) rank = 100;
         // Name starts with query
         else if (name.startsWith(query)) rank = 80;
+        // ID contains query
+        else if (id.includes(query)) rank = 70;
         // Name contains query
         else if (name.includes(query)) rank = 60;
         // Alias match
@@ -39,6 +49,10 @@ export function useSearch<T extends PackageSummary>(items: Ref<T[] | undefined>)
         else if (tags.some((t) => t.includes(query))) rank = 40;
         // Publisher match
         else if (p.publisher?.toLowerCase().includes(query)) rank = 30;
+        // License match
+        else if (license.includes(query)) rank = 25;
+        // Dependencies match
+        else if (deps.some((d) => d.includes(query))) rank = 22;
         // Description match
         else if (desc.includes(query)) rank = 20;
 

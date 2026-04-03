@@ -68,10 +68,14 @@ watch(serverConfig, (data) => {
   }
 }, { immediate: true });
 
-// Apply theme immediately when changed
+// Apply theme and font size immediately when changed
 watch(() => config.general.theme, (theme) => {
   setTheme(theme);
 });
+
+watch(() => config.general.font_size, (size) => {
+  document.documentElement.dataset.fontSize = size;
+}, { immediate: true });
 
 function validate(): boolean {
   const result = safeParse(AppConfigSchema, config);
@@ -189,7 +193,10 @@ function handleReset() {
         v-else-if="activeSection === 'logging'"
         v-model="config.logging"
       />
-      <AboutSection v-else-if="activeSection === 'about'" />
+      <AboutSection
+        v-else-if="activeSection === 'about'"
+        @restore-snapshot="(c) => Object.assign(config, c)"
+      />
     </div>
   </div>
 </template>
