@@ -36,19 +36,23 @@ let unlistenBackendLog: UnlistenFn | null = null;
 
 // Forward backend tracing logs to the log panel
 async function setupBackendLogListener() {
-  unlistenBackendLog = await listen<{
-    timestamp: string;
-    level: string;
-    target: string;
-    message: string;
-  }>("backend-log", (event) => {
-    logPanel.value?.addEntry({
-      timestamp: event.payload.timestamp,
-      level: event.payload.level as "error" | "warn" | "info" | "debug" | "trace",
+  try {
+    unlistenBackendLog = await listen<{
+      timestamp: string;
+      level: string;
+      target: string;
+      message: string;
+    }>("backend-log", (event) => {
+      logPanel.value?.addEntry({
+        timestamp: event.payload.timestamp,
+        level: event.payload.level as "error" | "warn" | "info" | "debug" | "trace",
       target: event.payload.target,
       message: event.payload.message,
     });
   });
+  } catch {
+    // Not running inside Tauri
+  }
 }
 
 // Wire core events to operations dock, log panel, and error toasts (T036/T037)
@@ -99,7 +103,8 @@ useCoreEvents((event: CoreEvent) => {
 
 // Listen for self-update availability
 async function setupUpdateListener() {
-  unlistenUpdate = await listen<{ version: string; body: string | null }>(
+  try {
+    unlistenUpdate = await listen<{ version: string; body: string | null }>(
     "update-available",
     (event) => {
       updateVersion.value = event.payload.version;
@@ -113,6 +118,9 @@ async function setupUpdateListener() {
       });
     },
   );
+  } catch {
+    // Not running inside Tauri
+  }
 }
 
 async function installUpdate() {

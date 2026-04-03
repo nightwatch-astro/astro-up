@@ -21,12 +21,16 @@ const catalogStatus = ref<"unknown" | "syncing" | "ready" | "error">("unknown");
 let unlistenStatus: UnlistenFn | null = null;
 
 onMounted(async () => {
-  unlistenStatus = await listen<string>("catalog-status", (event) => {
-    catalogStatus.value = event.payload as typeof catalogStatus.value;
-    if (event.payload === "ready") {
-      refetch();
-    }
-  });
+  try {
+    unlistenStatus = await listen<string>("catalog-status", (event) => {
+      catalogStatus.value = event.payload as typeof catalogStatus.value;
+      if (event.payload === "ready") {
+        refetch();
+      }
+    });
+  } catch {
+    // Not running inside Tauri
+  }
 });
 
 onUnmounted(() => {
