@@ -1,5 +1,7 @@
+use std::fmt;
+
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::broadcast;
 
 use astro_up_core::catalog::CatalogFilter;
@@ -16,6 +18,12 @@ use crate::state::{AppState, OperationId};
 pub struct CoreError {
     pub message: String,
     pub code: String,
+}
+
+impl fmt::Display for CoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.code, self.message)
+    }
 }
 
 impl From<astro_up_core::error::CoreError> for CoreError {
@@ -282,7 +290,7 @@ async fn run_orchestrated_operation(
     app: &AppHandle,
     state: &AppState,
     id: &str,
-    op_id: &OperationId,
+    _op_id: &OperationId,
     cancel_token: tokio_util::sync::CancellationToken,
 ) -> Result<serde_json::Value, CoreError> {
     use astro_up_core::backup::BackupService;
@@ -323,7 +331,9 @@ async fn run_orchestrated_operation(
         &lock_path, packages, ledger, downloader, installer, backup, db,
     )?;
 
-    let pkg_id: astro_up_core::catalog::PackageId = id.parse().map_err(|e: CoreError| e)?;
+    let pkg_id: astro_up_core::catalog::PackageId = id
+        .parse()
+        .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))?;
     let plan = orchestrator
         .plan(UpdateRequest {
             packages: vec![pkg_id],
@@ -360,7 +370,6 @@ pub async fn install_software(
 
     let app_clone = app.clone();
     let op_id_clone = op_id.clone();
-    let db_path = state.db_path.clone();
 
     tauri::async_runtime::spawn(async move {
         let state_ref = app_clone.state::<AppState>();

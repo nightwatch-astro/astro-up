@@ -13,6 +13,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 astro-up-core.workspace = true
+chrono.workspace = true
 dashmap = "6"
 directories = "6"
 rusqlite = { version = "0.39", features = ["bundled"] }

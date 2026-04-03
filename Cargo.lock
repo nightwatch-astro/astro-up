@@ -227,6 +227,7 @@ name = "astro-up-gui"
 version = "0.1.0"
 dependencies = [
  "astro-up-core",
+ "chrono",
  "dashmap",
  "directories",
  "insta",

@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use astro_up_core::catalog::SqliteCatalogReader;
-use astro_up_core::config::ConfigStore;
 use astro_up_core::detect::DetectionError;
 use astro_up_core::detect::scanner::{LedgerStore, PackageSource};
 use astro_up_core::ledger::{LedgerEntry, LedgerSource};
@@ -78,7 +77,7 @@ impl LedgerStore for SqliteLedgerStore {
                             .unwrap_or_else(|_| "0.0.0".to_string()),
                     ),
                     source: LedgerSource::Acknowledged,
-                    recorded_at: chrono::Utc::now(), // SQLite datetime approximation
+                    recorded_at: chrono::Utc::now(),
                     notes: row.get(4)?,
                     install_path: row
                         .get::<_, Option<String>>(5)?

@@ -93,7 +93,7 @@ pub struct HistoryFilter {
 // ---------------------------------------------------------------------------
 
 /// Callback for streaming engine events to the UI layer.
-pub type EventCallback = Box<dyn Fn(Event) + Send>;
+pub type EventCallback = Box<dyn Fn(Event) + Send + Sync>;
 
 // ---------------------------------------------------------------------------
 // Orchestrator trait
