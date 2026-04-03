@@ -217,7 +217,7 @@ impl SqliteCatalogReader {
         match result {
             Some(json) => {
                 let config: crate::types::DetectionConfig =
-                    serde_json::from_str(&json).map_err(|e| CoreError::CatalogCorrupted)?;
+                    serde_json::from_str(&json).map_err(|_| CoreError::CatalogCorrupted)?;
                 Ok(Some(config))
             }
             None => Ok(None),
