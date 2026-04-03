@@ -59,8 +59,8 @@ export function useTheme() {
   async function init() {
     try {
       const config = await invoke<Record<string, unknown>>("get_config");
-      const general = config?.general as Record<string, unknown> | undefined;
-      const theme = (general?.theme as ThemeMode) ?? "system";
+      const ui = config?.ui as Record<string, unknown> | undefined;
+      const theme = (ui?.theme as ThemeMode) ?? "system";
       applyTheme(theme);
     } catch {
       applyTheme("system");
@@ -71,9 +71,9 @@ export function useTheme() {
     applyTheme(mode);
     try {
       const config = await invoke<Record<string, unknown>>("get_config");
-      const general = (config?.general as Record<string, unknown>) ?? {};
-      general.theme = mode;
-      await invoke("save_config", { config: { ...config, general } });
+      const ui = (config?.ui as Record<string, unknown>) ?? {};
+      ui.theme = mode;
+      await invoke("save_config", { config: { ...config, ui } });
     } catch (e) {
       console.warn("Failed to save theme preference:", e);
     }

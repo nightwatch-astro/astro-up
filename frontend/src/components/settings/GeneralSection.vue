@@ -2,9 +2,9 @@
 import Dropdown from "primevue/dropdown";
 import ToggleSwitch from "primevue/toggleswitch";
 import InputText from "primevue/inputtext";
-import type { GeneralConfig } from "../../types/config";
+import type { UiConfig } from "../../types/config";
 
-const config = defineModel<GeneralConfig>({ required: true });
+const config = defineModel<UiConfig>({ required: true });
 
 const themeOptions = [
   { label: "Dark", value: "dark" },

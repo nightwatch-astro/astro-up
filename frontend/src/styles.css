@@ -67,3 +67,39 @@ body {
     overflow-x: auto;
   }
 }
+
+/* Toast stacking — max 3 visible (FR-046) */
+.p-toast .p-toast-message:nth-child(n+4) {
+  display: none;
+}
+
+/* Focus management — tab order (FR-048) */
+.app-sidebar { order: 1; }
+.app-content { order: 2; }
+
+/* Truncation helpers */
+.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.path-scroll {
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* Info grid stacking on narrow viewports (FR-024) */
+@media (max-width: 900px) {
+  .info-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

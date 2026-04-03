@@ -24,6 +24,10 @@ const logPanel = ref<InstanceType<typeof LogPanel> | null>(null);
 useKeyboard({
   onToggleLog: () => { logVisible.value = !logVisible.value; },
   onEscape: () => { logVisible.value = false; },
+  onFocusSearch: () => {
+    const searchInput = document.querySelector<HTMLInputElement>(".app-main input[type='text'], .app-main .p-inputtext");
+    searchInput?.focus();
+  },
 });
 
 const updateVersion = ref<string | null>(null);

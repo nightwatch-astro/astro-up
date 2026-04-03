@@ -3,6 +3,7 @@ import { ref, reactive, watch } from "vue";
 import Button from "primevue/button";
 import { useToast } from "primevue/usetoast";
 import { safeParse } from "valibot";
+import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import GeneralSection from "../components/settings/GeneralSection.vue";
 import StartupSection from "../components/settings/StartupSection.vue";
 import NotificationsSection from "../components/settings/NotificationsSection.vue";
@@ -26,6 +27,7 @@ const { save: saveSnapshot } = useConfigSnapshots();
 
 const activeSection = ref("general");
 const errors = ref<string[]>([]);
+const showResetConfirm = ref(false);
 
 const sections = [
   { id: "general", label: "General", icon: "pi-cog" },
@@ -40,7 +42,7 @@ const sections = [
 ];
 
 const defaultConfig: AppConfig = {
-  general: {
+  ui: {
     theme: "system", font_size: "medium", auto_scan_on_launch: false,
     default_install_scope: "user", default_install_method: "silent",
     auto_check_updates: true, check_interval: "24h",
@@ -52,7 +54,7 @@ const defaultConfig: AppConfig = {
     show_errors: true, show_warnings: true,
     show_update_available: true, show_operation_complete: true,
   },
-  backup: { scheduled_enabled: false, schedule: "weekly", max_per_package: 5, max_total_size_mb: 0, max_age_days: 0 },
+  backup_policy: { scheduled_enabled: false, schedule: "weekly", max_per_package: 5, max_total_size_mb: 0, max_age_days: 0 },
   catalog: { url: "https://github.com/nightwatch-astro/astro-up-catalog/releases/latest/download/catalog.db", cache_ttl: "24h" },
   network: { proxy: null, connect_timeout: "10s", timeout: "30s", download_speed_limit: 0 },
   paths: { download_dir: "", cache_dir: "", keep_installers: false, purge_installers_after_days: 7 },
@@ -69,11 +71,11 @@ watch(serverConfig, (data) => {
 }, { immediate: true });
 
 // Apply theme and font size immediately when changed
-watch(() => config.general.theme, (theme) => {
+watch(() => config.ui.theme, (theme) => {
   setTheme(theme);
 });
 
-watch(() => config.general.font_size, (size) => {
+watch(() => config.ui.font_size, (size) => {
   document.documentElement.dataset.fontSize = size;
 }, { immediate: true });
 
@@ -105,8 +107,9 @@ function handleSave() {
   });
 }
 
-function handleReset() {
+function confirmReset() {
   Object.assign(config, structuredClone(defaultConfig));
+  showResetConfirm.value = false;
   toast.add({ severity: "info", summary: "Reset to defaults", life: 3000 });
 }
 </script>
@@ -139,7 +142,7 @@ function handleReset() {
             label="Reset to Defaults"
             severity="secondary"
             text
-            @click="handleReset"
+            @click="showResetConfirm = true"
           />
           <Button
             label="Save Changes"
@@ -163,7 +166,7 @@ function handleReset() {
 
       <GeneralSection
         v-if="activeSection === 'general'"
-        v-model="config.general"
+        v-model="config.ui"
       />
       <StartupSection
         v-else-if="activeSection === 'startup'"
@@ -175,7 +178,7 @@ function handleReset() {
       />
       <BackupSection
         v-else-if="activeSection === 'backup'"
-        v-model="config.backup"
+        v-model="config.backup_policy"
       />
       <CatalogSection
         v-else-if="activeSection === 'catalog'"
@@ -198,6 +201,16 @@ function handleReset() {
         @restore-snapshot="(c) => Object.assign(config, c)"
       />
     </div>
+
+    <ConfirmDialog
+      v-model:visible="showResetConfirm"
+      title="Reset to Defaults"
+      message="This will reset all settings to their default values. Your current settings will be lost."
+      icon="pi-refresh"
+      confirm-label="Reset"
+      severity="danger"
+      @confirm="confirmReset"
+    />
   </div>
 </template>
 

@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-export const GeneralSchema = v.object({
+export const UiSchema = v.object({
   theme: v.picklist(["dark", "light", "system"]),
   font_size: v.picklist(["small", "medium", "large"]),
   auto_scan_on_launch: v.boolean(),
@@ -61,10 +61,10 @@ export const LogSchema = v.object({
 });
 
 export const AppConfigSchema = v.object({
-  general: GeneralSchema,
+  ui: UiSchema,
   startup: StartupSchema,
   notifications: NotificationsSchema,
-  backup: BackupPolicySchema,
+  backup_policy: BackupPolicySchema,
   catalog: CatalogSchema,
   network: NetworkSchema,
   paths: PathsSchema,

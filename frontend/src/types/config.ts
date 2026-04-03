@@ -1,15 +1,15 @@
 export interface AppConfig {
-  general: GeneralConfig;
+  ui: UiConfig;
   startup: StartupConfig;
   notifications: NotificationsConfig;
-  backup: BackupPolicyConfig;
+  backup_policy: BackupPolicyConfig;
   catalog: CatalogConfig;
   network: NetworkConfig;
   paths: PathsConfig;
   logging: LogConfig;
 }
 
-export interface GeneralConfig {
+export interface UiConfig {
   theme: "dark" | "light" | "system";
   font_size: "small" | "medium" | "large";
   auto_scan_on_launch: boolean;

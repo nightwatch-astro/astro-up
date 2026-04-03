@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useSoftwareList, useUpdateCheck } from "../../composables/useInvoke";
+import { useOperations } from "../../composables/useOperations";
 
 defineEmits<{
   toggleLog: [];
@@ -8,6 +9,7 @@ defineEmits<{
 
 const { data: software } = useSoftwareList(() => "all");
 const { data: updates } = useUpdateCheck();
+const { operation, isRunning } = useOperations();
 
 const catalogCount = computed(() => software.value?.length ?? 0);
 const installedCount = computed(() => {
@@ -49,6 +51,13 @@ const lastSync = computed(() => {
         <i class="pi pi-sync" />
         {{ lastSync }}
       </span>
+      <template v-if="isRunning">
+        <span class="status-separator" />
+        <span class="status-item has-op">
+          <i class="pi pi-spinner pi-spin" />
+          {{ operation?.label }}
+        </span>
+      </template>
     </div>
 
     <div class="status-actions">
@@ -95,6 +104,10 @@ const lastSync = computed(() => {
 
 .status-item.has-updates {
   color: var(--p-yellow-400);
+}
+
+.status-item.has-op {
+  color: var(--p-blue-400);
 }
 
 .status-separator {
