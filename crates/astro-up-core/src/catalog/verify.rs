@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::error::CoreError;
 
 /// The production minisign public key, embedded at compile time.
-pub const MINISIGN_PUBLIC_KEY: &str = "RWT3Z/NUV2mo2nf2YDHF/Iyz9NFR7+gkUHa0rTlAcIBBxg+eqG3LUItj";
+pub const MINISIGN_PUBLIC_KEY: &str = "RWQK6Ny4IewwF5A+6bI/YNv08w/kZ7hy3xVAv+SWPT11w+7RvatDV0bg";
 
 /// Verify a catalog file against its minisign signature.
 ///

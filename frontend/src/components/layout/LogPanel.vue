@@ -13,7 +13,7 @@ defineEmits<{
 
 const MAX_ENTRIES = 1000;
 const entries = ref<LogEntry[]>([]);
-const logFilter = ref<LogEntry["level"] | "all">("all");
+const logFilter = ref<LogEntry["level"] | "all">("info");
 const logContainer = ref<HTMLElement | null>(null);
 const panelHeight = ref(200);
 const isResizing = ref(false);
