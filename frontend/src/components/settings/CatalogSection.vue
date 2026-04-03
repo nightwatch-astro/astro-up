@@ -20,7 +20,7 @@ const cacheTtlOptions = [
 async function redownloadCatalog() {
   resyncing.value = true;
   try {
-    await invoke("sync_catalog");
+    await invoke("sync_catalog", { force: true });
   } catch (e) {
     console.error("Catalog re-download failed:", e);
   } finally {

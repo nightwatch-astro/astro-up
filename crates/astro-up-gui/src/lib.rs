@@ -197,6 +197,7 @@ pub fn run() {
             commands::list_backups,
             commands::backup_preview,
             commands::delete_backup,
+            commands::clear_directory,
         ])
         .setup(|app| {
             let start = std::time::Instant::now();

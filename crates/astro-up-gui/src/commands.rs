@@ -63,11 +63,25 @@ fn forward_events(app: AppHandle, mut rx: broadcast::Receiver<Event>) {
 // --- Catalog sync ---
 
 #[tauri::command]
-pub async fn sync_catalog(app: AppHandle, state: State<'_, AppState>) -> Result<String, CoreError> {
-    tracing::info!(command = "sync_catalog", "Syncing catalog...");
+pub async fn sync_catalog(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    force: Option<bool>,
+) -> Result<String, CoreError> {
+    tracing::info!(
+        command = "sync_catalog",
+        force = force.unwrap_or(false),
+        "Syncing catalog..."
+    );
     let _ = app.emit("catalog-status", "syncing");
 
-    match state.catalog_manager.ensure_catalog().await {
+    let result = if force.unwrap_or(false) {
+        state.catalog_manager.refresh().await
+    } else {
+        state.catalog_manager.ensure_catalog().await
+    };
+
+    match result {
         Ok(result) => {
             let status = format!("{result:?}");
             tracing::info!(command = "sync_catalog", result = %status, "Catalog sync complete");
@@ -670,5 +684,44 @@ pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
             message: format!("Failed to delete backup: {e}"),
             code: "io_error".into(),
         })?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<(), CoreError> {
+    let _state = &state; // keep State in scope for future config-based path resolution
+    let path = if dir.is_empty() {
+        return Err(CoreError {
+            message: "No directory specified".into(),
+            code: "invalid_input".into(),
+        });
+    } else {
+        std::path::PathBuf::from(&dir)
+    };
+
+    tracing::info!(command = "clear_directory", path = %path.display(), "Clearing directory...");
+
+    if !path.exists() {
+        return Ok(());
+    }
+
+    let mut count = 0u32;
+    let mut entries = tokio::fs::read_dir(&path).await.map_err(|e| CoreError {
+        message: format!("Failed to read directory: {e}"),
+        code: "io_error".into(),
+    })?;
+
+    while let Some(entry) = entries.next_entry().await.map_err(|e| CoreError {
+        message: format!("Failed to read entry: {e}"),
+        code: "io_error".into(),
+    })? {
+        let entry_path = entry.path();
+        if entry_path.is_file() {
+            tokio::fs::remove_file(&entry_path).await.ok();
+            count += 1;
+        }
+    }
+
+    tracing::info!(command = "clear_directory", count, "Cleared files");
     Ok(())
 }

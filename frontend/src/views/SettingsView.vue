@@ -2,6 +2,7 @@
 import { ref, reactive, watch } from "vue";
 import Button from "primevue/button";
 import { useToast } from "primevue/usetoast";
+import { invoke } from "@tauri-apps/api/core";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import GeneralSection from "../components/settings/GeneralSection.vue";
 import StartupSection from "../components/settings/StartupSection.vue";
@@ -93,6 +94,23 @@ function confirmReset() {
   showResetConfirm.value = false;
   toast.add({ severity: "info", summary: "Reset to defaults", life: 3000 });
 }
+
+async function clearDirectory(dir: string, label: string) {
+  try {
+    await invoke("clear_directory", { dir });
+    toast.add({ severity: "success", summary: `${label} cleared`, life: 3000 });
+  } catch {
+    toast.add({ severity: "warn", summary: `No ${label.toLowerCase()} to clear`, life: 3000 });
+  }
+}
+
+function handleClearCache() {
+  clearDirectory(config.paths?.cache_dir || "", "Cache");
+}
+
+function handleClearDownloads() {
+  clearDirectory(config.paths?.download_dir || "", "Downloads");
+}
 </script>
 
 <template>
@@ -152,6 +170,8 @@ function confirmReset() {
       <PathsSection
         v-else-if="activeSection === 'paths'"
         v-model="config.paths"
+        @clear-cache="handleClearCache"
+        @clear-downloads="handleClearDownloads"
       />
       <LoggingSection
         v-else-if="activeSection === 'logging'"
