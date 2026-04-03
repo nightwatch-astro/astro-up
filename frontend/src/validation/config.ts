@@ -60,13 +60,24 @@ export const LogSchema = v.object({
   log_file: v.string(),
 });
 
+export const UpdateSchema = v.object({
+  auto_check: v.boolean(),
+  check_interval: v.pipe(v.string(), v.minLength(1, "Required")),
+});
+
+export const TelemetrySchema = v.object({
+  enabled: v.boolean(),
+});
+
 export const AppConfigSchema = v.object({
   ui: UiSchema,
   startup: StartupSchema,
   notifications: NotificationsSchema,
   backup_policy: BackupPolicySchema,
   catalog: CatalogSchema,
-  network: NetworkSchema,
   paths: PathsSchema,
+  network: NetworkSchema,
+  updates: UpdateSchema,
   logging: LogSchema,
+  telemetry: TelemetrySchema,
 });
