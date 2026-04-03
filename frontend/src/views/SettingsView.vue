@@ -2,7 +2,6 @@
 import { ref, reactive, watch } from "vue";
 import Button from "primevue/button";
 import { useToast } from "primevue/usetoast";
-import { safeParse } from "valibot";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import GeneralSection from "../components/settings/GeneralSection.vue";
 import StartupSection from "../components/settings/StartupSection.vue";
@@ -15,19 +14,16 @@ import LoggingSection from "../components/settings/LoggingSection.vue";
 import AboutSection from "../components/settings/AboutSection.vue";
 import { useConfig, useSaveConfig } from "../composables/useInvoke";
 import { useTheme } from "../composables/useTheme";
-import { useConfigSnapshots } from "../stores/configSnapshots";
-import { AppConfigSchema } from "../validation/config";
 import type { AppConfig } from "../types/config";
 
 const toast = useToast();
 const { data: serverConfig } = useConfig();
 const saveMutation = useSaveConfig();
 const { setTheme } = useTheme();
-const { save: saveSnapshot } = useConfigSnapshots();
 
 const activeSection = ref("general");
-const errors = ref<string[]>([]);
 const showResetConfirm = ref(false);
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 const sections = [
   { id: "general", label: "General", icon: "pi-cog" },
@@ -43,7 +39,7 @@ const sections = [
 
 const defaultConfig: AppConfig = {
   ui: {
-    theme: "system", font_size: "medium", auto_scan_on_launch: false,
+    theme: "system", font_size: "medium", auto_scan_on_launch: true,
     default_install_scope: "user", default_install_method: "silent",
     auto_check_updates: true, check_interval: "1day",
     auto_notify_updates: true, auto_install_updates: false,
@@ -64,50 +60,38 @@ const defaultConfig: AppConfig = {
 };
 
 const config = reactive<AppConfig>(structuredClone(defaultConfig));
+let initialized = false;
 
 // Load server config when available
 watch(serverConfig, (data) => {
   if (data) {
     Object.assign(config, data as unknown as AppConfig);
+    initialized = true;
   }
 }, { immediate: true });
 
-// Apply theme and font size immediately when changed
-watch(() => config.ui?.theme, (theme, oldTheme) => {
-  if (theme && theme !== oldTheme) setTheme(theme);
-}, { immediate: true, deep: true });
+// Auto-save on any config change (debounced 500ms)
+watch(config, () => {
+  if (!initialized) return;
 
-watch(() => config.ui?.font_size, (size) => {
-  if (size) document.documentElement.dataset.fontSize = size;
-}, { immediate: true, deep: true });
-
-function validate(): boolean {
-  const result = safeParse(AppConfigSchema, config);
-  if (!result.success) {
-    errors.value = result.issues.map(
-      (i) => `${i.path?.map((p) => p.key).join(".")} — ${i.message}`,
-    );
-    return false;
+  // Apply theme + font immediately
+  if (config.ui?.theme) {
+    setTheme(config.ui.theme);
   }
-  errors.value = [];
-  return true;
-}
-
-function handleSave() {
-  if (!validate()) {
-    toast.add({ severity: "error", summary: "Validation failed", detail: errors.value.join("; "), life: 5000 });
-    return;
+  if (config.ui?.font_size) {
+    document.documentElement.dataset.fontSize = config.ui.font_size;
   }
-  saveSnapshot(config);
-  saveMutation.mutate(config as unknown as Record<string, unknown>, {
-    onSuccess: () => {
-      toast.add({ severity: "success", summary: "Settings saved", life: 3000 });
-    },
-    onError: (err) => {
-      toast.add({ severity: "error", summary: "Save failed", detail: String(err), life: 5000 });
-    },
-  });
-}
+
+  // Debounced save to backend
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveMutation.mutate(config as unknown as Record<string, unknown>, {
+      onError: (err) => {
+        toast.add({ severity: "error", summary: "Save failed", detail: String(err), life: 5000 });
+      },
+    });
+  }, 500);
+}, { deep: true });
 
 function confirmReset() {
   Object.assign(config, structuredClone(defaultConfig));
@@ -136,34 +120,14 @@ function confirmReset() {
         <h2 class="page-title">
           {{ sections.find((s) => s.id === activeSection)?.label }}
         </h2>
-        <div
+        <Button
           v-if="activeSection !== 'about'"
-          class="settings-actions"
-        >
-          <Button
-            label="Reset to Defaults"
-            severity="secondary"
-            text
-            @click="showResetConfirm = true"
-          />
-          <Button
-            label="Save Changes"
-            icon="pi pi-check"
-            @click="handleSave"
-          />
-        </div>
-      </div>
-
-      <div
-        v-if="errors.length > 0"
-        class="settings-errors"
-      >
-        <p
-          v-for="(err, i) in errors"
-          :key="i"
-        >
-          {{ err }}
-        </p>
+          label="Reset to Defaults"
+          severity="secondary"
+          text
+          size="small"
+          @click="showResetConfirm = true"
+        />
       </div>
 
       <GeneralSection
@@ -200,14 +164,13 @@ function confirmReset() {
       />
       <AboutSection
         v-else-if="activeSection === 'about'"
-        @restore-snapshot="(c) => Object.assign(config, c)"
       />
     </div>
 
     <ConfirmDialog
       v-model:visible="showResetConfirm"
       title="Reset to Defaults"
-      message="This will reset all settings to their default values. Your current settings will be lost."
+      message="This will reset all settings to their default values."
       icon="pi-refresh"
       confirm-label="Reset"
       severity="danger"
@@ -281,25 +244,5 @@ function confirmReset() {
   font-size: 20px;
   font-weight: 600;
   color: var(--p-surface-0);
-}
-
-.settings-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.settings-errors {
-  background: color-mix(in srgb, var(--p-red-500) 10%, transparent);
-  border: 1px solid var(--p-red-500);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-}
-
-.settings-errors p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--p-red-400);
-  line-height: 1.5;
 }
 </style>

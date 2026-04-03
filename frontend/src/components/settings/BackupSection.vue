@@ -31,29 +31,31 @@ const scheduleOptions = [
         option-value="value"
       />
     </div>
-    <template v-if="config.scheduled_enabled">
-      <div class="field">
-        <label>Max backups per package (0 = unlimited)</label>
-        <InputNumber
-          v-model="config.max_per_package"
-          :min="0"
-        />
-      </div>
-      <div class="field">
-        <label>Max total size (MB, 0 = unlimited)</label>
-        <InputNumber
-          v-model="config.max_total_size_mb"
-          :min="0"
-        />
-      </div>
-      <div class="field">
-        <label>Max age (days, 0 = never expire)</label>
-        <InputNumber
-          v-model="config.max_age_days"
-          :min="0"
-        />
-      </div>
-    </template>
+
+    <h4 class="subsection-title">
+      Retention
+    </h4>
+    <div class="field">
+      <label>Max backups per package (0 = unlimited)</label>
+      <InputNumber
+        v-model="config.max_per_package"
+        :min="0"
+      />
+    </div>
+    <div class="field">
+      <label>Max total size (MB, 0 = unlimited)</label>
+      <InputNumber
+        v-model="config.max_total_size_mb"
+        :min="0"
+      />
+    </div>
+    <div class="field">
+      <label>Max age (days, 0 = never expire)</label>
+      <InputNumber
+        v-model="config.max_age_days"
+        :min="0"
+      />
+    </div>
   </div>
 </template>
 
@@ -63,4 +65,5 @@ const scheduleOptions = [
 .field label { font-size: 13px; font-weight: 500; color: var(--p-surface-300); }
 .field-toggle { display: flex; align-items: center; gap: 10px; }
 .field-toggle label { font-size: 13px; color: var(--p-surface-300); }
+.subsection-title { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--p-surface-200); }
 </style>

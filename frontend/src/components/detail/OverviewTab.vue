@@ -74,6 +74,10 @@ function detectionMethod(pkg: PackageWithStatus): string {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  background: var(--p-surface-800);
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid var(--p-surface-700);
 }
 
 .info-wide {
