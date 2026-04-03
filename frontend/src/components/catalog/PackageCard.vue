@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PackageIcon from "../shared/PackageIcon.vue";
 import type { PackageWithStatus, Category } from "../../types/package";
 
 defineProps<{
@@ -32,9 +33,11 @@ const categoryClass: Record<Category, string> = {
     @keydown.enter="$emit('click')"
   >
     <div class="sw-card-hdr">
-      <div class="sw-icon">
-        <i class="pi pi-box" />
-      </div>
+      <PackageIcon
+        :icon-base64="pkg.icon_base64"
+        :category="pkg.category"
+        size="lg"
+      />
       <div>
         <div class="sw-name">
           {{ pkg.name }}

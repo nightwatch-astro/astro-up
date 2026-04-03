@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
+import PackageIcon from "../components/shared/PackageIcon.vue";
 import { useSoftwareList, useUpdateCheck, useScanInstalled, useUpdateSoftware } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import type { PackageWithStatus } from "../types/package";
@@ -122,9 +123,11 @@ function confirmUpdateAll() {
           class="upd-row"
           @click="router.push({ name: 'package-detail', params: { id: pkg.id } })"
         >
-          <div class="upd-icon">
-            <i class="pi pi-box" />
-          </div>
+          <PackageIcon
+            :icon-base64="pkg.icon_base64"
+            :category="pkg.category"
+            size="md"
+          />
           <div class="upd-info">
             <div class="upd-name">
               {{ pkg.name }}

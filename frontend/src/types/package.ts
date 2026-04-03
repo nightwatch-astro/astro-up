@@ -32,6 +32,7 @@ export interface PackageSummary {
   tags: string[];
   dependencies: string[];
   manifest_version: number;
+  icon_base64?: string | null;
 }
 
 export interface VersionEntry {

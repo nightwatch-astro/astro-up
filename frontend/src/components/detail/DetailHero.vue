@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from "primevue/button";
+import PackageIcon from "../shared/PackageIcon.vue";
 import type { PackageWithStatus } from "../../types/package";
 
 defineProps<{
@@ -15,9 +16,11 @@ defineEmits<{
 
 <template>
   <div class="detail-hero">
-    <div class="hero-icon">
-      <i class="pi pi-box" />
-    </div>
+    <PackageIcon
+      :icon-base64="pkg.icon_base64"
+      :category="pkg.category"
+      size="xl"
+    />
     <div class="hero-info">
       <h1 class="hero-name">
         {{ pkg.name }}

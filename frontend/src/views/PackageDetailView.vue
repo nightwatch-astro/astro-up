@@ -109,7 +109,7 @@ function confirmBackup() {
             <TabPanel value="1">
               <VersionsTab
                 :versions="[]"
-                :installed-version="pkg.installed_version"
+                :installed-version="pkg.installed_version ?? null"
               />
             </TabPanel>
             <TabPanel value="2">

@@ -4,7 +4,6 @@ import InputText from "primevue/inputtext";
 import IconField from "primevue/iconfield";
 import InputIcon from "primevue/inputicon";
 import ProgressSpinner from "primevue/progressspinner";
-import Button from "primevue/button";
 import { useRouter } from "vue-router";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import CategoryChips from "../components/catalog/CategoryChips.vue";

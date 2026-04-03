@@ -131,6 +131,8 @@ pub struct PackageSummary {
     pub tags: Vec<String>,
     pub dependencies: Vec<String>,
     pub manifest_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_base64: Option<String>,
 }
 
 // ---------------------------------------------------------------------------

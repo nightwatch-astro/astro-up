@@ -85,7 +85,7 @@ impl SqliteCatalogReader {
     pub fn resolve(&self, id: &PackageId) -> Result<PackageSummary, CoreError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, manifest_version, name, description, publisher, homepage,
-                    category, type, slug, license, tags, aliases, dependencies
+                    category, type, slug, license, tags, aliases, dependencies, icon_base64
              FROM packages WHERE id = ?1",
         )?;
 
@@ -100,7 +100,7 @@ impl SqliteCatalogReader {
         let mut stmt = self.conn.prepare(
             "SELECT p.id, p.manifest_version, p.name, p.description, p.publisher,
                     p.homepage, p.category, p.type, p.slug, p.license,
-                    p.tags, p.aliases, p.dependencies, f.rank
+                    p.tags, p.aliases, p.dependencies, p.icon_base64, f.rank
              FROM packages_fts f
              JOIN packages p ON p.rowid = f.rowid
              WHERE packages_fts MATCH ?1
@@ -109,7 +109,7 @@ impl SqliteCatalogReader {
 
         let results = stmt
             .query_map(params![query], |row| {
-                let rank: f64 = row.get(13)?;
+                let rank: f64 = row.get(14)?;
                 Ok(SearchResult {
                     package: row_to_package_at(row, 0)?,
                     rank,
@@ -124,7 +124,7 @@ impl SqliteCatalogReader {
     pub fn filter(&self, filter: &CatalogFilter) -> Result<Vec<PackageSummary>, CoreError> {
         let mut sql = String::from(
             "SELECT id, manifest_version, name, description, publisher, homepage,
-                    category, type, slug, license, tags, aliases, dependencies
+                    category, type, slug, license, tags, aliases, dependencies, icon_base64
              FROM packages WHERE 1=1",
         );
         let mut param_values: Vec<String> = Vec::new();
@@ -303,6 +303,7 @@ fn row_to_package_at(row: &rusqlite::Row<'_>, offset: usize) -> rusqlite::Result
         tags: parse_json_vec(&tags_json),
         aliases: parse_json_vec(&aliases_json),
         dependencies: parse_json_vec(&deps_json),
+        icon_base64: row.get(offset + 13)?,
     })
 }
 
