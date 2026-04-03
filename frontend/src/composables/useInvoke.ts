@@ -123,6 +123,18 @@ export function useUpdateSoftware() {
   });
 }
 
+export function useUpdateAll() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      invoke<OperationId>("update_all"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["software"] });
+      queryClient.invalidateQueries({ queryKey: ["updates"] });
+    },
+  });
+}
+
 export function useScanInstalled() {
   const queryClient = useQueryClient();
   return useMutation({

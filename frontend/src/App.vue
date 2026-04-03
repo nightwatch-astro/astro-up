@@ -72,22 +72,20 @@ useCoreEvents((event: CoreEvent) => {
   } else if (event.type === "backup_progress") {
     const pct = Math.round((event.data.files_processed / event.data.total_files) * 100);
     updateProgress(pct, `Backing up: ${event.data.files_processed}/${event.data.total_files}`);
-  } else if (
-    event.type === "install_complete" ||
-    event.type === "download_complete" ||
-    event.type === "scan_complete" ||
-    event.type === "backup_complete" ||
-    event.type === "restore_complete" ||
-    event.type === "orchestration_complete"
-  ) {
-    completeOperation();
-    addStep("info", `${event.type}`);
   } else if (event.type === "package_started") {
     startOperation(event.data.package_id, `Installing ${event.data.package_id}`);
   } else if (event.type === "download_started") {
     if (!isRunning.value) startOperation(event.data.id, `Downloading ${event.data.id}`);
     addStep("info", "Download started");
-  } else if (event.type === "install_started" || event.type === "backup_started" || event.type === "restore_started" || event.type === "scan_started") {
+  } else if (event.type === "download_complete") {
+    addStep("info", "Download complete");
+  } else if (event.type === "scan_started") {
+    startOperation("scan", "Scanning installed software");
+  } else if (event.type === "scan_complete") {
+    completeOperation();
+  } else if (event.type === "backup_started" || event.type === "restore_started" || event.type === "install_started") {
+    addStep("info", `${event.type}`);
+  } else if (event.type === "backup_complete" || event.type === "restore_complete" || event.type === "install_complete") {
     addStep("info", `${event.type}`);
   } else if (event.type === "package_complete") {
     if (event.data.status === "failed") {
@@ -95,6 +93,11 @@ useCoreEvents((event: CoreEvent) => {
       failOperation(`${event.data.package_id}: ${reason}`);
     } else {
       completeOperation();
+    }
+  } else if (event.type === "orchestration_complete") {
+    addStep("info", `Done: ${event.data.succeeded} succeeded, ${event.data.failed} failed`);
+    if (!isRunning.value) {
+      // Single-package orchestration already handled by package_complete
     }
   }
 

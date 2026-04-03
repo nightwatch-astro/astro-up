@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
-import { useSoftwareList, useUpdateCheck, useScanInstalled, useUpdateSoftware } from "../composables/useInvoke";
+import { useSoftwareList, useUpdateCheck, useScanInstalled, useUpdateAll } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import type { PackageWithStatus } from "../types/package";
 
@@ -12,7 +12,7 @@ const router = useRouter();
 const { data: software } = useSoftwareList(() => "all");
 const { data: updates } = useUpdateCheck();
 const scanMutation = useScanInstalled();
-const updateMutation = useUpdateSoftware();
+const updateAllMutation = useUpdateAll();
 const { startOperation, isRunning } = useOperations();
 
 const showScanConfirm = ref(false);
@@ -41,9 +41,7 @@ function confirmScan() {
 
 function confirmUpdateAll() {
   if (!startOperation("update-all", "Updating all packages")) return;
-  for (const pkg of updatablePackages.value) {
-    updateMutation.mutate(pkg.id);
-  }
+  updateAllMutation.mutate();
 }
 
 

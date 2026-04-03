@@ -381,11 +381,12 @@ pub async fn scan_installed(
     Ok(value)
 }
 
-/// Shared helper: create an orchestrator, plan for a single package, and execute.
+/// Shared helper: create an orchestrator, plan, and execute.
+/// Pass an empty slice for `ids` to plan all available updates.
 async fn run_orchestrated_operation(
     app: &AppHandle,
     state: &AppState,
-    id: &str,
+    ids: &[&str],
     _op_id: &OperationId,
     cancel_token: tokio_util::sync::CancellationToken,
 ) -> Result<serde_json::Value, CoreError> {
@@ -427,12 +428,16 @@ async fn run_orchestrated_operation(
         &lock_path, packages, ledger, downloader, installer, backup, db,
     )?;
 
-    let pkg_id: astro_up_core::catalog::PackageId = id
-        .parse()
-        .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))?;
+    let pkg_ids: Vec<astro_up_core::catalog::PackageId> = ids
+        .iter()
+        .map(|id| {
+            id.parse()
+                .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))
+        })
+        .collect::<Result<_, _>>()?;
     let plan = orchestrator
         .plan(UpdateRequest {
-            packages: vec![pkg_id],
+            packages: pkg_ids,
             allow_major: false,
             allow_downgrade: false,
             dry_run: false,
@@ -469,7 +474,8 @@ pub async fn install_software(
 
     tauri::async_runtime::spawn(async move {
         let state_ref = app_clone.state::<AppState>();
-        match run_orchestrated_operation(&app_clone, &state_ref, &id, &op_id_clone, token).await {
+        match run_orchestrated_operation(&app_clone, &state_ref, &[&id], &op_id_clone, token).await
+        {
             Ok(_) => {
                 tracing::info!(command = "install_software", package = id, "Completed");
             }
@@ -516,7 +522,8 @@ pub async fn update_software(
 
     tauri::async_runtime::spawn(async move {
         let state_ref = app_clone.state::<AppState>();
-        match run_orchestrated_operation(&app_clone, &state_ref, &id, &op_id_clone, token).await {
+        match run_orchestrated_operation(&app_clone, &state_ref, &[&id], &op_id_clone, token).await
+        {
             Ok(_) => {
                 tracing::info!(command = "update_software", package = id, "Completed");
             }
@@ -536,6 +543,52 @@ pub async fn update_software(
 
     tracing::debug!(
         command = "update_software",
+        operation_id = op_id.id,
+        duration_ms = start.elapsed().as_millis() as u64,
+        "Command dispatched"
+    );
+    Ok(op_id)
+}
+
+#[tauri::command]
+pub async fn update_all(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<OperationId, CoreError> {
+    let start = std::time::Instant::now();
+    let (op_id, token) = state.register_operation();
+    tracing::info!(
+        command = "update_all",
+        operation_id = op_id.id,
+        "Updating all packages..."
+    );
+
+    let app_clone = app.clone();
+    let op_id_clone = op_id.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let state_ref = app_clone.state::<AppState>();
+        // Empty packages vec → plan_all() plans every package with an available update
+        match run_orchestrated_operation(&app_clone, &state_ref, &[], &op_id_clone, token).await {
+            Ok(_) => {
+                tracing::info!(command = "update_all", "Completed");
+            }
+            Err(e) => {
+                tracing::error!(command = "update_all", error = %e, "Failed");
+                emit_event(
+                    &app_clone,
+                    &Event::Error {
+                        id: "update-all".into(),
+                        error: e.message,
+                    },
+                );
+            }
+        }
+        state_ref.remove_operation(&op_id_clone.id);
+    });
+
+    tracing::debug!(
+        command = "update_all",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
         "Command dispatched"

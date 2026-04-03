@@ -191,6 +191,7 @@ pub fn run() {
             commands::scan_installed,
             commands::install_software,
             commands::update_software,
+            commands::update_all,
             commands::create_backup,
             commands::restore_backup,
             commands::cancel_operation,
