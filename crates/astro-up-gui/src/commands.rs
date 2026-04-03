@@ -184,11 +184,11 @@ pub async fn check_for_updates(state: State<'_, AppState>) -> Result<serde_json:
         }
     }
 
-    tracing::debug!(
+    tracing::info!(
         command = "check_for_updates",
         update_count = updates.len(),
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed"
+        "Update check complete"
     );
     Ok(serde_json::Value::Array(updates))
 }
@@ -217,7 +217,7 @@ pub async fn save_config(
     config: serde_json::Value,
 ) -> Result<(), CoreError> {
     let start = std::time::Instant::now();
-    tracing::debug!(command = "save_config", "Command invoked");
+    tracing::info!(command = "save_config", "Saving configuration...");
 
     // Extract key-value pairs from the JSON and write to config store
     let store = state.open_config_store()?;
@@ -261,10 +261,10 @@ pub async fn scan_installed(
 ) -> Result<serde_json::Value, CoreError> {
     let start = std::time::Instant::now();
     let (op_id, _token) = state.register_operation();
-    tracing::debug!(
+    tracing::info!(
         command = "scan_installed",
         operation_id = op_id.id,
-        "Command invoked"
+        "Scanning installed software..."
     );
 
     // Emit scan_started event
@@ -297,12 +297,12 @@ pub async fn scan_installed(
     let value = serde_json::to_value(&scan_result).map_err(|e| CoreError::from(e.to_string()))?;
 
     state.remove_operation(&op_id.id);
-    tracing::debug!(
+    tracing::info!(
         command = "scan_installed",
         operation_id = op_id.id,
         total_found,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed"
+        "Scan complete"
     );
     Ok(value)
 }
@@ -383,7 +383,7 @@ pub async fn install_software(
 ) -> Result<OperationId, CoreError> {
     let start = std::time::Instant::now();
     let (op_id, token) = state.register_operation();
-    tracing::debug!(
+    tracing::info!(
         command = "install_software",
         package = id,
         operation_id = op_id.id,
@@ -430,7 +430,7 @@ pub async fn update_software(
 ) -> Result<OperationId, CoreError> {
     let start = std::time::Instant::now();
     let (op_id, token) = state.register_operation();
-    tracing::debug!(
+    tracing::info!(
         command = "update_software",
         package = id,
         operation_id = op_id.id,
@@ -477,10 +477,10 @@ pub async fn create_backup(
 ) -> Result<serde_json::Value, CoreError> {
     let start = std::time::Instant::now();
     let (op_id, _token) = state.register_operation();
-    tracing::debug!(
+    tracing::info!(
         command = "create_backup",
         operation_id = op_id.id,
-        "Command invoked"
+        "Creating backup..."
     );
 
     let (tx, rx) = broadcast::channel::<Event>(64);
@@ -516,7 +516,7 @@ pub async fn restore_backup(
 ) -> Result<(), CoreError> {
     let start = std::time::Instant::now();
     let (op_id, _token) = state.register_operation();
-    tracing::debug!(
+    tracing::info!(
         command = "restore_backup",
         archive,
         operation_id = op_id.id,
@@ -603,7 +603,7 @@ pub async fn backup_preview(
 
 #[tauri::command]
 pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
-    tracing::debug!(command = "delete_backup", archive, "Command invoked");
+    tracing::info!(command = "delete_backup", archive, "Deleting backup...");
     tokio::fs::remove_file(&archive)
         .await
         .map_err(|e| CoreError {

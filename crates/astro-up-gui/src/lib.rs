@@ -132,8 +132,7 @@ fn spawn_backup_scheduler(app: &AppHandle) {
 
 pub fn run() {
     // Init tracing: stderr fmt + frontend forwarding layer
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,astro_up_core=debug,astro_up_gui=debug"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     tracing_subscriber::registry()
         .with(env_filter)
@@ -202,7 +201,7 @@ pub fn run() {
             tracing::debug!("Plugins registered in {:?}", start.elapsed());
 
             if let Some(window) = app.get_webview_window("main") {
-                tracing::debug!(label = "main", "Window created: {:?}", window.inner_size());
+                tracing::info!(label = "main", "Window created: {:?}", window.inner_size());
             }
 
             tray::setup(app.handle())?;
