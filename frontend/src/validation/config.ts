@@ -44,12 +44,14 @@ export const NetworkSchema = v.object({
   proxy: v.nullable(v.string()),
   connect_timeout: v.pipe(v.string(), v.minLength(1, "Required")),
   timeout: v.pipe(v.string(), v.minLength(1, "Required")),
+  user_agent: v.optional(v.string()),
   download_speed_limit: v.pipe(v.number(), v.minValue(0)),
 });
 
 export const PathsSchema = v.object({
-  download_dir: v.pipe(v.string(), v.minLength(1, "Required")),
-  cache_dir: v.pipe(v.string(), v.minLength(1, "Required")),
+  download_dir: v.string(),
+  cache_dir: v.string(),
+  data_dir: v.optional(v.string()),
   keep_installers: v.boolean(),
   purge_installers_after_days: v.pipe(v.number(), v.minValue(0)),
 });

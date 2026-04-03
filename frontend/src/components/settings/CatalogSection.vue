@@ -9,8 +9,8 @@ const cacheTtlOptions = [
   { label: "1 hour", value: "1h" },
   { label: "6 hours", value: "6h" },
   { label: "12 hours", value: "12h" },
-  { label: "24 hours", value: "24h" },
-  { label: "7 days", value: "168h" },
+  { label: "1 day", value: "1day" },
+  { label: "7 days", value: "7days" },
 ];
 </script>
 

@@ -10,9 +10,9 @@ use state::AppState;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_window_state::StateFlags;
-use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, Layer};
 
 #[tauri::command]
 fn get_version() -> String {
@@ -131,12 +131,20 @@ fn spawn_backup_scheduler(app: &AppHandle) {
 }
 
 pub fn run() {
-    // Init tracing: stderr fmt + frontend forwarding layer
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    // Init tracing: stderr (info) + frontend forwarding (debug+)
+    // Global filter allows debug through so the frontend log panel can show it.
+    // The fmt (stderr) layer has its own filter to keep terminal output at info.
+    let global_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("debug,hyper=info,reqwest=info,rustls=info"));
+    let stderr_filter = EnvFilter::new("info,hyper=warn,reqwest=warn,rustls=warn");
 
     tracing_subscriber::registry()
-        .with(env_filter)
-        .with(tracing_subscriber::fmt::layer().with_target(true))
+        .with(global_filter)
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(true)
+                .with_filter(stderr_filter),
+        )
         .with(log_layer::FrontendLogLayer)
         .init();
 

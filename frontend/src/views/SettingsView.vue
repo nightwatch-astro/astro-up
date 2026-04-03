@@ -73,13 +73,13 @@ watch(serverConfig, (data) => {
 }, { immediate: true });
 
 // Apply theme and font size immediately when changed
-watch(() => config.ui.theme, (theme) => {
-  if (theme) setTheme(theme);
-}, { immediate: true });
+watch(() => config.ui?.theme, (theme, oldTheme) => {
+  if (theme && theme !== oldTheme) setTheme(theme);
+}, { immediate: true, deep: true });
 
-watch(() => config.ui.font_size, (size) => {
+watch(() => config.ui?.font_size, (size) => {
   if (size) document.documentElement.dataset.fontSize = size;
-}, { immediate: true });
+}, { immediate: true, deep: true });
 
 function validate(): boolean {
   const result = safeParse(AppConfigSchema, config);

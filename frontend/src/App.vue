@@ -202,7 +202,8 @@ onUnmounted(() => {
 <style>
 .app-layout {
   display: flex;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
 }
 
 .app-content {
