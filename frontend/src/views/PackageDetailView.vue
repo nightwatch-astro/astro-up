@@ -95,7 +95,10 @@ function confirmBackup() {
             <Tab value="1">
               Versions
             </Tab>
-            <Tab value="2">
+            <Tab
+              v-if="pkg.installed_version"
+              value="2"
+            >
               Backup
             </Tab>
             <Tab value="3">
