@@ -1,11 +1,16 @@
+use std::fmt;
+
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::broadcast;
 
 use astro_up_core::catalog::CatalogFilter;
 use astro_up_core::config;
+use astro_up_core::detect::DetectionResult;
+use astro_up_core::detect::scanner::Scanner;
 use astro_up_core::events::Event;
 
+use crate::adapters::{CatalogPackageSource, SqliteLedgerStore};
 use crate::state::{AppState, OperationId};
 
 /// Error type returned to the frontend via Tauri invoke.
@@ -13,6 +18,12 @@ use crate::state::{AppState, OperationId};
 pub struct CoreError {
     pub message: String,
     pub code: String,
+}
+
+impl fmt::Display for CoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.code, self.message)
+    }
 }
 
 impl From<astro_up_core::error::CoreError> for CoreError {
@@ -49,6 +60,42 @@ fn forward_events(app: AppHandle, mut rx: broadcast::Receiver<Event>) {
     });
 }
 
+// --- Catalog sync ---
+
+#[tauri::command]
+pub async fn sync_catalog(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    force: Option<bool>,
+) -> Result<String, CoreError> {
+    tracing::info!(
+        command = "sync_catalog",
+        force = force.unwrap_or(false),
+        "Syncing catalog..."
+    );
+    let _ = app.emit("catalog-status", "syncing");
+
+    let result = if force.unwrap_or(false) {
+        state.catalog_manager.refresh().await
+    } else {
+        state.catalog_manager.ensure_catalog().await
+    };
+
+    match result {
+        Ok(result) => {
+            let status = format!("{result:?}");
+            tracing::info!(command = "sync_catalog", result = %status, "Catalog sync complete");
+            let _ = app.emit("catalog-status", "ready");
+            Ok(status)
+        }
+        Err(e) => {
+            tracing::error!(command = "sync_catalog", error = %e, "Catalog sync failed");
+            let _ = app.emit("catalog-status", "error");
+            Err(CoreError::from(e))
+        }
+    }
+}
+
 // --- Read commands (wired to core) ---
 
 #[tauri::command]
@@ -59,28 +106,74 @@ pub async fn list_software(
     let start = std::time::Instant::now();
     tracing::debug!(command = "list_software", filter, "Command invoked");
 
+    let query_result = try_list_software(&state, &filter);
+
+    match query_result {
+        Ok(value) => {
+            tracing::debug!(
+                command = "list_software",
+                duration_ms = start.elapsed().as_millis() as u64,
+                "Command completed"
+            );
+            Ok(value)
+        }
+        Err(e) => {
+            // Catalog may be corrupt or have old schema — delete and re-sync
+            tracing::warn!(command = "list_software", error = %e, "Query failed, attempting catalog recovery");
+            let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+            if catalog_path.exists() {
+                let _ = std::fs::remove_file(&catalog_path);
+                // Also remove sidecar so ensure_catalog fetches fresh
+                let meta_path = catalog_path.with_extension("db.meta");
+                let _ = std::fs::remove_file(&meta_path);
+                tracing::info!(
+                    command = "list_software",
+                    "Deleted corrupt catalog, will re-sync on next attempt"
+                );
+            }
+            Err(e.into())
+        }
+    }
+}
+
+/// Try to open the catalog and run the list query.
+fn try_list_software(
+    state: &AppState,
+    filter: &str,
+) -> Result<serde_json::Value, astro_up_core::error::CoreError> {
     let reader = state.open_catalog_reader()?;
-    let result = match filter.as_str() {
-        "all" => serde_json::to_value(reader.list_all()?),
+    let packages = match filter {
+        "all" => reader.list_all()?,
         f if f.starts_with("category:") => {
             let category = f.strip_prefix("category:").unwrap();
             let cat_filter = CatalogFilter {
                 category: category.parse().ok(),
                 ..CatalogFilter::default()
             };
-            serde_json::to_value(reader.filter(&cat_filter)?)
+            reader.filter(&cat_filter)?
         }
-        // "installed" and "outdated" need detect module — stub for now
-        _ => serde_json::to_value(reader.list_all()?),
-    }
-    .map_err(|e| CoreError::from(e.to_string()))?;
-
+        _ => reader.list_all()?,
+    };
     tracing::debug!(
         command = "list_software",
-        duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed"
+        count = packages.len(),
+        "Query OK"
     );
-    Ok(result)
+    serde_json::to_value(&packages)
+        .map_err(|e| astro_up_core::error::CoreError::Database(format!("serialization error: {e}")))
+}
+
+#[tauri::command]
+pub async fn get_versions(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<serde_json::Value, CoreError> {
+    let reader = state.open_catalog_reader()?;
+    let pkg_id: astro_up_core::catalog::PackageId = id
+        .parse()
+        .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))?;
+    let versions = reader.versions(&pkg_id)?;
+    serde_json::to_value(&versions).map_err(|e| CoreError::from(e.to_string()))
 }
 
 #[tauri::command]
@@ -113,16 +206,51 @@ pub async fn search_catalog(
 }
 
 #[tauri::command]
-pub async fn check_for_updates() -> Result<serde_json::Value, CoreError> {
+pub async fn check_for_updates(state: State<'_, AppState>) -> Result<serde_json::Value, CoreError> {
     let start = std::time::Instant::now();
     tracing::debug!(command = "check_for_updates", "Command invoked");
-    // TODO: needs detect scanner + catalog comparison (trait adapters required)
-    tracing::debug!(
+
+    let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+    let packages = CatalogPackageSource::new(catalog_path.clone());
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+    let scanner = Scanner::new(packages, ledger);
+
+    // Run scan to get current detection state
+    let scan_result = scanner.scan().await.map_err(|e| CoreError {
+        message: e.to_string(),
+        code: "scan_error".into(),
+    })?;
+
+    // Compare installed versions with latest catalog versions
+    let reader = state.open_catalog_reader()?;
+    let mut updates = Vec::new();
+
+    for detection in &scan_result.results {
+        if let DetectionResult::Installed { ref version, .. } = detection.result {
+            let pkg_id = detection
+                .package_id
+                .parse()
+                .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e.to_string()))?;
+            if let Ok(Some(latest)) = reader.latest_version(&pkg_id) {
+                let latest_ver = astro_up_core::types::Version::parse(&latest.version);
+                if latest_ver > *version {
+                    updates.push(serde_json::json!({
+                        "id": detection.package_id,
+                        "current_version": version.to_string(),
+                        "latest_version": latest.version,
+                    }));
+                }
+            }
+        }
+    }
+
+    tracing::info!(
         command = "check_for_updates",
+        update_count = updates.len(),
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed (stub)"
+        "Update check complete"
     );
-    Ok(serde_json::json!([]))
+    Ok(serde_json::Value::Array(updates))
 }
 
 #[tauri::command]
@@ -149,7 +277,7 @@ pub async fn save_config(
     config: serde_json::Value,
 ) -> Result<(), CoreError> {
     let start = std::time::Instant::now();
-    tracing::debug!(command = "save_config", "Command invoked");
+    tracing::info!(command = "save_config", "Saving configuration...");
 
     // Extract key-value pairs from the JSON and write to config store
     let store = state.open_config_store()?;
@@ -159,12 +287,26 @@ pub async fn save_config(
         for (section, values) in obj {
             if let Some(inner) = values.as_object() {
                 for (key, value) in inner {
+                    // Skip null values — they represent "use default"
+                    if value.is_null() {
+                        continue;
+                    }
                     let dotpath = format!("{section}.{key}");
                     let str_value = match value {
                         serde_json::Value::String(s) => s.clone(),
+                        serde_json::Value::Bool(b) => b.to_string(),
+                        serde_json::Value::Number(n) => n.to_string(),
                         other => other.to_string(),
                     };
-                    config::config_set(&store, &current, &dotpath, &str_value)?;
+                    // Skip empty strings for path-type fields
+                    if str_value.is_empty()
+                        && (dotpath.ends_with("_dir") || dotpath.ends_with("_file"))
+                    {
+                        continue;
+                    }
+                    if let Err(e) = config::config_set(&store, &current, &dotpath, &str_value) {
+                        tracing::warn!(key = dotpath, error = %e, "Failed to save config key");
+                    }
                 }
             }
         }
@@ -193,21 +335,123 @@ pub async fn scan_installed(
 ) -> Result<serde_json::Value, CoreError> {
     let start = std::time::Instant::now();
     let (op_id, _token) = state.register_operation();
-    tracing::debug!(
+    tracing::info!(
         command = "scan_installed",
         operation_id = op_id.id,
-        "Command invoked"
+        "Scanning installed software..."
     );
-    // TODO: needs PackageSource + LedgerStore trait implementations
-    let _ = &app;
+
+    // Emit scan_started event
+    emit_event(&app, &Event::ScanStarted);
+
+    let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+    let packages = CatalogPackageSource::new(catalog_path);
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+    let scanner = Scanner::new(packages, ledger);
+
+    let scan_result = scanner.scan().await.map_err(|e| CoreError {
+        message: e.to_string(),
+        code: "scan_error".into(),
+    })?;
+
+    let total_found = scan_result
+        .results
+        .iter()
+        .filter(|r| r.result.is_installed())
+        .count();
+
+    // Emit scan_complete event
+    emit_event(
+        &app,
+        &Event::ScanComplete {
+            total_found: total_found as u32,
+        },
+    );
+
+    let value = serde_json::to_value(&scan_result).map_err(|e| CoreError::from(e.to_string()))?;
+
     state.remove_operation(&op_id.id);
-    tracing::debug!(
+    tracing::info!(
         command = "scan_installed",
         operation_id = op_id.id,
+        total_found,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed (stub)"
+        "Scan complete"
     );
-    Ok(serde_json::json!({"total_found": 0}))
+    Ok(value)
+}
+
+/// Shared helper: create an orchestrator, plan, and execute.
+/// Pass an empty slice for `ids` to plan all available updates.
+async fn run_orchestrated_operation(
+    app: &AppHandle,
+    state: &AppState,
+    ids: &[&str],
+    _op_id: &OperationId,
+    cancel_token: tokio_util::sync::CancellationToken,
+) -> Result<serde_json::Value, CoreError> {
+    use astro_up_core::backup::BackupService;
+    use astro_up_core::download::DownloadManager;
+    use astro_up_core::engine::orchestrator::{Orchestrator, UpdateRequest};
+    use astro_up_core::install::InstallerService;
+
+    let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+    let packages = CatalogPackageSource::new(catalog_path);
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+
+    let config = state.config.lock().unwrap().clone();
+    let (event_tx, rx) = broadcast::channel::<Event>(64);
+    forward_events(app.clone(), rx);
+
+    let downloader = DownloadManager::new(&config.network, event_tx)?;
+    let installer = InstallerService::new(
+        std::time::Duration::from_secs(600),
+        std::env::temp_dir().join("astro-up").join("installs"),
+    );
+    let backup_dir = state
+        .db_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("backups");
+    let backup = BackupService::new(backup_dir, 5);
+
+    let db_conn =
+        rusqlite::Connection::open(&state.db_path).map_err(|e| CoreError::from(e.to_string()))?;
+    let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
+    let lock_path = state
+        .db_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("orchestration.lock");
+
+    let orchestrator = astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
+        &lock_path, packages, ledger, downloader, installer, backup, db,
+    )?;
+
+    let pkg_ids: Vec<astro_up_core::catalog::PackageId> = ids
+        .iter()
+        .map(|id| {
+            id.parse()
+                .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))
+        })
+        .collect::<Result<_, _>>()?;
+    let plan = orchestrator
+        .plan(UpdateRequest {
+            packages: pkg_ids,
+            allow_major: false,
+            allow_downgrade: false,
+            dry_run: false,
+            confirmed: true,
+        })
+        .await?;
+
+    let app_clone = app.clone();
+    let on_event: astro_up_core::engine::orchestrator::EventCallback = Box::new(move |event| {
+        emit_event(&app_clone, &event);
+    });
+
+    let result = orchestrator.execute(plan, on_event, cancel_token).await?;
+    serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
 }
 
 #[tauri::command]
@@ -217,20 +461,43 @@ pub async fn install_software(
     id: String,
 ) -> Result<OperationId, CoreError> {
     let start = std::time::Instant::now();
-    let (op_id, _token) = state.register_operation();
-    tracing::debug!(
+    let (op_id, token) = state.register_operation();
+    tracing::info!(
         command = "install_software",
         package = id,
         operation_id = op_id.id,
         "Command invoked"
     );
-    // TODO: needs Orchestrator with 5 trait implementations
-    let _ = &app;
+
+    let app_clone = app.clone();
+    let op_id_clone = op_id.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let state_ref = app_clone.state::<AppState>();
+        match run_orchestrated_operation(&app_clone, &state_ref, &[&id], &op_id_clone, token).await
+        {
+            Ok(_) => {
+                tracing::info!(command = "install_software", package = id, "Completed");
+            }
+            Err(e) => {
+                tracing::error!(command = "install_software", package = id, error = %e, "Failed");
+                emit_event(
+                    &app_clone,
+                    &Event::InstallFailed {
+                        id: id.clone(),
+                        error: e.message,
+                    },
+                );
+            }
+        }
+        state_ref.remove_operation(&op_id_clone.id);
+    });
+
     tracing::debug!(
         command = "install_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed (stub)"
+        "Command dispatched"
     );
     Ok(op_id)
 }
@@ -242,20 +509,89 @@ pub async fn update_software(
     id: String,
 ) -> Result<OperationId, CoreError> {
     let start = std::time::Instant::now();
-    let (op_id, _token) = state.register_operation();
-    tracing::debug!(
+    let (op_id, token) = state.register_operation();
+    tracing::info!(
         command = "update_software",
         package = id,
         operation_id = op_id.id,
         "Command invoked"
     );
-    // TODO: needs Orchestrator with 5 trait implementations
-    let _ = &app;
+
+    let app_clone = app.clone();
+    let op_id_clone = op_id.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let state_ref = app_clone.state::<AppState>();
+        match run_orchestrated_operation(&app_clone, &state_ref, &[&id], &op_id_clone, token).await
+        {
+            Ok(_) => {
+                tracing::info!(command = "update_software", package = id, "Completed");
+            }
+            Err(e) => {
+                tracing::error!(command = "update_software", package = id, error = %e, "Failed");
+                emit_event(
+                    &app_clone,
+                    &Event::InstallFailed {
+                        id: id.clone(),
+                        error: e.message,
+                    },
+                );
+            }
+        }
+        state_ref.remove_operation(&op_id_clone.id);
+    });
+
     tracing::debug!(
         command = "update_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed (stub)"
+        "Command dispatched"
+    );
+    Ok(op_id)
+}
+
+#[tauri::command]
+pub async fn update_all(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<OperationId, CoreError> {
+    let start = std::time::Instant::now();
+    let (op_id, token) = state.register_operation();
+    tracing::info!(
+        command = "update_all",
+        operation_id = op_id.id,
+        "Updating all packages..."
+    );
+
+    let app_clone = app.clone();
+    let op_id_clone = op_id.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let state_ref = app_clone.state::<AppState>();
+        // Empty packages vec → plan_all() plans every package with an available update
+        match run_orchestrated_operation(&app_clone, &state_ref, &[], &op_id_clone, token).await {
+            Ok(_) => {
+                tracing::info!(command = "update_all", "Completed");
+            }
+            Err(e) => {
+                tracing::error!(command = "update_all", error = %e, "Failed");
+                emit_event(
+                    &app_clone,
+                    &Event::Error {
+                        id: "update-all".into(),
+                        error: e.message,
+                    },
+                );
+            }
+        }
+        state_ref.remove_operation(&op_id_clone.id);
+    });
+
+    tracing::debug!(
+        command = "update_all",
+        operation_id = op_id.id,
+        duration_ms = start.elapsed().as_millis() as u64,
+        "Command dispatched"
     );
     Ok(op_id)
 }
@@ -268,10 +604,10 @@ pub async fn create_backup(
 ) -> Result<serde_json::Value, CoreError> {
     let start = std::time::Instant::now();
     let (op_id, _token) = state.register_operation();
-    tracing::debug!(
+    tracing::info!(
         command = "create_backup",
         operation_id = op_id.id,
-        "Command invoked"
+        "Creating backup..."
     );
 
     let (tx, rx) = broadcast::channel::<Event>(64);
@@ -307,7 +643,7 @@ pub async fn restore_backup(
 ) -> Result<(), CoreError> {
     let start = std::time::Instant::now();
     let (op_id, _token) = state.register_operation();
-    tracing::debug!(
+    tracing::info!(
         command = "restore_backup",
         archive,
         operation_id = op_id.id,
@@ -363,4 +699,82 @@ pub async fn cancel_operation(
         "Command completed"
     );
     result
+}
+
+// --- Backup CRUD commands (#508) ---
+
+#[tauri::command]
+pub async fn list_backups(
+    state: State<'_, AppState>,
+    package_id: String,
+) -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "list_backups", package_id, "Command invoked");
+    let entries = state.backup_service.list(&package_id).await?;
+    let value = serde_json::to_value(&entries).map_err(|e| CoreError::from(e.to_string()))?;
+    Ok(value)
+}
+
+#[tauri::command]
+pub async fn backup_preview(
+    state: State<'_, AppState>,
+    archive: String,
+) -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "backup_preview", archive, "Command invoked");
+    let preview = state
+        .backup_service
+        .restore_preview(std::path::Path::new(&archive))
+        .await?;
+    let value = serde_json::to_value(&preview).map_err(|e| CoreError::from(e.to_string()))?;
+    Ok(value)
+}
+
+#[tauri::command]
+pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
+    tracing::info!(command = "delete_backup", archive, "Deleting backup...");
+    tokio::fs::remove_file(&archive)
+        .await
+        .map_err(|e| CoreError {
+            message: format!("Failed to delete backup: {e}"),
+            code: "io_error".into(),
+        })?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<(), CoreError> {
+    let _state = &state; // keep State in scope for future config-based path resolution
+    let path = if dir.is_empty() {
+        return Err(CoreError {
+            message: "No directory specified".into(),
+            code: "invalid_input".into(),
+        });
+    } else {
+        std::path::PathBuf::from(&dir)
+    };
+
+    tracing::info!(command = "clear_directory", path = %path.display(), "Clearing directory...");
+
+    if !path.exists() {
+        return Ok(());
+    }
+
+    let mut count = 0u32;
+    let mut entries = tokio::fs::read_dir(&path).await.map_err(|e| CoreError {
+        message: format!("Failed to read directory: {e}"),
+        code: "io_error".into(),
+    })?;
+
+    while let Some(entry) = entries.next_entry().await.map_err(|e| CoreError {
+        message: format!("Failed to read entry: {e}"),
+        code: "io_error".into(),
+    })? {
+        let entry_path = entry.path();
+        if entry_path.is_file() {
+            tokio::fs::remove_file(&entry_path).await.ok();
+            count += 1;
+        }
+    }
+
+    tracing::info!(command = "clear_directory", count, "Cleared files");
+    Ok(())
 }

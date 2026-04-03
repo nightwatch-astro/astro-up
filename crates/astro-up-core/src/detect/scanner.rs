@@ -15,6 +15,15 @@ use crate::types::{Software, Version};
 /// Will be implemented by the catalog module (spec 005) when available.
 pub trait PackageSource {
     fn list_all(&self) -> Result<Vec<Software>, DetectionError>;
+
+    /// Look up the latest non-pre-release version entry for a package.
+    /// Returns `None` if the package has no version entries.
+    fn latest_version(
+        &self,
+        _id: &crate::catalog::PackageId,
+    ) -> Result<Option<crate::catalog::VersionEntry>, DetectionError> {
+        Ok(None)
+    }
 }
 
 /// Minimal interface for reading/writing ledger entries.

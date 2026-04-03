@@ -18,6 +18,7 @@ pub async fn detect_exists(config: &DetectionConfig, resolver: &PathResolver) ->
     if Path::new(&path).exists() {
         DetectionResult::InstalledUnknownVersion {
             method: DetectionMethod::FileExists,
+            install_path: Some(path),
         }
     } else {
         DetectionResult::NotInstalled
@@ -68,10 +69,12 @@ pub async fn detect_config(config: &DetectionConfig, resolver: &PathResolver) ->
             DetectionResult::Installed {
                 version: Version::parse(version_str),
                 method: DetectionMethod::ConfigFile,
+                install_path: Some(path.clone()),
             }
         }
         _ => DetectionResult::InstalledUnknownVersion {
             method: DetectionMethod::ConfigFile,
+            install_path: Some(path),
         },
     }
 }

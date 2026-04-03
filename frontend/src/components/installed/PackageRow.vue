@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Button from "primevue/button";
-import Tag from "primevue/tag";
+import PackageIcon from "../shared/PackageIcon.vue";
 import type { PackageWithStatus } from "../../types/package";
 
 defineProps<{
@@ -16,50 +16,53 @@ defineEmits<{
 
 <template>
   <div
-    class="package-row"
+    class="inst-row"
     @click="$emit('detail')"
   >
-    <div class="row-icon">
-      <i class="pi pi-box" />
+    <PackageIcon
+      :icon-base64="pkg.icon_base64"
+      :category="pkg.category"
+      size="md"
+    />
+    <div class="inst-info">
+      <div class="inst-name">
+        {{ pkg.name }}
+      </div>
+      <div class="inst-sub">
+        {{ pkg.category }} &middot; {{ pkg.detection?.type === 'Installed' || pkg.detection?.type === 'InstalledUnknownVersion' ? pkg.detection.method : pkg.software_type }}
+      </div>
     </div>
-    <div class="row-info">
-      <span class="row-name">{{ pkg.name }}</span>
-      <span class="row-category">{{ pkg.category }}</span>
-    </div>
-    <div class="row-version">
+    <div class="inst-version">
       <template v-if="pkg.update_available">
-        <span class="version-current">{{ pkg.installed_version }}</span>
-        <i class="pi pi-arrow-right version-arrow" />
-        <span class="version-latest">{{ pkg.latest_version }}</span>
+        <span class="ver-update">{{ pkg.installed_version }} &rarr; {{ pkg.latest_version }}</span>
       </template>
       <template v-else>
-        <Tag
-          :value="pkg.installed_version ?? 'Unknown'"
-          severity="success"
-        />
-        <i class="pi pi-check version-check" />
+        <span class="ver-ok">
+          {{ pkg.installed_version }}
+          <i class="pi pi-check" />
+        </span>
       </template>
     </div>
     <div
-      class="row-actions"
+      class="inst-actions"
       @click.stop
     >
       <Button
         v-if="pkg.installed_version"
         icon="pi pi-database"
+        label="Backup Now"
         text
-        rounded
         size="small"
         severity="secondary"
-        title="Backup Now"
+        class="action-btn"
         @click="$emit('backup')"
       />
       <Button
         v-if="pkg.update_available"
         label="Update"
-        icon="pi pi-arrow-up"
-        size="small"
         severity="warn"
+        size="small"
+        class="action-btn"
         @click="$emit('update')"
       />
     </div>
@@ -67,84 +70,83 @@ defineEmits<{
 </template>
 
 <style scoped>
-.package-row {
+.inst-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--p-surface-700);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.1s;
 }
 
-.package-row:hover {
-  background: var(--p-surface-800);
+.inst-row:last-child {
+  border-bottom: none;
 }
 
-.row-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+.inst-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sw-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
   background: var(--p-surface-700);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 15px;
+  color: var(--p-primary-400);
   flex-shrink: 0;
-  color: var(--p-surface-300);
-  font-size: 14px;
 }
 
-.row-info {
+.inst-info {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 
-.row-name {
+.inst-name {
   font-size: 14px;
+  color: var(--p-surface-0);
   font-weight: 500;
-  color: var(--p-surface-100);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.row-category {
+.inst-sub {
+  font-size: 11px;
+  color: var(--p-surface-500);
+  margin-top: 1px;
+}
+
+.inst-version {
   font-size: 12px;
-  color: var(--p-surface-400);
-}
-
-.row-version {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  min-width: 120px;
+  text-align: right;
+  margin-right: 8px;
   flex-shrink: 0;
 }
 
-.version-current {
-  color: var(--p-surface-400);
-}
-
-.version-arrow {
-  font-size: 10px;
+.ver-update {
   color: var(--p-yellow-400);
 }
 
-.version-latest {
-  color: var(--p-yellow-400);
-  font-weight: 500;
-}
-
-.version-check {
+.ver-ok {
   color: var(--p-green-400);
-  font-size: 12px;
 }
 
-.row-actions {
+.ver-ok i {
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.inst-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
+  align-items: center;
   flex-shrink: 0;
+}
+
+.action-btn {
+  font-size: 11px;
 }
 </style>

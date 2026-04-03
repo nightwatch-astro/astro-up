@@ -86,6 +86,7 @@ mod tests {
         DetectionResult::Installed {
             version: Version::parse(v),
             method: DetectionMethod::Registry,
+            install_path: None,
         }
     }
 

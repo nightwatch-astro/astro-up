@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useSoftwareList, useUpdateCheck } from "../../composables/useInvoke";
+import { useOperations } from "../../composables/useOperations";
 
 defineEmits<{
   toggleLog: [];
@@ -8,6 +10,7 @@ defineEmits<{
 
 const { data: software } = useSoftwareList(() => "all");
 const { data: updates } = useUpdateCheck();
+const { operation, isRunning } = useOperations();
 
 const catalogCount = computed(() => software.value?.length ?? 0);
 const installedCount = computed(() => {
@@ -18,9 +21,36 @@ const installedCount = computed(() => {
 });
 const updateCount = computed(() => updates.value?.length ?? 0);
 
+const lastScanTime = ref<Date | null>(null);
+let unlistenScan: UnlistenFn | null = null;
+let unlistenCatalog: UnlistenFn | null = null;
+
+onMounted(async () => {
+  try {
+    unlistenScan = await listen("core-event", (event) => {
+      const payload = event.payload as { type?: string };
+      if (payload.type === "scan_complete") {
+        lastScanTime.value = new Date();
+      }
+    });
+    unlistenCatalog = await listen("catalog-status", (event) => {
+      if (event.payload === "ready") {
+        lastScanTime.value = new Date();
+      }
+    });
+  } catch {
+    // Not running inside Tauri
+  }
+});
+
+onUnmounted(() => {
+  unlistenScan?.();
+  unlistenCatalog?.();
+});
+
 const lastSync = computed(() => {
-  if (!software.value) return "Never";
-  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (!lastScanTime.value) return "Never";
+  return lastScanTime.value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 });
 </script>
 
@@ -47,17 +77,25 @@ const lastSync = computed(() => {
       <span class="status-separator" />
       <span class="status-item">
         <i class="pi pi-sync" />
-        {{ lastSync }}
+        Last scan: {{ lastSync }}
       </span>
+      <template v-if="isRunning">
+        <span class="status-separator" />
+        <span class="status-item has-op">
+          <i class="pi pi-spinner pi-spin" />
+          {{ operation?.label }}
+        </span>
+      </template>
     </div>
 
     <div class="status-actions">
       <button
-        class="status-action"
-        title="Toggle log panel"
+        class="log-toggle"
+        title="Toggle log panel (Ctrl+L)"
         @click="$emit('toggleLog')"
       >
         <i class="pi pi-list" />
+        Log
       </button>
     </div>
   </div>
@@ -68,19 +106,19 @@ const lastSync = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 28px;
-  padding: 0 12px;
+  height: 26px;
+  padding: 0 16px;
   background: var(--p-surface-900);
   border-top: 1px solid var(--p-surface-700);
-  font-size: 12px;
-  color: var(--p-surface-400);
+  font-size: 11px;
+  color: var(--p-surface-500);
   flex-shrink: 0;
 }
 
 .status-items {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
 }
 
 .status-item {
@@ -97,6 +135,10 @@ const lastSync = computed(() => {
   color: var(--p-yellow-400);
 }
 
+.status-item.has-op {
+  color: var(--p-blue-400);
+}
+
 .status-separator {
   width: 1px;
   height: 12px;
@@ -108,18 +150,21 @@ const lastSync = computed(() => {
   align-items: center;
 }
 
-.status-action {
-  background: none;
-  border: none;
-  color: var(--p-surface-400);
-  cursor: pointer;
-  padding: 2px 6px;
+.log-toggle {
+  background: transparent;
+  border: 1px solid var(--p-surface-600);
   border-radius: 4px;
-  font-size: 12px;
+  color: var(--p-surface-400);
+  font-size: 11px;
+  padding: 1px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.status-action:hover {
-  background: var(--p-surface-800);
-  color: var(--p-surface-0);
+.log-toggle:hover {
+  border-color: var(--p-primary-400);
+  color: var(--p-primary-400);
 }
 </style>

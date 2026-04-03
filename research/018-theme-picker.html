@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Astro-Up — Theme Picker</title>
+  <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; transition: background .2s; }
+
+    .picker-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #0f172a; border-bottom: 1px solid #334155; padding: 10px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .picker-bar h3 { color: #f1f5f9; font-size: 14px; white-space: nowrap; }
+    .picker-group { display: flex; align-items: center; gap: 6px; }
+    .picker-group label { font-size: 12px; color: #94a3b8; margin-right: 2px; white-space: nowrap; font-weight: 600; }
+    .swatch { width: 26px; height: 26px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; transition: all .15s; position: relative; }
+    .swatch:hover { transform: scale(1.15); }
+    .swatch.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.3); }
+    .swatch-name { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 8px; color: #94a3b8; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .15s; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+    .swatch:hover .swatch-name { opacity: 1; }
+    .current-label { font-size: 12px; color: #f1f5f9; margin-left: auto; white-space: nowrap; }
+    .current-label span { font-weight: 600; }
+    .mode-toggle { display: flex; border-radius: 6px; overflow: hidden; border: 1px solid #334155; }
+    .mode-btn { padding: 4px 14px; font-size: 12px; cursor: pointer; border: none; background: transparent; color: #94a3b8; transition: all .15s; }
+    .mode-btn.active { background: #334155; color: #f1f5f9; }
+
+    .preview { margin-top: 56px; display: flex; height: calc(100vh - 56px); }
+
+    .sidebar { width: 220px; display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar-header { padding: 20px 16px; }
+    .sidebar-header h1 { font-size: 18px; font-weight: 700; }
+    .sidebar-header .ver { font-size: 11px; margin-top: 2px; }
+    .sidebar-nav { flex: 1; padding: 8px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all .15s; user-select: none; }
+    .nav-item i { font-size: 16px; width: 20px; text-align: center; }
+    .nav-badge { margin-left: auto; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
+    .sidebar-footer { padding: 12px 16px; font-size: 11px; line-height: 1.6; }
+
+    .main { flex: 1; overflow-y: auto; padding-bottom: 28px; }
+    .page { padding: 24px 32px; max-width: 1200px; }
+    .page-hdr h2 { font-size: 22px; font-weight: 600; }
+    .page-hdr p { font-size: 13px; margin-top: 4px; }
+    .page-hdr { margin-bottom: 24px; }
+
+    .card { border-radius: 12px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat { padding: 18px; }
+    .stat .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+    .stat .val { font-size: 28px; font-weight: 700; margin-top: 2px; }
+    .stat .sub { font-size: 11px; margin-top: 2px; }
+
+    .tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .3px; }
+    .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+
+    .btn { padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    .upd-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background .1s; }
+    .upd-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .upd-name { font-size: 13px; font-weight: 500; }
+    .upd-ver { font-size: 11px; margin-top: 1px; }
+
+    .act-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; }
+    .act-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+    .act-name { font-size: 13px; }
+    .act-det { font-size: 11px; }
+    .act-time { font-size: 11px; margin-left: auto; }
+
+    .quick-actions { display: flex; gap: 10px; margin-bottom: 24px; }
+    .section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+    .sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
+    .sw-card { padding: 18px; cursor: pointer; transition: all .15s; }
+    .sw-card:hover { transform: translateY(-1px); }
+    .sw-card-hdr { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+    .sw-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .sw-name { font-size: 14px; font-weight: 600; }
+    .sw-pub { font-size: 11px; margin-top: 1px; }
+    .sw-desc { font-size: 12px; line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .sw-foot { display: flex; align-items: center; justify-content: space-between; }
+    .sw-status { font-size: 11px; }
+
+    .status-bar { position: fixed; bottom: 0; left: 220px; right: 0; height: 26px; display: flex; align-items: center; gap: 16px; padding: 0 16px; font-size: 11px; z-index: 60; }
+    .log-toggle { margin-left: auto; border-radius: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; background: transparent; }
+  </style>
+</head>
+<body>
+
+<div class="picker-bar">
+  <h3>Theme Picker</h3>
+  <div class="picker-group">
+    <label>Mode:</label>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-dark" onclick="setMode('dark')"><i class="pi pi-moon" style="font-size:11px"></i> Dark</button>
+      <button class="mode-btn" id="btn-light" onclick="setMode('light')"><i class="pi pi-sun" style="font-size:11px"></i> Light</button>
+    </div>
+  </div>
+  <div class="picker-group">
+    <label>Surface:</label>
+    <div id="surface-swatches" style="display:flex;gap:4px"></div>
+  </div>
+  <div class="picker-group">
+    <label>Primary:</label>
+    <div id="primary-swatches" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+  </div>
+  <div class="current-label" id="cur-label"></div>
+</div>
+
+<div class="preview" id="preview"></div>
+
+<script>
+var SURFACES = {
+  slate:   {50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',800:'#1e293b',900:'#0f172a',950:'#020617'},
+  gray:    {50:'#f9fafb',100:'#f3f4f6',200:'#e5e7eb',300:'#d1d5db',400:'#9ca3af',500:'#6b7280',600:'#4b5563',700:'#374151',800:'#1f2937',900:'#111827',950:'#030712'},
+  zinc:    {50:'#fafafa',100:'#f4f4f5',200:'#e4e4e7',300:'#d4d4d8',400:'#a1a1aa',500:'#71717a',600:'#52525b',700:'#3f3f46',800:'#27272a',900:'#18181b',950:'#09090b'},
+  neutral: {50:'#fafafa',100:'#f5f5f5',200:'#e5e5e5',300:'#d4d4d4',400:'#a3a3a3',500:'#737373',600:'#525252',700:'#404040',800:'#262626',900:'#171717',950:'#0a0a0a'},
+  stone:   {50:'#fafaf9',100:'#f5f5f4',200:'#e7e5e4',300:'#d6d3d1',400:'#a8a29e',500:'#78716c',600:'#57534e',700:'#44403c',800:'#292524',900:'#1c1917',950:'#0c0a09'},
+};
+
+var PRIMARIES = {
+  blue:    {50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a',950:'#172554'},
+  indigo:  {50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81',950:'#1e1b4b'},
+  violet:  {50:'#f5f3ff',100:'#ede9fe',200:'#ddd6fe',300:'#c4b5fd',400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',800:'#5b21b6',900:'#4c1d95',950:'#2e1065'},
+  purple:  {50:'#faf5ff',100:'#f3e8ff',200:'#e9d5ff',300:'#d8b4fe',400:'#c084fc',500:'#a855f7',600:'#9333ea',700:'#7e22ce',800:'#6b21a8',900:'#581c87',950:'#3b0764'},
+  sky:     {50:'#f0f9ff',100:'#e0f2fe',200:'#bae6fd',300:'#7dd3fc',400:'#38bdf8',500:'#0ea5e9',600:'#0284c7',700:'#0369a1',800:'#075985',900:'#0c4a6e',950:'#082f49'},
+  cyan:    {50:'#ecfeff',100:'#cffafe',200:'#a5f3fc',300:'#67e8f9',400:'#22d3ee',500:'#06b6d4',600:'#0891b2',700:'#0e7490',800:'#155e75',900:'#164e63',950:'#083344'},
+  teal:    {50:'#f0fdfa',100:'#ccfbf1',200:'#99f6e4',300:'#5eead4',400:'#2dd4bf',500:'#14b8a6',600:'#0d9488',700:'#0f766e',800:'#115e59',900:'#134e4a',950:'#042f2e'},
+  emerald: {50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857',800:'#065f46',900:'#064e3b',950:'#022c22'},
+  green:   {50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d',950:'#052e16'},
+  lime:    {50:'#f7fee7',100:'#ecfccb',200:'#d9f99d',300:'#bef264',400:'#a3e635',500:'#84cc16',600:'#65a30d',700:'#4d7c0f',800:'#3f6212',900:'#365314',950:'#1a2e05'},
+  amber:   {50:'#fffbeb',100:'#fef3c7',200:'#fde68a',300:'#fcd34d',400:'#fbbf24',500:'#f59e0b',600:'#d97706',700:'#b45309',800:'#92400e',900:'#78350f',950:'#451a03'},
+  yellow:  {50:'#fefce8',100:'#fef9c3',200:'#fef08a',300:'#fde047',400:'#facc15',500:'#eab308',600:'#ca8a04',700:'#a16207',800:'#854d0e',900:'#713f12',950:'#422006'},
+  orange:  {50:'#fff7ed',100:'#ffedd5',200:'#fed7aa',300:'#fdba74',400:'#fb923c',500:'#f97316',600:'#ea580c',700:'#c2410c',800:'#9a3412',900:'#7c2d12',950:'#431407'},
+  red:     {50:'#fef2f2',100:'#fee2e2',200:'#fecaca',300:'#fca5a5',400:'#f87171',500:'#ef4444',600:'#dc2626',700:'#b91c1c',800:'#991b1b',900:'#7f1d1d',950:'#450a0a'},
+  rose:    {50:'#fff1f2',100:'#ffe4e6',200:'#fecdd3',300:'#fda4af',400:'#fb7185',500:'#f43f5e',600:'#e11d48',700:'#be123c',800:'#9f1239',900:'#881337',950:'#4c0519'},
+  pink:    {50:'#fdf2f8',100:'#fce7f3',200:'#fbcfe8',300:'#f9a8d4',400:'#f472b6',500:'#ec4899',600:'#db2777',700:'#be185d',800:'#9d174d',900:'#831843',950:'#500724'},
+  fuchsia: {50:'#fdf4ff',100:'#fae8ff',200:'#f5d0fe',300:'#f0abfc',400:'#e879f9',500:'#d946ef',600:'#c026d3',700:'#a21caf',800:'#86198f',900:'#701a75',950:'#4a044e'},
+};
+
+var curSurface = 'slate';
+var curPrimary = 'blue';
+var curMode = 'dark';
+
+function hexMix(hex, alpha) {
+  var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return 'rgba('+r+','+g+','+b+','+alpha+')';
+}
+
+function setMode(m) {
+  curMode = m;
+  document.getElementById('btn-dark').classList.toggle('active', m === 'dark');
+  document.getElementById('btn-light').classList.toggle('active', m === 'light');
+  applyTheme();
+}
+
+/* Map surface palette to semantic roles for dark and light modes */
+function theme(s, p) {
+  if (curMode === 'dark') {
+    return {
+      base: s[950], surface: s[900], card: s[800], elevated: s[900],
+      border: s[800], borderHover: s[700],
+      textPrimary: s[100], textSecondary: s[400], textMuted: s[500], textDim: s[600],
+      iconBg: s[700],
+      primary: p[600], primaryText: p[400], primaryBg: hexMix(p[600], 0.2),
+      btnText: '#fff', outlineText: s[400],
+      warnVal: '#f59e0b', warnBg: '#d97706', warnBtnText: '#fff',
+      greenFg: '#34d399', greenBg: '#064e3b',
+      yellowFg: '#fbbf24', yellowBg: '#451a03',
+      indigoFg: '#818cf8', indigoBg: '#1e1b4b',
+      purpleFg: '#a78bfa', purpleBg: '#4a1d96',
+      tealFg: '#5eead4', tealBg: '#134e4a',
+    };
+  } else {
+    return {
+      base: '#ffffff', surface: s[50], card: '#ffffff', elevated: s[50],
+      border: s[200], borderHover: s[300],
+      textPrimary: s[900], textSecondary: s[600], textMuted: s[500], textDim: s[400],
+      iconBg: s[100],
+      primary: p[600], primaryText: p[700], primaryBg: hexMix(p[500], 0.1),
+      btnText: '#fff', outlineText: s[600],
+      warnVal: '#d97706', warnBg: '#d97706', warnBtnText: '#fff',
+      greenFg: '#059669', greenBg: hexMix('#059669', 0.1),
+      yellowFg: '#d97706', yellowBg: hexMix('#d97706', 0.08),
+      indigoFg: '#4f46e5', indigoBg: hexMix('#4f46e5', 0.1),
+      purpleFg: '#7c3aed', purpleBg: hexMix('#7c3aed', 0.1),
+      tealFg: '#0d9488', tealBg: hexMix('#0d9488', 0.1),
+    };
+  }
+}
+
+function buildSwatches() {
+  var sc = document.getElementById('surface-swatches');
+  Object.entries(SURFACES).forEach(function(entry) {
+    var name = entry[0], pal = entry[1];
+    var d = document.createElement('div');
+    d.className = 'swatch'; d.dataset.name = name;
+    d.style.background = 'linear-gradient(135deg, ' + pal[200] + ' 33%, ' + pal[700] + ' 33%, ' + pal[700] + ' 66%, ' + pal[950] + ' 66%)';
+    d.title = name;
+    var lbl = document.createElement('span');
+    lbl.className = 'swatch-name'; lbl.textContent = name;
+    d.appendChild(lbl);
+    d.addEventListener('click', function() { curSurface = name; applyTheme(); });
+    sc.appendChild(d);
+  });
+
+  var pc = document.getElementById('primary-swatches');
+  Object.entries(PRIMARIES).forEach(function(entry) {
+    var name = entry[0], pal = entry[1];
+    var d = document.createElement('div');
+    d.className = 'swatch'; d.dataset.name = name;
+    d.style.background = pal[500];
+    d.title = name;
+    var lbl = document.createElement('span');
+    lbl.className = 'swatch-name'; lbl.textContent = name;
+    d.appendChild(lbl);
+    d.addEventListener('click', function() { curPrimary = name; applyTheme(); });
+    pc.appendChild(d);
+  });
+}
+
+function applyTheme() {
+  document.body.style.background = curMode === 'dark' ? SURFACES[curSurface][950] : '#ffffff';
+
+  document.getElementById('cur-label').textContent =
+    curMode.charAt(0).toUpperCase() + curMode.slice(1) + ' | ' + curSurface + ' + ' + curPrimary;
+
+  document.querySelectorAll('#surface-swatches .swatch').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.name === curSurface);
+  });
+  document.querySelectorAll('#primary-swatches .swatch').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.name === curPrimary);
+  });
+
+  render();
+}
+
+function E(tag, attrs, children) {
+  var e = document.createElement(tag);
+  if (attrs) Object.keys(attrs).forEach(function(k) {
+    if (k === 'style' && typeof attrs[k] === 'object') Object.assign(e.style, attrs[k]);
+    else if (k === 'className') e.className = attrs[k];
+    else e.setAttribute(k, attrs[k]);
+  });
+  if (typeof children === 'string') e.textContent = children;
+  else if (Array.isArray(children)) children.forEach(function(c) { if (c) e.appendChild(c); });
+  return e;
+}
+
+function I(cls) { var i = document.createElement('i'); i.className = 'pi ' + cls; return i; }
+
+function render() {
+  var t = theme(SURFACES[curSurface], PRIMARIES[curPrimary]);
+  var container = document.getElementById('preview');
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  // Sidebar
+  container.appendChild(E('nav', {className:'sidebar', style:{background:t.elevated, borderRight:'1px solid '+t.border}}, [
+    E('div', {className:'sidebar-header', style:{borderBottom:'1px solid '+t.border}}, [
+      E('h1', {style:{color:t.textPrimary}}, 'Astro-Up'),
+      E('div', {className:'ver', style:{color:t.textMuted}}, 'v0.1.0'),
+    ]),
+    E('div', {className:'sidebar-nav'}, [
+      E('div', {className:'nav-item', style:{background:t.primaryBg, color:t.primaryText}}, [I('pi-home'), document.createTextNode(' Dashboard')]),
+      E('div', {className:'nav-item', style:{color:t.textSecondary}}, [I('pi-th-large'), document.createTextNode(' Catalog')]),
+      (function() {
+        var item = E('div', {className:'nav-item', style:{color:t.textSecondary}}, [I('pi-check-circle'), document.createTextNode(' Installed ')]);
+        item.appendChild(E('span', {className:'nav-badge', style:{background:t.warnVal, color:'#000'}}, '3'));
+        return item;
+      })(),
+      E('div', {className:'nav-item', style:{color:t.textSecondary}}, [I('pi-database'), document.createTextNode(' Backup')]),
+      E('div', {className:'nav-item', style:{color:t.textSecondary}}, [I('pi-cog'), document.createTextNode(' Settings')]),
+    ]),
+    E('div', {className:'sidebar-footer', style:{borderTop:'1px solid '+t.border, color:t.textDim}}, 'v0.1.0'),
+  ]));
+
+  // Main
+  var main = E('div', {className:'main', style:{background:t.base}});
+  var page = E('div', {className:'page'});
+
+  page.appendChild(E('div', {className:'page-hdr'}, [
+    E('h2', {style:{color:t.textPrimary}}, 'Dashboard'),
+    E('p', {style:{color:t.textMuted}}, 'Overview of your astrophotography software'),
+  ]));
+
+  // Stats
+  var stats = E('div', {className:'stats'});
+  [{lbl:'INSTALLED',val:'8',sub:'of 12 in catalog',vc:t.textPrimary},
+   {lbl:'UPDATES AVAILABLE',val:'3',sub:'Review and install',vc:t.warnVal},
+   {lbl:'LAST SCAN',val:'Today 14:30',sub:'8 packages detected',vc:t.textPrimary,vs:'18px'},
+   {lbl:'BACKUPS',val:'5',sub:'124 MB total',vc:t.textPrimary}
+  ].forEach(function(d) {
+    stats.appendChild(E('div', {className:'stat card', style:{background:t.card, border:'1px solid '+t.borderHover}}, [
+      E('div', {className:'lbl', style:{color:t.textMuted}}, d.lbl),
+      E('div', {className:'val', style:{color:d.vc, fontSize:d.vs||'28px', fontWeight:'700', marginTop:'2px'}}, d.val),
+      E('div', {className:'sub', style:{color:t.textSecondary}}, d.sub),
+    ]));
+  });
+  page.appendChild(stats);
+
+  // Updates
+  var ut = E('div', {className:'section-title', style:{color:t.textPrimary}});
+  var wi = I('pi-exclamation-circle'); wi.style.color = t.warnVal; wi.style.fontSize = '13px';
+  ut.appendChild(wi); ut.appendChild(document.createTextNode(' Updates Available'));
+  page.appendChild(ut);
+
+  var uc = E('div', {className:'card', style:{background:t.card, border:'1px solid '+t.borderHover, marginBottom:'24px', overflow:'hidden'}});
+  [{n:'N.I.N.A.',c:'Capture \u00b7 InnoSetup',f:'3.1.2',to:'3.2.0',i:'pi-camera',ic:t.primaryText},
+   {n:'FTDI CDM Driver',c:'Driver \u00b7 Exe',f:'2.12.36',to:'2.12.38',i:'pi-bolt',ic:t.yellowFg},
+   {n:'SharpCap',c:'Capture \u00b7 InnoSetup',f:'4.1.0',to:'4.2.1',i:'pi-eye',ic:t.primaryText}
+  ].forEach(function(u, i, a) {
+    uc.appendChild(E('div', {className:'upd-row', style:{borderBottom: i<a.length-1?'1px solid '+t.borderHover:'none'}}, [
+      E('div', {className:'upd-icon', style:{background:t.iconBg, color:u.ic}}, [I(u.i)]),
+      E('div', {style:{flex:'1'}}, [
+        E('div', {className:'upd-name', style:{color:t.textPrimary}}, u.n),
+        E('div', {className:'upd-ver', style:{color:t.textMuted}}, u.c),
+      ]),
+      E('div', {style:{color:t.warnVal, fontSize:'12px', flexShrink:'0'}}, u.f+' \u2192 '+u.to),
+      E('button', {className:'btn btn-sm', style:{background:t.warnBg, color:t.warnBtnText, border:'none'}}, 'Update'),
+    ]));
+  });
+  page.appendChild(uc);
+
+  // Quick actions
+  var qa = E('div', {className:'quick-actions'});
+  var sb = E('button', {className:'btn', style:{background:t.primary, color:t.btnText, border:'none'}});
+  sb.appendChild(I('pi-refresh')); sb.appendChild(document.createTextNode(' Scan Installed'));
+  qa.appendChild(sb);
+  var ub = E('button', {className:'btn', style:{border:'1px solid '+t.borderHover, background:'transparent', color:t.outlineText}});
+  ub.appendChild(I('pi-download')); ub.appendChild(document.createTextNode(' Update All (3)'));
+  qa.appendChild(ub);
+  page.appendChild(qa);
+
+  // Activity
+  page.appendChild(E('div', {className:'section-title', style:{color:t.textPrimary}}, 'Recent Activity'));
+  var ac = E('div', {className:'card', style:{background:t.card, border:'1px solid '+t.borderHover, overflow:'hidden'}});
+  [{n:'N.I.N.A. updated to 3.2.0',d:'Capture \u00b7 Silent install',tm:'2 hours ago',i:'pi-arrow-up',bg:t.yellowBg,fg:t.yellowFg},
+   {n:'PHD2 installed (2.6.13)',d:'Guiding \u00b7 InnoSetup',tm:'Yesterday',i:'pi-check',bg:t.greenBg,fg:t.greenFg},
+   {n:'Full scan completed',d:'8 packages found, 3 updates available',tm:'Yesterday',i:'pi-search',bg:t.indigoBg,fg:t.indigoFg},
+   {n:'ASCOM Platform installed',d:'Prerequisites \u00b7 MSI',tm:'3 days ago',i:'pi-check',bg:t.greenBg,fg:t.greenFg}
+  ].forEach(function(a, i, arr) {
+    ac.appendChild(E('div', {className:'act-row', style:{borderBottom: i<arr.length-1?'1px solid '+t.borderHover:'none'}}, [
+      E('div', {className:'act-icon', style:{background:a.bg, color:a.fg}}, [I(a.i)]),
+      E('div', {style:{flex:'1'}}, [
+        E('div', {className:'act-name', style:{color:t.textPrimary}}, a.n),
+        E('div', {className:'act-det', style:{color:t.textMuted}}, a.d),
+      ]),
+      E('div', {className:'act-time', style:{color:t.textDim}}, a.tm),
+    ]));
+  });
+  page.appendChild(ac);
+
+  // Catalog cards
+  var cs = E('div', {style:{marginTop:'32px'}});
+  cs.appendChild(E('div', {className:'section-title', style:{color:t.textPrimary}}, 'Catalog Preview'));
+  var gr = E('div', {className:'sw-grid'});
+  [{n:'N.I.N.A.',p:'Stefan Berg',ds:'Nighttime Imaging \'N\' Astronomy \u2014 advanced imaging suite with sequencer and plate solving.',i:'pi-camera',ic:t.primaryText,tg:'CAPTURE',tb:t.primaryBg,tf:t.primaryText,dc:'#fbbf24',st:'3.1.2 \u2192 3.2.0',sc:t.warnVal},
+   {n:'PHD2',p:'OpenPHD',ds:'Push Here Dummy guiding software. The most popular free auto-guiding solution.',i:'pi-compass',ic:t.greenFg,tg:'GUIDING',tb:t.greenBg,tf:t.greenFg,dc:t.greenFg,st:'2.6.13',sc:t.greenFg},
+   {n:'ASTAP',p:'Han Kleijn',ds:'Astrometric STAcking Program \u2014 plate solver and FITS viewer with stacking.',i:'pi-star',ic:t.purpleFg,tg:'PLATESOLVING',tb:t.purpleBg,tf:t.purpleFg,dc:t.greenFg,st:'2024.12.28',sc:t.greenFg},
+   {n:'Stellarium',p:'Stellarium Developers',ds:'Free open source planetarium. Shows a realistic 3D sky as seen with the naked eye.',i:'pi-globe',ic:t.tealFg,tg:'PLANETARIUM',tb:t.tealBg,tf:t.tealFg,dc:t.textDim,st:'Not installed',sc:t.textDim}
+  ].forEach(function(c) {
+    gr.appendChild(E('div', {className:'sw-card card', style:{background:t.card, border:'1px solid '+t.borderHover}}, [
+      E('div', {className:'sw-card-hdr'}, [
+        E('div', {className:'sw-icon', style:{background:t.iconBg, color:c.ic}}, [I(c.i)]),
+        E('div', {}, [
+          E('div', {className:'sw-name', style:{color:t.textPrimary}}, c.n),
+          E('div', {className:'sw-pub', style:{color:t.textMuted}}, c.p),
+        ]),
+      ]),
+      E('div', {className:'sw-desc', style:{color:t.textSecondary}}, c.ds),
+      E('div', {className:'sw-foot'}, [
+        E('span', {className:'tag', style:{background:c.tb, color:c.tf}}, c.tg),
+        (function() {
+          var st = E('div', {className:'sw-status'});
+          st.appendChild(E('span', {className:'status-dot', style:{background:c.dc}}));
+          st.appendChild(E('span', {style:{color:c.sc}}, c.st));
+          return st;
+        })(),
+      ]),
+    ]));
+  });
+  cs.appendChild(gr);
+  page.appendChild(cs);
+
+  main.appendChild(page);
+
+  // Status bar
+  var sb2 = E('div', {className:'status-bar', style:{background:t.elevated, borderTop:'1px solid '+t.borderHover, color:t.textMuted}});
+  [{i:'pi-th-large',t:' 12 packages'},{i:'pi-check-circle',t:' 8 installed'},{i:'pi-arrow-up',t:' 3 updates',c:t.warnVal},{i:'pi-sync',t:' 14:30'}
+  ].forEach(function(si, i) {
+    if (i > 0) sb2.appendChild(E('span', {style:{color:t.borderHover}}, '|'));
+    var sp = E('span', {style:{color:si.c||t.textMuted}});
+    var ic = I(si.i); ic.style.fontSize = '10px';
+    sp.appendChild(ic); sp.appendChild(document.createTextNode(si.t));
+    sb2.appendChild(sp);
+  });
+  var lb = E('button', {className:'log-toggle', style:{border:'1px solid '+t.borderHover, color:t.textMuted}});
+  var li = I('pi-list'); li.style.fontSize = '10px';
+  lb.appendChild(li); lb.appendChild(document.createTextNode(' Log'));
+  sb2.appendChild(lb);
+  main.appendChild(sb2);
+
+  container.appendChild(main);
+}
+
+buildSwatches();
+applyTheme();
+</script>
+</body>
+</html>

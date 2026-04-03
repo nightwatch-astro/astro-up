@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-export const GeneralSchema = v.object({
+export const UiSchema = v.object({
   theme: v.picklist(["dark", "light", "system"]),
   font_size: v.picklist(["small", "medium", "large"]),
   auto_scan_on_launch: v.boolean(),
@@ -44,12 +44,14 @@ export const NetworkSchema = v.object({
   proxy: v.nullable(v.string()),
   connect_timeout: v.pipe(v.string(), v.minLength(1, "Required")),
   timeout: v.pipe(v.string(), v.minLength(1, "Required")),
+  user_agent: v.optional(v.string()),
   download_speed_limit: v.pipe(v.number(), v.minValue(0)),
 });
 
 export const PathsSchema = v.object({
-  download_dir: v.pipe(v.string(), v.minLength(1, "Required")),
-  cache_dir: v.pipe(v.string(), v.minLength(1, "Required")),
+  download_dir: v.string(),
+  cache_dir: v.string(),
+  data_dir: v.optional(v.string()),
   keep_installers: v.boolean(),
   purge_installers_after_days: v.pipe(v.number(), v.minValue(0)),
 });
@@ -60,13 +62,24 @@ export const LogSchema = v.object({
   log_file: v.string(),
 });
 
+export const UpdateSchema = v.object({
+  auto_check: v.boolean(),
+  check_interval: v.pipe(v.string(), v.minLength(1, "Required")),
+});
+
+export const TelemetrySchema = v.object({
+  enabled: v.boolean(),
+});
+
 export const AppConfigSchema = v.object({
-  general: GeneralSchema,
+  ui: UiSchema,
   startup: StartupSchema,
   notifications: NotificationsSchema,
-  backup: BackupPolicySchema,
+  backup_policy: BackupPolicySchema,
   catalog: CatalogSchema,
-  network: NetworkSchema,
   paths: PathsSchema,
+  network: NetworkSchema,
+  updates: UpdateSchema,
   logging: LogSchema,
+  telemetry: TelemetrySchema,
 });

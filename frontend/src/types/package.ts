@@ -32,6 +32,7 @@ export interface PackageSummary {
   tags: string[];
   dependencies: string[];
   manifest_version: number;
+  icon_base64?: string | null;
 }
 
 export interface VersionEntry {
@@ -50,14 +51,14 @@ export interface SearchResult {
 }
 
 export type DetectionResult =
-  | { type: "Installed"; version: string; method: string }
-  | { type: "InstalledUnknownVersion"; method: string }
+  | { type: "Installed"; version: string; method: string; install_path?: string | null }
+  | { type: "InstalledUnknownVersion"; method: string; install_path?: string | null }
   | { type: "NotInstalled" }
   | { type: "Unavailable"; reason: string };
 
 export interface PackageWithStatus extends PackageSummary {
-  installed_version: string | null;
-  latest_version: string;
-  update_available: boolean;
-  detection: DetectionResult;
+  installed_version?: string | null;
+  latest_version?: string;
+  update_available?: boolean;
+  detection?: DetectionResult;
 }

@@ -2,7 +2,8 @@
 import { ref, reactive, watch } from "vue";
 import Button from "primevue/button";
 import { useToast } from "primevue/usetoast";
-import { safeParse } from "valibot";
+import { invoke } from "@tauri-apps/api/core";
+import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import GeneralSection from "../components/settings/GeneralSection.vue";
 import StartupSection from "../components/settings/StartupSection.vue";
 import NotificationsSection from "../components/settings/NotificationsSection.vue";
@@ -13,19 +14,15 @@ import PathsSection from "../components/settings/PathsSection.vue";
 import LoggingSection from "../components/settings/LoggingSection.vue";
 import AboutSection from "../components/settings/AboutSection.vue";
 import { useConfig, useSaveConfig } from "../composables/useInvoke";
-import { useTheme } from "../composables/useTheme";
-import { useConfigSnapshots } from "../stores/configSnapshots";
-import { AppConfigSchema } from "../validation/config";
 import type { AppConfig } from "../types/config";
 
 const toast = useToast();
 const { data: serverConfig } = useConfig();
 const saveMutation = useSaveConfig();
-const { setTheme } = useTheme();
-const { save: saveSnapshot } = useConfigSnapshots();
 
 const activeSection = ref("general");
-const errors = ref<string[]>([]);
+const showResetConfirm = ref(false);
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 const sections = [
   { id: "general", label: "General", icon: "pi-cog" },
@@ -40,74 +37,79 @@ const sections = [
 ];
 
 const defaultConfig: AppConfig = {
-  general: {
-    theme: "system", font_size: "medium", auto_scan_on_launch: false,
+  ui: {
+    theme: "system", font_size: "medium", auto_scan_on_launch: true,
     default_install_scope: "user", default_install_method: "silent",
-    auto_check_updates: true, check_interval: "24h",
+    auto_check_updates: true, check_interval: "1day",
     auto_notify_updates: true, auto_install_updates: false,
   },
-  startup: { start_at_login: false, start_minimized: false, minimize_to_tray_on_close: true },
+  startup: { start_at_login: true, start_minimized: true, minimize_to_tray_on_close: true },
   notifications: {
     enabled: true, display_duration: 5,
     show_errors: true, show_warnings: true,
     show_update_available: true, show_operation_complete: true,
   },
-  backup: { scheduled_enabled: false, schedule: "weekly", max_per_package: 5, max_total_size_mb: 0, max_age_days: 0 },
-  catalog: { url: "https://github.com/nightwatch-astro/astro-up-catalog/releases/latest/download/catalog.db", cache_ttl: "24h" },
-  network: { proxy: null, connect_timeout: "10s", timeout: "30s", download_speed_limit: 0 },
-  paths: { download_dir: "", cache_dir: "", keep_installers: false, purge_installers_after_days: 7 },
+  backup_policy: { scheduled_enabled: false, schedule: "weekly", max_per_package: 5, max_total_size_mb: 0, max_age_days: 0 },
+  catalog: { url: "https://github.com/nightwatch-astro/astro-up-manifests/releases/download/catalog/latest/catalog.db", cache_ttl: "1day" },
+  network: { proxy: null, connect_timeout: "10s", timeout: "30s", user_agent: "", download_speed_limit: 0 },
+  paths: { download_dir: "", cache_dir: "", data_dir: "", keep_installers: false, purge_installers_after_days: 7 },
+  updates: { auto_check: true, check_interval: "1day" },
   logging: { level: "info", log_to_file: true, log_file: "" },
+  telemetry: { enabled: false },
 };
 
 const config = reactive<AppConfig>(structuredClone(defaultConfig));
+let initialized = false;
 
-// Load server config when available
+// Load server config when available (JSON round-trip strips VueQuery's readonly proxy)
 watch(serverConfig, (data) => {
   if (data) {
-    Object.assign(config, data as unknown as AppConfig);
+    Object.assign(config, JSON.parse(JSON.stringify(data)) as AppConfig);
+    initialized = true;
   }
 }, { immediate: true });
 
-// Apply theme and font size immediately when changed
-watch(() => config.general.theme, (theme) => {
-  setTheme(theme);
-});
-
-watch(() => config.general.font_size, (size) => {
-  document.documentElement.dataset.fontSize = size;
-}, { immediate: true });
-
-function validate(): boolean {
-  const result = safeParse(AppConfigSchema, config);
-  if (!result.success) {
-    errors.value = result.issues.map(
-      (i) => `${i.path?.map((p) => p.key).join(".")} — ${i.message}`,
-    );
-    return false;
+// Auto-save on any config change (debounced 500ms)
+watch(config, () => {
+  // Apply font size immediately (even before backend config loads)
+  if (config.ui?.font_size) {
+    document.documentElement.dataset.fontSize = config.ui.font_size;
   }
-  errors.value = [];
-  return true;
-}
 
-function handleSave() {
-  if (!validate()) {
-    toast.add({ severity: "error", summary: "Validation failed", detail: errors.value.join("; "), life: 5000 });
-    return;
-  }
-  saveSnapshot(config);
-  saveMutation.mutate(config as unknown as Record<string, unknown>, {
-    onSuccess: () => {
-      toast.add({ severity: "success", summary: "Settings saved", life: 3000 });
-    },
-    onError: (err) => {
-      toast.add({ severity: "error", summary: "Save failed", detail: String(err), life: 5000 });
-    },
-  });
-}
+  // Only persist to backend once real config has loaded
+  if (!initialized) return;
 
-function handleReset() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveMutation.mutate(config as unknown as Record<string, unknown>, {
+      onError: (err) => {
+        toast.add({ severity: "error", summary: "Save failed", detail: String(err), life: 5000 });
+      },
+    });
+  }, 500);
+}, { deep: true });
+
+function confirmReset() {
   Object.assign(config, structuredClone(defaultConfig));
+  showResetConfirm.value = false;
   toast.add({ severity: "info", summary: "Reset to defaults", life: 3000 });
+}
+
+async function clearDirectory(dir: string, label: string) {
+  try {
+    await invoke("clear_directory", { dir });
+    toast.add({ severity: "success", summary: `${label} cleared`, life: 3000 });
+  } catch {
+    toast.add({ severity: "warn", summary: `No ${label.toLowerCase()} to clear`, life: 3000 });
+  }
+}
+
+function handleClearCache() {
+  clearDirectory(config.paths?.cache_dir || "", "Cache");
+}
+
+function handleClearDownloads() {
+  clearDirectory(config.paths?.download_dir || "", "Downloads");
 }
 </script>
 
@@ -131,39 +133,19 @@ function handleReset() {
         <h2 class="page-title">
           {{ sections.find((s) => s.id === activeSection)?.label }}
         </h2>
-        <div
+        <Button
           v-if="activeSection !== 'about'"
-          class="settings-actions"
-        >
-          <Button
-            label="Reset to Defaults"
-            severity="secondary"
-            text
-            @click="handleReset"
-          />
-          <Button
-            label="Save Changes"
-            icon="pi pi-check"
-            @click="handleSave"
-          />
-        </div>
-      </div>
-
-      <div
-        v-if="errors.length > 0"
-        class="settings-errors"
-      >
-        <p
-          v-for="(err, i) in errors"
-          :key="i"
-        >
-          {{ err }}
-        </p>
+          label="Reset to Defaults"
+          severity="secondary"
+          text
+          size="small"
+          @click="showResetConfirm = true"
+        />
       </div>
 
       <GeneralSection
         v-if="activeSection === 'general'"
-        v-model="config.general"
+        v-model="config.ui"
       />
       <StartupSection
         v-else-if="activeSection === 'startup'"
@@ -175,7 +157,7 @@ function handleReset() {
       />
       <BackupSection
         v-else-if="activeSection === 'backup'"
-        v-model="config.backup"
+        v-model="config.backup_policy"
       />
       <CatalogSection
         v-else-if="activeSection === 'catalog'"
@@ -188,6 +170,8 @@ function handleReset() {
       <PathsSection
         v-else-if="activeSection === 'paths'"
         v-model="config.paths"
+        @clear-cache="handleClearCache"
+        @clear-downloads="handleClearDownloads"
       />
       <LoggingSection
         v-else-if="activeSection === 'logging'"
@@ -195,9 +179,18 @@ function handleReset() {
       />
       <AboutSection
         v-else-if="activeSection === 'about'"
-        @restore-snapshot="(c) => Object.assign(config, c)"
       />
     </div>
+
+    <ConfirmDialog
+      v-model:visible="showResetConfirm"
+      title="Reset to Defaults"
+      message="This will reset all settings to their default values."
+      icon="pi-refresh"
+      confirm-label="Reset"
+      severity="danger"
+      @confirm="confirmReset"
+    />
   </div>
 </template>
 
@@ -266,25 +259,5 @@ function handleReset() {
   font-size: 20px;
   font-weight: 600;
   color: var(--p-surface-0);
-}
-
-.settings-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.settings-errors {
-  background: color-mix(in srgb, var(--p-red-500) 10%, transparent);
-  border: 1px solid var(--p-red-500);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-}
-
-.settings-errors p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--p-red-400);
-  line-height: 1.5;
 }
 </style>

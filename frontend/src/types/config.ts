@@ -1,15 +1,17 @@
 export interface AppConfig {
-  general: GeneralConfig;
+  ui: UiConfig;
   startup: StartupConfig;
   notifications: NotificationsConfig;
-  backup: BackupPolicyConfig;
+  backup_policy: BackupPolicyConfig;
   catalog: CatalogConfig;
-  network: NetworkConfig;
   paths: PathsConfig;
+  network: NetworkConfig;
+  updates: UpdateConfig;
   logging: LogConfig;
+  telemetry: TelemetryConfig;
 }
 
-export interface GeneralConfig {
+export interface UiConfig {
   theme: "dark" | "light" | "system";
   font_size: "small" | "medium" | "large";
   auto_scan_on_launch: boolean;
@@ -53,18 +55,29 @@ export interface NetworkConfig {
   proxy: string | null;
   connect_timeout: string;
   timeout: string;
+  user_agent: string;
   download_speed_limit: number;
 }
 
 export interface PathsConfig {
   download_dir: string;
   cache_dir: string;
+  data_dir: string;
   keep_installers: boolean;
   purge_installers_after_days: number;
+}
+
+export interface UpdateConfig {
+  auto_check: boolean;
+  check_interval: string;
 }
 
 export interface LogConfig {
   level: "error" | "warn" | "info" | "debug" | "trace";
   log_to_file: boolean;
   log_file: string;
+}
+
+export interface TelemetryConfig {
+  enabled: boolean;
 }

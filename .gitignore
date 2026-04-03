@@ -45,3 +45,11 @@ Thumbs.db
 
 # Embedding model cache
 .fastembed_cache/
+
+# Signing keys (secret key must never be committed)
+minisign.key
+*.secret.key
+
+# Temp signing artifacts
+blabla
+blabla.minisig

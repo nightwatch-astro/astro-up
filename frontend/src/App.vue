@@ -3,7 +3,6 @@ import { onMounted, onUnmounted, ref } from "vue";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useTheme } from "./composables/useTheme";
 import { useCoreEvents } from "./composables/useCoreEvents";
 import { useKeyboard } from "./composables/useKeyboard";
 import { useOperations } from "./composables/useOperations";
@@ -15,19 +14,44 @@ import LogPanel from "./components/layout/LogPanel.vue";
 import type { CoreEvent } from "./types/commands";
 
 const toast = useToast();
-const { init: initTheme } = useTheme();
 const { addEntry } = useErrorLog();
-const { updateProgress, completeOperation, failOperation, addStep } = useOperations();
+const { updateProgress, completeOperation, failOperation, addStep, startOperation, isRunning } = useOperations();
 const logVisible = ref(false);
 const logPanel = ref<InstanceType<typeof LogPanel> | null>(null);
 
 useKeyboard({
   onToggleLog: () => { logVisible.value = !logVisible.value; },
   onEscape: () => { logVisible.value = false; },
+  onFocusSearch: () => {
+    const searchInput = document.querySelector<HTMLInputElement>(".app-main input[type='text'], .app-main .p-inputtext");
+    searchInput?.focus();
+  },
 });
 
 const updateVersion = ref<string | null>(null);
 let unlistenUpdate: UnlistenFn | null = null;
+let unlistenBackendLog: UnlistenFn | null = null;
+
+// Forward backend tracing logs to the log panel
+async function setupBackendLogListener() {
+  try {
+    unlistenBackendLog = await listen<{
+      timestamp: string;
+      level: string;
+      target: string;
+      message: string;
+    }>("backend-log", (event) => {
+      logPanel.value?.addEntry({
+        timestamp: event.payload.timestamp,
+        level: event.payload.level as "error" | "warn" | "info" | "debug" | "trace",
+      target: event.payload.target,
+      message: event.payload.message,
+    });
+  });
+  } catch {
+    // Not running inside Tauri
+  }
+}
 
 // Wire core events to operations dock, log panel, and error toasts (T036/T037)
 useCoreEvents((event: CoreEvent) => {
@@ -41,24 +65,40 @@ useCoreEvents((event: CoreEvent) => {
 
   // Map events to operations progress
   if (event.type === "download_progress") {
-    updateProgress(event.data.progress, `Downloading: ${event.data.progress}%`);
+    const pct = Math.round(event.data.progress * 100);
+    updateProgress(pct, `Downloading: ${pct}%`);
   } else if (event.type === "scan_progress") {
     updateProgress(event.data.progress, `Scanning: ${event.data.current_id}`);
   } else if (event.type === "backup_progress") {
     const pct = Math.round((event.data.files_processed / event.data.total_files) * 100);
     updateProgress(pct, `Backing up: ${event.data.files_processed}/${event.data.total_files}`);
-  } else if (
-    event.type === "install_complete" ||
-    event.type === "download_complete" ||
-    event.type === "scan_complete" ||
-    event.type === "backup_complete" ||
-    event.type === "restore_complete" ||
-    event.type === "orchestration_complete"
-  ) {
+  } else if (event.type === "package_started") {
+    startOperation(event.data.package_id, `Installing ${event.data.package_id}`);
+  } else if (event.type === "download_started") {
+    if (!isRunning.value) startOperation(event.data.id, `Downloading ${event.data.id}`);
+    addStep("info", "Download started");
+  } else if (event.type === "download_complete") {
+    addStep("info", "Download complete");
+  } else if (event.type === "scan_started") {
+    startOperation("scan", "Scanning installed software");
+  } else if (event.type === "scan_complete") {
     completeOperation();
+  } else if (event.type === "backup_started" || event.type === "restore_started" || event.type === "install_started") {
     addStep("info", `${event.type}`);
-  } else if (event.type === "install_started" || event.type === "download_started" || event.type === "backup_started" || event.type === "restore_started" || event.type === "scan_started") {
+  } else if (event.type === "backup_complete" || event.type === "restore_complete" || event.type === "install_complete") {
     addStep("info", `${event.type}`);
+  } else if (event.type === "package_complete") {
+    if (event.data.status === "failed") {
+      const reason = event.data.error ?? "unknown error";
+      failOperation(`${event.data.package_id}: ${reason}`);
+    } else {
+      completeOperation();
+    }
+  } else if (event.type === "orchestration_complete") {
+    addStep("info", `Done: ${event.data.succeeded} succeeded, ${event.data.failed} failed`);
+    if (!isRunning.value) {
+      // Single-package orchestration already handled by package_complete
+    }
   }
 
   // Error handling -> toasts + error log (FR-028)
@@ -77,7 +117,8 @@ useCoreEvents((event: CoreEvent) => {
 
 // Listen for self-update availability
 async function setupUpdateListener() {
-  unlistenUpdate = await listen<{ version: string; body: string | null }>(
+  try {
+    unlistenUpdate = await listen<{ version: string; body: string | null }>(
     "update-available",
     (event) => {
       updateVersion.value = event.payload.version;
@@ -91,6 +132,9 @@ async function setupUpdateListener() {
       });
     },
   );
+  } catch {
+    // Not running inside Tauri
+  }
 }
 
 async function installUpdate() {
@@ -122,14 +166,13 @@ function dismissUpdate() {
 }
 
 onMounted(() => {
-  initTheme();
   setupUpdateListener();
+  setupBackendLogListener();
 });
 
 onUnmounted(() => {
-  if (unlistenUpdate) {
-    unlistenUpdate();
-  }
+  if (unlistenUpdate) unlistenUpdate();
+  if (unlistenBackendLog) unlistenBackendLog();
 });
 </script>
 
@@ -180,7 +223,8 @@ onUnmounted(() => {
 <style>
 .app-layout {
   display: flex;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
 }
 
 .app-content {
@@ -188,6 +232,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .app-main {

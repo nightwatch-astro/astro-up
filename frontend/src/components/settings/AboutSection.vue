@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import Button from "primevue/button";
-import { useConfigSnapshots } from "../../stores/configSnapshots";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 
 const version = __APP_VERSION__;
 const checking = ref(false);
-const { snapshots, restore, remove } = useConfigSnapshots();
-
-defineEmits<{
-  restoreSnapshot: [config: Record<string, unknown>];
-}>();
 
 async function checkForUpdates() {
   checking.value = true;
@@ -26,16 +21,6 @@ async function checkForUpdates() {
   } finally {
     checking.value = false;
   }
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 </script>
 
@@ -58,48 +43,13 @@ function formatDate(iso: string): string {
     />
 
     <div class="about-links">
-      <a
-        href="https://github.com/nightwatch-astro/astro-up"
-        target="_blank"
+      <button
         class="about-link"
+        @click="openUrl('https://github.com/nightwatch-astro/astro-up')"
       >
         <i class="pi pi-github" /> GitHub
-      </a>
+      </button>
     </div>
-
-    <!-- Config Snapshots (FR-040) -->
-    <section
-      v-if="snapshots.length > 0"
-      class="snapshots-section"
-    >
-      <h4 class="section-title">
-        Config Snapshots
-      </h4>
-      <div
-        v-for="snap in snapshots"
-        :key="snap.id"
-        class="snapshot-item"
-      >
-        <span class="snapshot-date">{{ formatDate(snap.timestamp) }}</span>
-        <div class="snapshot-actions">
-          <Button
-            label="Restore"
-            size="small"
-            severity="secondary"
-            outlined
-            @click="$emit('restoreSnapshot', restore(snap.id) as unknown as Record<string, unknown>)"
-          />
-          <Button
-            icon="pi pi-trash"
-            size="small"
-            severity="danger"
-            text
-            rounded
-            @click="remove(snap.id)"
-          />
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -116,40 +66,10 @@ function formatDate(iso: string): string {
   display: flex;
   align-items: center;
   gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 .about-link:hover { text-decoration: underline; }
-
-.snapshots-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-top: 1px solid var(--p-surface-700);
-  padding-top: 16px;
-}
-
-.section-title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--p-surface-300);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.snapshot-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 0;
-}
-
-.snapshot-date {
-  font-size: 13px;
-  color: var(--p-surface-300);
-}
-
-.snapshot-actions {
-  display: flex;
-  gap: 4px;
-}
 </style>

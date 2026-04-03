@@ -29,15 +29,16 @@ fn create_fixture_catalog() {
             publisher TEXT,
             homepage TEXT,
             category TEXT NOT NULL,
-            type TEXT NOT NULL,
+            sw_typee TEXT NOT NULL,
             slug TEXT NOT NULL,
             license TEXT,
             tags TEXT,
             aliases TEXT,
-            dependencies TEXT
+            dependencies TEXT,
+            icon_base64 TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_packages_category ON packages(category);
-        CREATE INDEX IF NOT EXISTS idx_packages_type ON packages(type);
+        CREATE INDEX IF NOT EXISTS idx_packages_sw_typee ON packages(sw_typee);
         CREATE INDEX IF NOT EXISTS idx_packages_slug ON packages(slug);
 
         CREATE TABLE IF NOT EXISTS versions (
@@ -144,11 +145,11 @@ fn create_fixture_catalog() {
         ),
     ];
 
-    for (id, mv, name, desc, pub_, hp, cat, typ, slug, lic, tags, aliases, deps) in &packages {
+    for (id, mv, name, desc, pub_, hp, cat, sw_type, slug, lic, tags, aliases, deps) in &packages {
         conn.execute(
-            "INSERT INTO packages (id, manifest_version, name, description, publisher, homepage, category, type, slug, license, tags, aliases, dependencies)
+            "INSERT INTO packages (id, manifest_version, name, description, publisher, homepage, category, sw_typee, slug, license, tags, aliases, dependencies)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-            params![id, mv, name, desc, pub_, hp, cat, typ, slug, lic, tags, aliases, deps],
+            params![id, mv, name, desc, pub_, hp, cat, sw_type, slug, lic, tags, aliases, deps],
         )
         .unwrap();
     }

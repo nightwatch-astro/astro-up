@@ -13,7 +13,7 @@ defineEmits<{
 
 const MAX_ENTRIES = 1000;
 const entries = ref<LogEntry[]>([]);
-const logFilter = ref<LogEntry["level"] | "all">("all");
+const logFilter = ref<LogEntry["level"] | "all">("info");
 const logContainer = ref<HTMLElement | null>(null);
 const panelHeight = ref(200);
 const isResizing = ref(false);
@@ -21,15 +21,24 @@ const isResizing = ref(false);
 const filterOptions = [
   { label: "All", value: "all" },
   { label: "Error", value: "error" },
-  { label: "Warn", value: "warn" },
-  { label: "Info", value: "info" },
-  { label: "Debug", value: "debug" },
-  { label: "Trace", value: "trace" },
+  { label: "Warn+", value: "warn" },
+  { label: "Info+", value: "info" },
+  { label: "Debug+", value: "debug" },
+  { label: "Trace+", value: "trace" },
 ];
+
+const LOG_LEVELS: Record<string, number> = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  debug: 3,
+  trace: 4,
+};
 
 const filteredEntries = computed(() => {
   if (logFilter.value === "all") return entries.value;
-  return entries.value.filter((e) => e.level === logFilter.value);
+  const threshold = LOG_LEVELS[logFilter.value] ?? 4;
+  return entries.value.filter((e) => (LOG_LEVELS[e.level] ?? 4) <= threshold);
 });
 
 function addEntry(entry: LogEntry) {
@@ -229,7 +238,6 @@ defineExpose({ addEntry, clearLog });
 .log-entry {
   display: flex;
   gap: 8px;
-  white-space: nowrap;
 }
 
 .log-time {
@@ -252,8 +260,7 @@ defineExpose({ addEntry, clearLog });
 
 .log-message {
   color: var(--p-surface-300);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .log-empty {

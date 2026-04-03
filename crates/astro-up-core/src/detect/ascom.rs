@@ -61,11 +61,13 @@ fn detect_windows(config: &DetectionConfig) -> DetectionResult {
                     return DetectionResult::Installed {
                         version: Version::parse(ver.trim()),
                         method: DetectionMethod::AscomProfile,
+                        install_path: None,
                     };
                 }
             }
             DetectionResult::InstalledUnknownVersion {
                 method: DetectionMethod::AscomProfile,
+                install_path: None,
             }
         }
         Err(_) => DetectionResult::NotInstalled,

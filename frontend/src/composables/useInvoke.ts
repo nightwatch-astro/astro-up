@@ -19,6 +19,14 @@ export function useCatalogSearch(query: () => string) {
   });
 }
 
+export function useVersions(id: () => string) {
+  return useQuery({
+    queryKey: ["versions", id],
+    queryFn: () => invoke<unknown[]>("get_versions", { id: id() }),
+    enabled: () => id().length > 0,
+  });
+}
+
 export function useUpdateCheck() {
   return useQuery({
     queryKey: ["updates"],
@@ -68,6 +76,17 @@ export function useBackupPreview(archive: () => string | null) {
   });
 }
 
+export function useSyncCatalog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => invoke<string>("sync_catalog"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["software"] });
+      queryClient.invalidateQueries({ queryKey: ["updates"] });
+    },
+  });
+}
+
 // --- Mutations ---
 
 export function useSaveConfig() {
@@ -97,6 +116,18 @@ export function useUpdateSoftware() {
   return useMutation({
     mutationFn: (id: string) =>
       invoke<OperationId>("update_software", { id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["software"] });
+      queryClient.invalidateQueries({ queryKey: ["updates"] });
+    },
+  });
+}
+
+export function useUpdateAll() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      invoke<OperationId>("update_all"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
       queryClient.invalidateQueries({ queryKey: ["updates"] });

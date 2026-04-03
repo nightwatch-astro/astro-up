@@ -6,10 +6,11 @@ defineProps<{
 }>();
 
 function detectionMethod(pkg: PackageWithStatus): string {
+  if (!pkg.detection) return "Not scanned";
   switch (pkg.detection.type) {
     case "Installed": return pkg.detection.method;
     case "InstalledUnknownVersion": return pkg.detection.method;
-    case "NotInstalled": return "—";
+    case "NotInstalled": return "Not installed";
     case "Unavailable": return pkg.detection.reason;
   }
 }
@@ -17,12 +18,18 @@ function detectionMethod(pkg: PackageWithStatus): string {
 
 <template>
   <div class="info-grid">
-    <div class="info-item">
-      <span class="info-label">Version</span>
-      <span class="info-value">{{ pkg.installed_version ?? pkg.latest_version }}</span>
+    <div
+      v-if="pkg.installed_version"
+      class="info-item"
+    >
+      <span class="info-label">Installed Version</span>
+      <span class="info-value">{{ pkg.installed_version }}</span>
     </div>
-    <div class="info-item">
-      <span class="info-label">Latest</span>
+    <div
+      v-if="pkg.latest_version"
+      class="info-item"
+    >
+      <span class="info-label">Latest Version</span>
       <span class="info-value">{{ pkg.latest_version }}</span>
     </div>
     <div class="info-item">
@@ -73,6 +80,10 @@ function detectionMethod(pkg: PackageWithStatus): string {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  background: var(--p-surface-800);
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid var(--p-surface-700);
 }
 
 .info-wide {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import Tabs from "primevue/tabs";
 import TabList from "primevue/tablist";
@@ -13,9 +13,9 @@ import BackupTab from "../components/detail/BackupTab.vue";
 import TechnicalTab from "../components/detail/TechnicalTab.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
-import { useSoftwareList, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
-import { useOperations } from "../composables/useOperations";
-import type { PackageWithStatus } from "../types/package";
+import { useSoftwareList, useVersions, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
+// useOperations not needed here — core events handle operation lifecycle
+import type { PackageWithStatus, VersionEntry } from "../types/package";
 
 const props = defineProps<{
   id: string;
@@ -23,26 +23,33 @@ const props = defineProps<{
 
 const router = useRouter();
 const { data: software, isLoading } = useSoftwareList(() => "all");
+const { data: versions } = useVersions(() => props.id);
 const installMutation = useInstallSoftware();
 const updateMutation = useUpdateSoftware();
 const backupMutation = useCreateBackup();
-const { startOperation } = useOperations();
 
 const showBackupConfirm = ref(false);
+const tabsReady = ref(false);
+onMounted(() => { tabsReady.value = true; });
 
 const pkg = computed<PackageWithStatus | undefined>(() => {
   if (!software.value) return undefined;
-  return (software.value as PackageWithStatus[]).find((p) => p.id === props.id);
+  const found = (software.value as PackageWithStatus[]).find((p) => p.id === props.id);
+  if (!found) return undefined;
+  // Merge latest_version from versions query without mutating the readonly VueQuery cache
+  const vList = versions.value as VersionEntry[] | undefined;
+  const latestVersion = found.latest_version ?? (vList?.length ? vList[0].version : undefined);
+  return { ...found, latest_version: latestVersion };
 });
 
 
 function handleInstall() {
-  if (!pkg.value || !startOperation(pkg.value.id, `Installing ${pkg.value.name}`)) return;
+  if (!pkg.value) return;
   installMutation.mutate(pkg.value.id);
 }
 
 function handleUpdate() {
-  if (!pkg.value || !startOperation(pkg.value.id, `Updating ${pkg.value.name}`)) return;
+  if (!pkg.value) return;
   updateMutation.mutate(pkg.value.id);
 }
 
@@ -87,7 +94,7 @@ function confirmBackup() {
       />
 
       <div class="detail-content">
-        <Tabs value="0">
+        <Tabs v-if="tabsReady" value="0">
           <TabList>
             <Tab value="0">
               Overview
@@ -95,7 +102,10 @@ function confirmBackup() {
             <Tab value="1">
               Versions
             </Tab>
-            <Tab value="2">
+            <Tab
+              v-if="pkg.installed_version"
+              value="2"
+            >
               Backup
             </Tab>
             <Tab value="3">
@@ -108,8 +118,9 @@ function confirmBackup() {
             </TabPanel>
             <TabPanel value="1">
               <VersionsTab
-                :versions="[]"
-                :installed-version="pkg.installed_version"
+                :versions="(versions as VersionEntry[] | undefined) ?? []"
+                :installed-version="pkg.installed_version ?? null"
+                @install="handleInstall"
               />
             </TabPanel>
             <TabPanel value="2">
@@ -147,7 +158,7 @@ function confirmBackup() {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 12px 32px;
   font-size: 13px;
   border-bottom: 1px solid var(--p-surface-800);
 }
@@ -177,6 +188,7 @@ function confirmBackup() {
 }
 
 .detail-content {
-  padding: 0 24px 24px;
+  padding: 0 32px 24px;
+  max-width: 1200px;
 }
 </style>

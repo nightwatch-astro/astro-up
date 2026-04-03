@@ -8,7 +8,7 @@ expression: value
       "nanos": 0,
       "secs": 86400
     },
-    "url": "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db"
+    "url": "https://github.com/nightwatch-astro/astro-up-manifests/releases/download/catalog/latest/catalog.db"
   },
   "logging": {
     "level": "info",

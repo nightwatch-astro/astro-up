@@ -1,16 +1,9 @@
 <script setup lang="ts">
 import Dropdown from "primevue/dropdown";
 import ToggleSwitch from "primevue/toggleswitch";
-import InputText from "primevue/inputtext";
-import type { GeneralConfig } from "../../types/config";
+import type { UiConfig } from "../../types/config";
 
-const config = defineModel<GeneralConfig>({ required: true });
-
-const themeOptions = [
-  { label: "Dark", value: "dark" },
-  { label: "Light", value: "light" },
-  { label: "System", value: "system" },
-];
+const config = defineModel<UiConfig>({ required: true });
 
 const fontOptions = [
   { label: "Small", value: "small" },
@@ -27,19 +20,20 @@ const methodOptions = [
   { label: "Silent", value: "silent" },
   { label: "Interactive", value: "interactive" },
 ];
+
+// Values must match humantime_serde output format
+const intervalOptions = [
+  { label: "1 hour", value: "1h" },
+  { label: "6 hours", value: "6h" },
+  { label: "12 hours", value: "12h" },
+  { label: "1 day", value: "1day" },
+  { label: "2 days", value: "2days" },
+  { label: "7 days", value: "7days" },
+];
 </script>
 
 <template>
   <div class="settings-section">
-    <div class="field">
-      <label>Theme</label>
-      <Dropdown
-        v-model="config.theme"
-        :options="themeOptions"
-        option-label="label"
-        option-value="value"
-      />
-    </div>
     <div class="field">
       <label>Font Size</label>
       <Dropdown
@@ -80,7 +74,12 @@ const methodOptions = [
       class="field"
     >
       <label>Check Interval</label>
-      <InputText v-model="config.check_interval" />
+      <Dropdown
+        v-model="config.check_interval"
+        :options="intervalOptions"
+        option-label="label"
+        option-value="value"
+      />
     </div>
     <div class="field-toggle">
       <ToggleSwitch v-model="config.auto_notify_updates" />

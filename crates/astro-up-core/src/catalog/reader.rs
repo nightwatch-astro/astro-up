@@ -85,7 +85,7 @@ impl SqliteCatalogReader {
     pub fn resolve(&self, id: &PackageId) -> Result<PackageSummary, CoreError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, manifest_version, name, description, publisher, homepage,
-                    category, type, slug, license, tags, aliases, dependencies
+                    category, type, slug, license, tags, aliases, dependencies, icon_base64
              FROM packages WHERE id = ?1",
         )?;
 
@@ -100,7 +100,7 @@ impl SqliteCatalogReader {
         let mut stmt = self.conn.prepare(
             "SELECT p.id, p.manifest_version, p.name, p.description, p.publisher,
                     p.homepage, p.category, p.type, p.slug, p.license,
-                    p.tags, p.aliases, p.dependencies, f.rank
+                    p.tags, p.aliases, p.dependencies, p.icon_base64, f.rank
              FROM packages_fts f
              JOIN packages p ON p.rowid = f.rowid
              WHERE packages_fts MATCH ?1
@@ -109,7 +109,7 @@ impl SqliteCatalogReader {
 
         let results = stmt
             .query_map(params![query], |row| {
-                let rank: f64 = row.get(13)?;
+                let rank: f64 = row.get(14)?;
                 Ok(SearchResult {
                     package: row_to_package_at(row, 0)?,
                     rank,
@@ -124,7 +124,7 @@ impl SqliteCatalogReader {
     pub fn filter(&self, filter: &CatalogFilter) -> Result<Vec<PackageSummary>, CoreError> {
         let mut sql = String::from(
             "SELECT id, manifest_version, name, description, publisher, homepage,
-                    category, type, slug, license, tags, aliases, dependencies
+                    category, type, slug, license, tags, aliases, dependencies, icon_base64
              FROM packages WHERE 1=1",
         );
         let mut param_values: Vec<String> = Vec::new();
@@ -196,6 +196,142 @@ impl SqliteCatalogReader {
     pub fn meta(&self) -> Result<CatalogMeta, CoreError> {
         Self::read_meta(&self.conn)
     }
+
+    /// Get detection config for a package from the operational `detection` table.
+    ///
+    /// Returns `None` if the table doesn't exist (old catalog) or the package has no detection config.
+    pub fn detection_config(
+        &self,
+        id: &PackageId,
+    ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
+        let result = self
+            .conn
+            .query_row(
+                "SELECT method, path, registry_key, registry_value,
+                        fallback_method, fallback_path
+                 FROM detection WHERE package_id = ?1",
+                params![id.as_ref()],
+                |row| {
+                    let method_str: String = row.get(0)?;
+                    let path: Option<String> = row.get(1)?;
+                    let registry_key: Option<String> = row.get(2)?;
+                    let registry_value: Option<String> = row.get(3)?;
+                    let fallback_method: Option<String> = row.get(4)?;
+                    let fallback_path: Option<String> = row.get(5)?;
+                    Ok((
+                        method_str,
+                        path,
+                        registry_key,
+                        registry_value,
+                        fallback_method,
+                        fallback_path,
+                    ))
+                },
+            )
+            .optional()
+            .unwrap_or(None); // Table may not exist in old catalogs
+
+        let Some((method_str, path, registry_key, registry_value, fallback_method, fallback_path)) =
+            result
+        else {
+            return Ok(None);
+        };
+
+        let method = match method_str.as_str() {
+            "registry" => crate::types::DetectionMethod::Registry,
+            "file" => crate::types::DetectionMethod::PeFile,
+            "wmi" => crate::types::DetectionMethod::Wmi,
+            "driver_store" => crate::types::DetectionMethod::DriverStore,
+            "ascom_profile" => crate::types::DetectionMethod::AscomProfile,
+            "file_exists" => crate::types::DetectionMethod::FileExists,
+            "config_file" => crate::types::DetectionMethod::ConfigFile,
+            _ => {
+                tracing::warn!(package = %id, method = %method_str, "unknown detection method");
+                return Ok(None);
+            }
+        };
+
+        let fallback = match (fallback_method, fallback_path) {
+            (Some(fm), fp) => {
+                let fb_method = match fm.as_str() {
+                    "registry" => crate::types::DetectionMethod::Registry,
+                    "file" => crate::types::DetectionMethod::PeFile,
+                    "file_exists" => crate::types::DetectionMethod::FileExists,
+                    _ => return Ok(None),
+                };
+                Some(Box::new(crate::types::DetectionConfig {
+                    method: fb_method,
+                    file_path: fp,
+                    registry_key: None,
+                    registry_value: None,
+                    version_regex: None,
+                    product_code: None,
+                    upgrade_code: None,
+                    inf_provider: None,
+                    device_class: None,
+                    inf_name: None,
+                    fallback: None,
+                }))
+            }
+            _ => None,
+        };
+
+        Ok(Some(crate::types::DetectionConfig {
+            method,
+            file_path: path,
+            registry_key,
+            registry_value,
+            version_regex: None,
+            product_code: None,
+            upgrade_code: None,
+            inf_provider: None,
+            device_class: None,
+            inf_name: None,
+            fallback,
+        }))
+    }
+
+    /// List all packages with their detection configs (for scanning).
+    ///
+    /// Returns `Software` objects with detection config populated from the `detection` table.
+    pub fn list_all_with_detection(&self) -> Result<Vec<crate::types::Software>, CoreError> {
+        let summaries = self.list_all()?;
+        let mut software = Vec::with_capacity(summaries.len());
+
+        for summary in summaries {
+            let detection = self.detection_config(&summary.id)?;
+            software.push(crate::types::Software {
+                id: summary.id,
+                slug: summary.slug,
+                name: summary.name,
+                software_type: summary.software_type,
+                category: summary.category,
+                os: vec![],
+                description: summary.description,
+                homepage: summary.homepage,
+                publisher: summary.publisher,
+                icon_url: None,
+                license: summary.license,
+                license_url: None,
+                aliases: summary.aliases,
+                tags: summary.tags,
+                notes: None,
+                docs_url: None,
+                channel: None,
+                min_os_version: None,
+                manifest_version: Some(summary.manifest_version),
+                detection,
+                install: None,
+                checkver: None,
+                dependencies: None,
+                hardware: None,
+                backup: None,
+                versioning: None,
+            });
+        }
+
+        Ok(software)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +370,7 @@ fn row_to_package_at(row: &rusqlite::Row<'_>, offset: usize) -> rusqlite::Result
         tags: parse_json_vec(&tags_json),
         aliases: parse_json_vec(&aliases_json),
         dependencies: parse_json_vec(&deps_json),
+        icon_base64: row.get(offset + 13)?,
     })
 }
 

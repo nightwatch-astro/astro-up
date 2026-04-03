@@ -9,7 +9,19 @@ export function useOperations() {
   const isRunning = computed(() => activeOperation.value?.status === "running");
 
   function startOperation(id: string, label: string): boolean {
-    // Single-op guard (FR-052)
+    // Clear finished operations so they don't block new ones
+    if (activeOperation.value && activeOperation.value.status !== "running") {
+      activeOperation.value = null;
+    }
+
+    // Safety valve: force-clear stale running operations (>60s)
+    if (activeOperation.value && activeOperation.value.status === "running") {
+      const started = activeOperation.value.steps[0]?.timestamp;
+      if (started && Date.now() - new Date(started).getTime() > 60_000) {
+        activeOperation.value = null;
+      }
+    }
+
     if (isRunning.value) {
       toast.add({
         severity: "warn",

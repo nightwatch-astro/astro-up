@@ -265,8 +265,33 @@ impl UpdatePlanner {
                         });
                     }
                 }
-                PackageStatus::NotInstalled | PackageStatus::Unknown => {
-                    // Not installed or unknown — nothing to update
+                PackageStatus::NotInstalled => {
+                    // Fresh install: plan as update from 0.0.0 to catalog version
+                    let deps = entry
+                        .software
+                        .dependencies
+                        .as_ref()
+                        .map(|d| {
+                            d.requires
+                                .iter()
+                                .filter_map(|dep| PackageId::new(&dep.id).ok())
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default();
+
+                    items.push(PlannedUpdate {
+                        package_id: entry.software.id.clone(),
+                        software: entry.software.clone(),
+                        current_version: Version::parse("0.0.0"),
+                        target_version: entry.catalog_version.clone(),
+                        version_entry: entry.version_entry.clone(),
+                        version_format: entry.version_format.clone(),
+                        has_backup_config: false,
+                        dependencies: deps,
+                    });
+                }
+                PackageStatus::Unknown => {
+                    // Unknown state — skip
                 }
             }
         }

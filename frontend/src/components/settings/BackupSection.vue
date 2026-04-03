@@ -31,6 +31,10 @@ const scheduleOptions = [
         option-value="value"
       />
     </div>
+
+    <h4 class="subsection-title">
+      Retention
+    </h4>
     <div class="field">
       <label>Max backups per package (0 = unlimited)</label>
       <InputNumber
@@ -61,4 +65,5 @@ const scheduleOptions = [
 .field label { font-size: 13px; font-weight: 500; color: var(--p-surface-300); }
 .field-toggle { display: flex; align-items: center; gap: 10px; }
 .field-toggle label { font-size: 13px; color: var(--p-surface-300); }
+.subsection-title { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--p-surface-200); }
 </style>

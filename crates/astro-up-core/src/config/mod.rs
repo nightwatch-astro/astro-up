@@ -13,8 +13,9 @@ use crate::error::CoreError;
 
 pub use api::{config_get, config_list, config_reset, config_set};
 pub use model::{
-    AppConfig, CatalogConfig, LogConfig, LogLevel, NetworkConfig, PathsConfig, TelemetryConfig,
-    UpdateConfig,
+    AppConfig, BackupPolicyConfig, BackupSchedule, CatalogConfig, FontSize, InstallMethod,
+    InstallScope, LogConfig, LogLevel, NetworkConfig, NotificationsConfig, PathsConfig,
+    StartupConfig, TelemetryConfig, ThemeMode, UiConfig, UpdateConfig,
 };
 pub use store::ConfigStore;
 
@@ -98,6 +99,120 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
     };
 
     match key {
+        // ui section
+        "ui.theme" => {
+            config.ui.theme = model::ThemeMode::from_str(value)
+                .map_err(|_| parse_err("theme (system/dark/light)"))?;
+        }
+        "ui.font_size" => {
+            config.ui.font_size = model::FontSize::from_str(value)
+                .map_err(|_| parse_err("font size (small/medium/large)"))?;
+        }
+        "ui.auto_scan_on_launch" => {
+            config.ui.auto_scan_on_launch = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "ui.default_install_scope" => {
+            config.ui.default_install_scope = model::InstallScope::from_str(value)
+                .map_err(|_| parse_err("scope (user/machine)"))?;
+        }
+        "ui.default_install_method" => {
+            config.ui.default_install_method = model::InstallMethod::from_str(value)
+                .map_err(|_| parse_err("method (silent/interactive)"))?;
+        }
+        "ui.auto_check_updates" => {
+            config.ui.auto_check_updates = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "ui.check_interval" => {
+            config.ui.check_interval =
+                parse_duration(value).map_err(|_| parse_err("duration (e.g. 24h, 6h)"))?;
+        }
+        "ui.auto_notify_updates" => {
+            config.ui.auto_notify_updates = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "ui.auto_install_updates" => {
+            config.ui.auto_install_updates = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        // startup section
+        "startup.start_at_login" => {
+            config.startup.start_at_login = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "startup.start_minimized" => {
+            config.startup.start_minimized = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "startup.minimize_to_tray_on_close" => {
+            config.startup.minimize_to_tray_on_close = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        // notifications section
+        "notifications.enabled" => {
+            config.notifications.enabled = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "notifications.display_duration" => {
+            config.notifications.display_duration = value
+                .parse::<u32>()
+                .map_err(|_| parse_err("integer seconds (0 = never auto-dismiss)"))?;
+        }
+        "notifications.show_errors" => {
+            config.notifications.show_errors = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "notifications.show_warnings" => {
+            config.notifications.show_warnings = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "notifications.show_update_available" => {
+            config.notifications.show_update_available = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "notifications.show_operation_complete" => {
+            config.notifications.show_operation_complete = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        // backup_policy section
+        "backup_policy.scheduled_enabled" => {
+            config.backup_policy.scheduled_enabled = value
+                .parse::<bool>()
+                .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "backup_policy.schedule" => {
+            config.backup_policy.schedule = model::BackupSchedule::from_str(value)
+                .map_err(|_| parse_err("schedule (daily/weekly/monthly)"))?;
+        }
+        "backup_policy.max_per_package" => {
+            config.backup_policy.max_per_package = value
+                .parse::<u32>()
+                .map_err(|_| parse_err("integer (0 = unlimited)"))?;
+        }
+        "backup_policy.max_total_size_mb" => {
+            config.backup_policy.max_total_size_mb = value
+                .parse::<u32>()
+                .map_err(|_| parse_err("integer MB (0 = unlimited)"))?;
+        }
+        "backup_policy.max_age_days" => {
+            config.backup_policy.max_age_days = value
+                .parse::<u32>()
+                .map_err(|_| parse_err("integer days (0 = never expire)"))?;
+        }
+        // catalog section
         "catalog.url" => config.catalog.url = value.to_string(),
         "catalog.cache_ttl" => {
             config.catalog.cache_ttl =
@@ -178,6 +293,46 @@ fn parse_duration(s: &str) -> Result<Duration, humantime::DurationError> {
 /// Get the string representation of a config field value.
 pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
     match key {
+        // ui section
+        "ui.theme" => Some(config.ui.theme.to_string()),
+        "ui.font_size" => Some(config.ui.font_size.to_string()),
+        "ui.auto_scan_on_launch" => Some(config.ui.auto_scan_on_launch.to_string()),
+        "ui.default_install_scope" => Some(config.ui.default_install_scope.to_string()),
+        "ui.default_install_method" => Some(config.ui.default_install_method.to_string()),
+        "ui.auto_check_updates" => Some(config.ui.auto_check_updates.to_string()),
+        "ui.check_interval" => {
+            Some(humantime::format_duration(config.ui.check_interval).to_string())
+        }
+        "ui.auto_notify_updates" => Some(config.ui.auto_notify_updates.to_string()),
+        "ui.auto_install_updates" => Some(config.ui.auto_install_updates.to_string()),
+        // startup section
+        "startup.start_at_login" => Some(config.startup.start_at_login.to_string()),
+        "startup.start_minimized" => Some(config.startup.start_minimized.to_string()),
+        "startup.minimize_to_tray_on_close" => {
+            Some(config.startup.minimize_to_tray_on_close.to_string())
+        }
+        // notifications section
+        "notifications.enabled" => Some(config.notifications.enabled.to_string()),
+        "notifications.display_duration" => Some(config.notifications.display_duration.to_string()),
+        "notifications.show_errors" => Some(config.notifications.show_errors.to_string()),
+        "notifications.show_warnings" => Some(config.notifications.show_warnings.to_string()),
+        "notifications.show_update_available" => {
+            Some(config.notifications.show_update_available.to_string())
+        }
+        "notifications.show_operation_complete" => {
+            Some(config.notifications.show_operation_complete.to_string())
+        }
+        // backup_policy section
+        "backup_policy.scheduled_enabled" => {
+            Some(config.backup_policy.scheduled_enabled.to_string())
+        }
+        "backup_policy.schedule" => Some(config.backup_policy.schedule.to_string()),
+        "backup_policy.max_per_package" => Some(config.backup_policy.max_per_package.to_string()),
+        "backup_policy.max_total_size_mb" => {
+            Some(config.backup_policy.max_total_size_mb.to_string())
+        }
+        "backup_policy.max_age_days" => Some(config.backup_policy.max_age_days.to_string()),
+        // catalog section
         "catalog.url" => Some(config.catalog.url.clone()),
         "catalog.cache_ttl" => {
             Some(humantime::format_duration(config.catalog.cache_ttl).to_string())

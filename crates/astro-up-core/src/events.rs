@@ -101,6 +101,9 @@ pub enum Event {
         package_id: PackageId,
         /// Stringified operation status (placeholder until OperationStatus type exists).
         status: String,
+        /// Error details when status is "failed".
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
     },
     /// Package skipped due to policy or dependency failure.
     PackageSkipped {
@@ -214,6 +217,7 @@ mod tests {
             Event::PackageComplete {
                 package_id: PackageId::new("nina-app").unwrap(),
                 status: "succeeded".into(),
+                error: None,
             },
             Event::PackageSkipped {
                 package_id: PackageId::new("phd2").unwrap(),

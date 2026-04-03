@@ -10,6 +10,7 @@
     "dialog:default",
     "updater:default",
     "autostart:default",
-    "window-state:default"
+    "window-state:default",
+    "shell:allow-open"
   ]
 }
