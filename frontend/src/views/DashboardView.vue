@@ -18,6 +18,8 @@ const { startOperation, isRunning } = useOperations();
 const showScanConfirm = ref(false);
 const showUpdateAllConfirm = ref(false);
 
+const catalogCount = computed(() => software.value?.length ?? 0);
+
 const installedCount = computed(() => {
   if (!software.value) return 0;
   return (software.value as PackageWithStatus[]).filter(
@@ -54,140 +56,182 @@ function relativeTime(iso: string): string {
   return `${days}d ago`;
 }
 
+const activityIconClass: Record<string, string> = {
+  install: "act-install",
+  update: "act-update",
+  scan: "act-scan",
+  backup: "act-install",
+  restore: "act-install",
+};
+
 const activityIcons: Record<string, string> = {
-  install: "pi-download",
+  install: "pi-check",
   update: "pi-arrow-up",
-  scan: "pi-refresh",
+  scan: "pi-search",
   backup: "pi-database",
   restore: "pi-replay",
 };
 </script>
 
 <template>
-  <div class="dashboard-view">
-    <h2 class="page-title">
-      Dashboard
-    </h2>
+  <div class="page-view">
+    <div class="page-hdr">
+      <h2>Dashboard</h2>
+      <p>Overview of your astrophotography software</p>
+    </div>
 
     <!-- Stats cards -->
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value">
-          {{ installedCount }}
-        </div>
+      <div class="stat-card card">
         <div class="stat-label">
           Installed
         </div>
+        <div class="stat-value">
+          {{ installedCount }}
+        </div>
+        <div class="stat-sub">
+          of {{ catalogCount }} in catalog
+        </div>
       </div>
       <div
-        class="stat-card clickable"
+        class="stat-card card warn clickable"
         @click="router.push('/installed')"
       >
-        <div
-          class="stat-value"
-          :class="{ highlight: updateCount > 0 }"
-        >
+        <div class="stat-label">
+          Updates Available
+        </div>
+        <div class="stat-value">
           {{ updateCount }}
         </div>
-        <div class="stat-label">
-          Updates
+        <div class="stat-sub">
+          Review and install
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value">
-          —
-        </div>
+      <div class="stat-card card">
         <div class="stat-label">
           Last Scan
         </div>
+        <div class="stat-value scan-val">
+          &mdash;
+        </div>
+        <div class="stat-sub">
+          {{ installedCount }} packages detected
+        </div>
       </div>
       <div
-        class="stat-card clickable"
+        class="stat-card card clickable"
         @click="router.push('/backup')"
       >
-        <div class="stat-value">
-          —
-        </div>
         <div class="stat-label">
           Backups
         </div>
+        <div class="stat-value">
+          &mdash;
+        </div>
+        <div class="stat-sub">
+&nbsp;
+        </div>
       </div>
     </div>
 
-    <!-- Updates preview + quick actions -->
-    <div class="dashboard-columns">
-      <section class="dashboard-section">
-        <h3 class="section-title">
-          Updates Available
-        </h3>
-        <div
-          v-if="updatablePackages.length === 0"
-          class="empty-note"
-        >
-          All packages are up to date.
-        </div>
+    <!-- Updates Available -->
+    <template v-if="updatablePackages.length > 0">
+      <div class="section-title">
+        <i class="pi pi-exclamation-circle section-title-icon" />
+        Updates Available
+      </div>
+      <div class="card updates-card">
         <div
           v-for="pkg in updatablePackages.slice(0, 5)"
           :key="pkg.id"
-          class="update-row"
+          class="upd-row"
           @click="router.push({ name: 'package-detail', params: { id: pkg.id } })"
         >
-          <span class="update-name">{{ pkg.name }}</span>
-          <span class="update-version">
-            {{ pkg.installed_version }} → {{ pkg.latest_version }}
-          </span>
-        </div>
-      </section>
-
-      <section class="dashboard-section">
-        <h3 class="section-title">
-          Quick Actions
-        </h3>
-        <div class="quick-actions">
+          <div class="upd-icon">
+            <i class="pi pi-box" />
+          </div>
+          <div class="upd-info">
+            <div class="upd-name">
+              {{ pkg.name }}
+            </div>
+            <div class="upd-sub">
+              {{ pkg.category }} &middot; {{ pkg.detection.type !== 'NotInstalled' && pkg.detection.type !== 'Unavailable' ? pkg.detection.method : pkg.software_type }}
+            </div>
+          </div>
+          <div class="upd-arrow">
+            {{ pkg.installed_version }} &rarr; {{ pkg.latest_version }}
+          </div>
           <Button
-            label="Scan"
-            icon="pi pi-refresh"
-            severity="secondary"
-            outlined
-            :disabled="isRunning"
-            @click="showScanConfirm = true"
-          />
-          <Button
-            v-if="updateCount > 0"
-            :label="`Update All (${updateCount})`"
-            icon="pi pi-arrow-up"
+            label="Update"
             severity="warn"
-            :disabled="isRunning"
-            @click="showUpdateAllConfirm = true"
+            size="small"
+            @click.stop="showUpdateAllConfirm = true"
           />
         </div>
-      </section>
+        <div class="upd-footer">
+          <Button
+            label="View all installed"
+            icon="pi pi-arrow-right"
+            text
+            size="small"
+            severity="secondary"
+            @click="router.push('/installed')"
+          />
+        </div>
+      </div>
+    </template>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <Button
+        label="Scan Installed"
+        icon="pi pi-refresh"
+        :disabled="isRunning"
+        @click="showScanConfirm = true"
+      />
+      <Button
+        v-if="updateCount > 0"
+        :label="`Update All (${updateCount})`"
+        icon="pi pi-download"
+        severity="secondary"
+        outlined
+        :disabled="isRunning"
+        @click="showUpdateAllConfirm = true"
+      />
     </div>
 
     <!-- Activity feed -->
-    <section class="dashboard-section">
-      <h3 class="section-title">
-        Recent Activity
-      </h3>
+    <div class="section-title">
+      Recent Activity
+    </div>
+    <div class="card activity-card">
       <div
         v-for="entry in mockActivity"
         :key="entry.id"
-        class="activity-row"
+        class="act-row"
       >
-        <i :class="['pi', activityIcons[entry.type] ?? 'pi-info-circle', 'activity-icon']" />
-        <div class="activity-info">
-          <span class="activity-name">{{ entry.name }}</span>
-          <span class="activity-detail">{{ entry.detail }}</span>
+        <div :class="['act-icon', activityIconClass[entry.type] ?? 'act-scan']">
+          <i :class="['pi', activityIcons[entry.type] ?? 'pi-info-circle']" />
         </div>
-        <span class="activity-time">{{ relativeTime(entry.timestamp) }}</span>
+        <div class="act-text">
+          <div class="act-name">
+            {{ entry.name }}
+          </div>
+          <div class="act-det">
+            {{ entry.detail }}
+          </div>
+        </div>
+        <div class="act-time">
+          {{ relativeTime(entry.timestamp) }}
+        </div>
       </div>
-    </section>
+    </div>
 
     <ConfirmDialog
       v-model:visible="showScanConfirm"
-      title="Scan"
-      message="Scan your system for installed astrophotography software?"
-      icon="pi-refresh"
+      title="Scan Installed Software"
+      message="Scan your system for installed astrophotography software? This may take a moment."
+      icon="pi-search"
       confirm-label="Scan"
       @confirm="confirmScan"
     />
@@ -196,7 +240,7 @@ const activityIcons: Record<string, string> = {
       v-model:visible="showUpdateAllConfirm"
       title="Update All"
       :message="`Update ${updateCount} package(s)?`"
-      icon="pi-arrow-up"
+      icon="pi-download"
       confirm-label="Update All"
       severity="warn"
       @confirm="confirmUpdateAll"
@@ -205,32 +249,43 @@ const activityIcons: Record<string, string> = {
 </template>
 
 <style scoped>
-.dashboard-view {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--p-surface-0);
-}
-
+/* Stats grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 14px;
 }
 
 .stat-card {
-  background: var(--p-surface-800);
-  border: 1px solid var(--p-surface-700);
-  border-radius: 10px;
-  padding: 16px;
-  text-align: center;
+  padding: 18px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--p-surface-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--p-surface-0);
+  margin-top: 2px;
+}
+
+.stat-value.scan-val {
+  font-size: 18px;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: var(--p-surface-400);
+  margin-top: 2px;
+}
+
+.stat-card.warn .stat-value {
+  color: var(--p-yellow-400);
 }
 
 .stat-card.clickable {
@@ -241,108 +296,145 @@ const activityIcons: Record<string, string> = {
   border-color: var(--p-surface-500);
 }
 
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--p-surface-0);
-}
-
-.stat-value.highlight {
+/* Section title */
+.section-title-icon {
   color: var(--p-yellow-400);
-}
-
-.stat-label {
   font-size: 13px;
-  color: var(--p-surface-400);
-  margin-top: 2px;
+  margin-right: 6px;
 }
 
-.dashboard-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+/* Updates card */
+.updates-card {
+  overflow: hidden;
 }
 
-.dashboard-section {
+.upd-row {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.section-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--p-surface-200);
-}
-
-.empty-note {
-  color: var(--p-surface-400);
-  font-size: 13px;
-  font-style: italic;
-}
-
-.update-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: 6px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--p-surface-700);
   cursor: pointer;
+  transition: background 0.1s;
+}
+
+.upd-row:last-child {
+  border-bottom: none;
+}
+
+.upd-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.upd-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--p-surface-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: var(--p-primary-400);
+  flex-shrink: 0;
+}
+
+.upd-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.upd-name {
   font-size: 13px;
-}
-
-.update-row:hover {
-  background: var(--p-surface-800);
-}
-
-.update-name {
-  color: var(--p-surface-200);
+  color: var(--p-surface-0);
   font-weight: 500;
 }
 
-.update-version {
+.upd-sub {
+  font-size: 11px;
+  color: var(--p-surface-500);
+  margin-top: 1px;
+}
+
+.upd-arrow {
   color: var(--p-yellow-400);
   font-size: 12px;
+  flex-shrink: 0;
 }
 
+.upd-footer {
+  padding: 10px 16px;
+  text-align: right;
+}
+
+/* Quick Actions */
 .quick-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
-.activity-row {
+/* Activity card */
+.activity-card {
+  overflow: hidden;
+}
+
+.act-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 0;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--p-surface-700);
 }
 
-.activity-icon {
-  font-size: 14px;
-  color: var(--p-surface-400);
-  width: 20px;
-  text-align: center;
+.act-row:last-child {
+  border-bottom: none;
 }
 
-.activity-info {
-  flex: 1;
+.act-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   display: flex;
-  flex-direction: column;
-}
-
-.activity-name {
-  font-size: 13px;
-  color: var(--p-surface-200);
-}
-
-.activity-detail {
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
-  color: var(--p-surface-400);
-}
-
-.activity-time {
-  font-size: 12px;
-  color: var(--p-surface-500);
   flex-shrink: 0;
+}
+
+.act-icon.act-install {
+  background: color-mix(in srgb, var(--p-green-500) 20%, transparent);
+  color: var(--p-green-400);
+}
+
+.act-icon.act-update {
+  background: color-mix(in srgb, var(--p-yellow-500) 15%, transparent);
+  color: var(--p-yellow-400);
+}
+
+.act-icon.act-scan {
+  background: color-mix(in srgb, var(--p-indigo-500) 20%, transparent);
+  color: var(--p-indigo-400);
+}
+
+.act-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.act-name {
+  font-size: 13px;
+  color: var(--p-surface-0);
+}
+
+.act-det {
+  font-size: 11px;
+  color: var(--p-surface-500);
+}
+
+.act-time {
+  font-size: 11px;
+  color: var(--p-surface-600);
+  flex-shrink: 0;
+  margin-left: auto;
 }
 </style>

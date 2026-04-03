@@ -39,6 +39,9 @@ const navItems = [
         />
       </router-link>
     </div>
+    <div class="sidebar-footer">
+      v{{ version }}
+    </div>
   </nav>
 </template>
 
@@ -107,5 +110,13 @@ const navItems = [
 
 .ml-auto {
   margin-left: auto;
+}
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--p-surface-700);
+  font-size: 11px;
+  color: var(--p-surface-500);
+  line-height: 1.6;
 }
 </style>

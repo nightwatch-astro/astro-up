@@ -42,6 +42,46 @@ body {
   min-width: 800px;
 }
 
+/* Page-level layout — matches mockup */
+.page-view {
+  padding: 24px 32px;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-hdr {
+  margin-bottom: 4px;
+}
+
+.page-hdr h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--p-surface-0);
+}
+
+.page-hdr p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--p-surface-500);
+}
+
+/* Card container — matches mockup */
+.card {
+  background: var(--p-surface-800);
+  border: 1px solid var(--p-surface-700);
+  border-radius: 12px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--p-surface-100);
+  margin: 0;
+}
+
 /* Min window size enforcement (FR-023) */
 @media (max-width: 800px) {
   body {

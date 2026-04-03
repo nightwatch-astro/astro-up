@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import Dropdown from "primevue/dropdown";
 import ToggleSwitch from "primevue/toggleswitch";
-import InputText from "primevue/inputtext";
 import type { UiConfig } from "../../types/config";
 
 const config = defineModel<UiConfig>({ required: true });
@@ -26,6 +25,15 @@ const scopeOptions = [
 const methodOptions = [
   { label: "Silent", value: "silent" },
   { label: "Interactive", value: "interactive" },
+];
+
+const intervalOptions = [
+  { label: "1 hour", value: "1h" },
+  { label: "6 hours", value: "6h" },
+  { label: "12 hours", value: "12h" },
+  { label: "24 hours", value: "24h" },
+  { label: "48 hours", value: "48h" },
+  { label: "7 days", value: "168h" },
 ];
 </script>
 
@@ -80,7 +88,12 @@ const methodOptions = [
       class="field"
     >
       <label>Check Interval</label>
-      <InputText v-model="config.check_interval" />
+      <Dropdown
+        v-model="config.check_interval"
+        :options="intervalOptions"
+        option-label="label"
+        option-value="value"
+      />
     </div>
     <div class="field-toggle">
       <ToggleSwitch v-model="config.auto_notify_updates" />

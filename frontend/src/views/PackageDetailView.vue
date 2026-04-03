@@ -147,7 +147,7 @@ function confirmBackup() {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 24px;
+  padding: 12px 32px;
   font-size: 13px;
   border-bottom: 1px solid var(--p-surface-800);
 }
@@ -177,6 +177,7 @@ function confirmBackup() {
 }
 
 .detail-content {
-  padding: 0 24px 24px;
+  padding: 0 32px 24px;
+  max-width: 1200px;
 }
 </style>

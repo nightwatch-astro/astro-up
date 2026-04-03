@@ -62,11 +62,12 @@ const lastSync = computed(() => {
 
     <div class="status-actions">
       <button
-        class="status-action"
-        title="Toggle log panel"
+        class="log-toggle"
+        title="Toggle log panel (Ctrl+L)"
         @click="$emit('toggleLog')"
       >
         <i class="pi pi-list" />
+        Log
       </button>
     </div>
   </div>
@@ -77,19 +78,19 @@ const lastSync = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 28px;
-  padding: 0 12px;
+  height: 26px;
+  padding: 0 16px;
   background: var(--p-surface-900);
   border-top: 1px solid var(--p-surface-700);
-  font-size: 12px;
-  color: var(--p-surface-400);
+  font-size: 11px;
+  color: var(--p-surface-500);
   flex-shrink: 0;
 }
 
 .status-items {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
 }
 
 .status-item {
@@ -121,18 +122,21 @@ const lastSync = computed(() => {
   align-items: center;
 }
 
-.status-action {
-  background: none;
-  border: none;
-  color: var(--p-surface-400);
-  cursor: pointer;
-  padding: 2px 6px;
+.log-toggle {
+  background: transparent;
+  border: 1px solid var(--p-surface-600);
   border-radius: 4px;
-  font-size: 12px;
+  color: var(--p-surface-400);
+  font-size: 11px;
+  padding: 1px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.status-action:hover {
-  background: var(--p-surface-800);
-  color: var(--p-surface-0);
+.log-toggle:hover {
+  border-color: var(--p-primary-400);
+  color: var(--p-primary-400);
 }
 </style>

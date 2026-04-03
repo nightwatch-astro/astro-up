@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
+import Dropdown from "primevue/dropdown";
 import type { NetworkConfig } from "../../types/config";
 
 const config = defineModel<NetworkConfig>({ required: true });
+
+const timeoutOptions = [
+  { label: "5 seconds", value: "5s" },
+  { label: "10 seconds", value: "10s" },
+  { label: "30 seconds", value: "30s" },
+  { label: "60 seconds", value: "60s" },
+  { label: "120 seconds", value: "120s" },
+];
 </script>
 
 <template>
@@ -17,11 +26,21 @@ const config = defineModel<NetworkConfig>({ required: true });
     </div>
     <div class="field">
       <label>Connection Timeout</label>
-      <InputText v-model="config.connect_timeout" />
+      <Dropdown
+        v-model="config.connect_timeout"
+        :options="timeoutOptions"
+        option-label="label"
+        option-value="value"
+      />
     </div>
     <div class="field">
       <label>Request Timeout</label>
-      <InputText v-model="config.timeout" />
+      <Dropdown
+        v-model="config.timeout"
+        :options="timeoutOptions"
+        option-label="label"
+        option-value="value"
+      />
     </div>
     <div class="field">
       <label>Download Speed Limit (bytes/s, 0 = unlimited)</label>

@@ -75,10 +75,11 @@ function confirmDelete() {
 </script>
 
 <template>
-  <div class="backup-view">
-    <h2 class="page-title">
-      Backup &amp; Restore
-    </h2>
+  <div class="page-view">
+    <div class="page-hdr">
+      <h2>Backup &amp; Restore</h2>
+      <p>Manage configuration backups for your software</p>
+    </div>
 
     <QuickRestore
       :backups="mockBackups"
@@ -154,31 +155,10 @@ function confirmDelete() {
 </template>
 
 <style scoped>
-.backup-view {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--p-surface-0);
-}
-
 .backup-list-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.section-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--p-surface-200);
 }
 
 .app-filter {

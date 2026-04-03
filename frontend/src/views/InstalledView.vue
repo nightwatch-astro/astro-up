@@ -2,6 +2,8 @@
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import InputText from "primevue/inputtext";
+import IconField from "primevue/iconfield";
+import InputIcon from "primevue/inputicon";
 import Button from "primevue/button";
 import PackageRow from "../components/installed/PackageRow.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
@@ -69,34 +71,38 @@ function handleBackup(pkg: PackageWithStatus) {
 </script>
 
 <template>
-  <div class="installed-view">
-    <div class="installed-header">
-      <h2 class="page-title">
-        Installed
-      </h2>
-      <div class="header-actions">
+  <div class="page-view">
+    <div class="page-hdr">
+      <h2>Installed Software</h2>
+      <p>{{ installed.length }} installed &middot; {{ updatable.length }} updates available</p>
+    </div>
+
+    <div class="installed-bar">
+      <IconField class="installed-search">
+        <InputIcon class="pi pi-search" />
         <InputText
           v-model="searchFilter"
-          placeholder="Filter..."
-          class="installed-search"
+          placeholder="Filter installed..."
         />
-        <Button
-          label="Re-scan"
-          icon="pi pi-refresh"
-          severity="secondary"
-          outlined
-          :disabled="isRunning"
-          @click="showScanConfirm = true"
-        />
-        <Button
-          v-if="updatable.length > 0"
-          :label="`Update All (${updatable.length})`"
-          icon="pi pi-arrow-up"
-          severity="warn"
-          :disabled="isRunning"
-          @click="showUpdateAllConfirm = true"
-        />
-      </div>
+      </IconField>
+      <Button
+        v-if="updatable.length > 0"
+        :label="`Update All (${updatable.length})`"
+        icon="pi pi-download"
+        severity="warn"
+        size="small"
+        :disabled="isRunning"
+        @click="showUpdateAllConfirm = true"
+      />
+      <Button
+        label="Re-scan"
+        icon="pi pi-refresh"
+        severity="secondary"
+        outlined
+        size="small"
+        :disabled="isRunning"
+        @click="showScanConfirm = true"
+      />
     </div>
 
     <EmptyState
@@ -107,11 +113,16 @@ function handleBackup(pkg: PackageWithStatus) {
       @action="showScanConfirm = true"
     />
 
-    <template v-else>
-      <section v-if="updatable.length > 0">
-        <h3 class="section-label">
+    <div
+      v-else
+      class="card installed-card"
+    >
+      <!-- Updates group -->
+      <template v-if="updatable.length > 0">
+        <div class="inst-group-hdr warn">
+          <i class="pi pi-exclamation-triangle" />
           Updates Available ({{ updatable.length }})
-        </h3>
+        </div>
         <PackageRow
           v-for="pkg in updatable"
           :key="pkg.id"
@@ -120,12 +131,14 @@ function handleBackup(pkg: PackageWithStatus) {
           @backup="handleBackup(pkg)"
           @detail="router.push({ name: 'package-detail', params: { id: pkg.id } })"
         />
-      </section>
+      </template>
 
-      <section v-if="upToDate.length > 0">
-        <h3 class="section-label">
+      <!-- Up to date group -->
+      <template v-if="upToDate.length > 0">
+        <div class="inst-group-hdr ok">
+          <i class="pi pi-check-circle" />
           Up to Date ({{ upToDate.length }})
-        </h3>
+        </div>
         <PackageRow
           v-for="pkg in upToDate"
           :key="pkg.id"
@@ -133,8 +146,8 @@ function handleBackup(pkg: PackageWithStatus) {
           @backup="handleBackup(pkg)"
           @detail="router.push({ name: 'package-detail', params: { id: pkg.id } })"
         />
-      </section>
-    </template>
+      </template>
+    </div>
 
     <ConfirmDialog
       v-model:visible="showUpdateConfirm"
@@ -160,7 +173,7 @@ function handleBackup(pkg: PackageWithStatus) {
           v-for="pkg in updatable"
           :key="pkg.id"
         >
-          {{ pkg.name }}: {{ pkg.installed_version }} → {{ pkg.latest_version }}
+          {{ pkg.name }}: {{ pkg.installed_version }} &rarr; {{ pkg.latest_version }}
         </li>
       </ul>
     </ConfirmDialog>
@@ -177,44 +190,38 @@ function handleBackup(pkg: PackageWithStatus) {
 </template>
 
 <style scoped>
-.installed-view {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.installed-header {
+.installed-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--p-surface-0);
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: 12px;
 }
 
 .installed-search {
-  width: 200px;
+  flex: 1;
 }
 
-.section-label {
-  margin: 8px 0 4px;
-  font-size: 13px;
+.installed-card {
+  overflow: hidden;
+}
+
+.inst-group-hdr {
+  padding: 10px 16px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--p-surface-400);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--p-surface-700);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inst-group-hdr.warn {
+  background: color-mix(in srgb, var(--p-yellow-500) 10%, transparent);
+  color: var(--p-yellow-400);
+}
+
+.inst-group-hdr.ok {
+  background: var(--p-surface-900);
+  color: var(--p-green-400);
 }
 
 .update-list {

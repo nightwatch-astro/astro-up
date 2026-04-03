@@ -33,11 +33,13 @@ function navigateToDetail(id: string) {
 </script>
 
 <template>
-  <div class="catalog-view">
-    <div class="catalog-header">
-      <h2 class="page-title">
-        Catalog
-      </h2>
+  <div class="page-view">
+    <div class="page-hdr">
+      <h2>Software Catalog</h2>
+      <p>Browse and install astrophotography software</p>
+    </div>
+
+    <div class="catalog-bar">
       <IconField class="catalog-search">
         <InputIcon class="pi pi-search" />
         <InputText
@@ -51,7 +53,6 @@ function navigateToDetail(id: string) {
       v-if="categories.length > 0"
       :active="activeCategory"
       :categories="categories"
-      class="catalog-chips"
       @select="setCategory"
     />
 
@@ -81,28 +82,13 @@ function navigateToDetail(id: string) {
 </template>
 
 <style scoped>
-.catalog-view {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.catalog-header {
+.catalog-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--p-surface-0);
+  gap: 12px;
 }
 
 .catalog-search {
-  width: 300px;
+  flex: 1;
 }
 </style>
