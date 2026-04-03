@@ -121,6 +121,7 @@ function confirmBackup() {
               <VersionsTab
                 :versions="(versions as VersionEntry[] | undefined) ?? []"
                 :installed-version="pkg.installed_version ?? null"
+                @install="handleInstall"
               />
             </TabPanel>
             <TabPanel value="2">
