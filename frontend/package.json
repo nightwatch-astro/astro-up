@@ -17,11 +17,11 @@
     "@tauri-apps/plugin-autostart": "^2",
     "@tauri-apps/plugin-updater": "^2",
     "@tauri-apps/plugin-window-state": "^2",
-    "@vueuse/core": "^14.2.1",
+    "@vueuse/core": "^14",
     "primevue": "^4",
-    "valibot": "^1.3.1",
+    "valibot": "^1",
     "vue": "^3",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6",
