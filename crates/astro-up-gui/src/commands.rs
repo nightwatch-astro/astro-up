@@ -4,8 +4,11 @@ use tokio::sync::broadcast;
 
 use astro_up_core::catalog::CatalogFilter;
 use astro_up_core::config;
+use astro_up_core::detect::DetectionResult;
+use astro_up_core::detect::scanner::Scanner;
 use astro_up_core::events::Event;
 
+use crate::adapters::{CatalogPackageSource, SqliteLedgerStore};
 use crate::state::{AppState, OperationId};
 
 /// Error type returned to the frontend via Tauri invoke.
@@ -113,16 +116,51 @@ pub async fn search_catalog(
 }
 
 #[tauri::command]
-pub async fn check_for_updates() -> Result<serde_json::Value, CoreError> {
+pub async fn check_for_updates(state: State<'_, AppState>) -> Result<serde_json::Value, CoreError> {
     let start = std::time::Instant::now();
     tracing::debug!(command = "check_for_updates", "Command invoked");
-    // TODO: needs detect scanner + catalog comparison (trait adapters required)
+
+    let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+    let packages = CatalogPackageSource::new(catalog_path.clone());
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+    let scanner = Scanner::new(packages, ledger);
+
+    // Run scan to get current detection state
+    let scan_result = scanner.scan().await.map_err(|e| CoreError {
+        message: e.to_string(),
+        code: "scan_error".into(),
+    })?;
+
+    // Compare installed versions with latest catalog versions
+    let reader = state.open_catalog_reader()?;
+    let mut updates = Vec::new();
+
+    for detection in &scan_result.results {
+        if let DetectionResult::Installed { ref version, .. } = detection.result {
+            let pkg_id = detection
+                .package_id
+                .parse()
+                .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e.to_string()))?;
+            if let Ok(Some(latest)) = reader.latest_version(&pkg_id) {
+                let latest_ver = astro_up_core::types::Version::parse(&latest.version);
+                if latest_ver > *version {
+                    updates.push(serde_json::json!({
+                        "id": detection.package_id,
+                        "current_version": version.to_string(),
+                        "latest_version": latest.version,
+                    }));
+                }
+            }
+        }
+    }
+
     tracing::debug!(
         command = "check_for_updates",
+        update_count = updates.len(),
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed (stub)"
+        "Command completed"
     );
-    Ok(serde_json::json!([]))
+    Ok(serde_json::Value::Array(updates))
 }
 
 #[tauri::command]
@@ -198,16 +236,45 @@ pub async fn scan_installed(
         operation_id = op_id.id,
         "Command invoked"
     );
-    // TODO: needs PackageSource + LedgerStore trait implementations
-    let _ = &app;
+
+    // Emit scan_started event
+    emit_event(&app, &Event::ScanStarted);
+
+    let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+    let packages = CatalogPackageSource::new(catalog_path);
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+    let scanner = Scanner::new(packages, ledger);
+
+    let scan_result = scanner.scan().await.map_err(|e| CoreError {
+        message: e.to_string(),
+        code: "scan_error".into(),
+    })?;
+
+    let total_found = scan_result
+        .results
+        .iter()
+        .filter(|r| r.result.is_installed())
+        .count();
+
+    // Emit scan_complete event
+    emit_event(
+        &app,
+        &Event::ScanComplete {
+            total_found: total_found as u32,
+        },
+    );
+
+    let value = serde_json::to_value(&scan_result).map_err(|e| CoreError::from(e.to_string()))?;
+
     state.remove_operation(&op_id.id);
     tracing::debug!(
         command = "scan_installed",
         operation_id = op_id.id,
+        total_found,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command completed (stub)"
+        "Command completed"
     );
-    Ok(serde_json::json!({"total_found": 0}))
+    Ok(value)
 }
 
 #[tauri::command]
@@ -363,4 +430,43 @@ pub async fn cancel_operation(
         "Command completed"
     );
     result
+}
+
+// --- Backup CRUD commands (#508) ---
+
+#[tauri::command]
+pub async fn list_backups(
+    state: State<'_, AppState>,
+    package_id: String,
+) -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "list_backups", package_id, "Command invoked");
+    let entries = state.backup_service.list(&package_id).await?;
+    let value = serde_json::to_value(&entries).map_err(|e| CoreError::from(e.to_string()))?;
+    Ok(value)
+}
+
+#[tauri::command]
+pub async fn backup_preview(
+    state: State<'_, AppState>,
+    archive: String,
+) -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "backup_preview", archive, "Command invoked");
+    let preview = state
+        .backup_service
+        .restore_preview(std::path::Path::new(&archive))
+        .await?;
+    let value = serde_json::to_value(&preview).map_err(|e| CoreError::from(e.to_string()))?;
+    Ok(value)
+}
+
+#[tauri::command]
+pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
+    tracing::debug!(command = "delete_backup", archive, "Command invoked");
+    tokio::fs::remove_file(&archive)
+        .await
+        .map_err(|e| CoreError {
+            message: format!("Failed to delete backup: {e}"),
+            code: "io_error".into(),
+        })?;
+    Ok(())
 }

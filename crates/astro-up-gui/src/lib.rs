@@ -1,3 +1,4 @@
+mod adapters;
 mod commands;
 mod state;
 pub mod tray;
@@ -118,6 +119,9 @@ pub fn run() {
             commands::create_backup,
             commands::restore_backup,
             commands::cancel_operation,
+            commands::list_backups,
+            commands::backup_preview,
+            commands::delete_backup,
         ])
         .setup(|app| {
             let start = std::time::Instant::now();
@@ -135,15 +139,27 @@ pub fn run() {
             tray::setup(app.handle())?;
             tracing::debug!("System tray created");
 
-            // Wire autostart to config (T032)
+            // Wire autostart to config (#652)
             #[cfg(desktop)]
             {
                 use tauri_plugin_autostart::ManagerExt;
                 let autostart = app.autolaunch();
-                // TODO: read ui.autostart from config; enable/disable accordingly
-                // For now, leave autostart in its current state
+                let state = app.state::<AppState>();
+                let want_autostart = state.config.lock().unwrap().startup.start_at_login;
+                let is_enabled = autostart.is_enabled().unwrap_or(false);
+
+                if want_autostart && !is_enabled {
+                    if let Err(e) = autostart.enable() {
+                        tracing::warn!("Failed to enable autostart: {e}");
+                    }
+                } else if !want_autostart && is_enabled {
+                    if let Err(e) = autostart.disable() {
+                        tracing::warn!("Failed to disable autostart: {e}");
+                    }
+                }
                 tracing::debug!(
                     enabled = autostart.is_enabled().unwrap_or(false),
+                    config = want_autostart,
                     "Autostart status"
                 );
             }
@@ -169,11 +185,15 @@ pub fn run() {
                 let app = window.app_handle();
                 let state = app.state::<AppState>();
 
-                // TODO: read ui.close_action from config
-                // For now, default to "minimize"
-                let close_action = "minimize"; // will read from config when wired
+                // Read close behavior from config (FR-030, #652)
+                let minimize_to_tray = state
+                    .config
+                    .lock()
+                    .unwrap()
+                    .startup
+                    .minimize_to_tray_on_close;
 
-                if close_action == "quit" && !state.has_active_operations() {
+                if !minimize_to_tray && !state.has_active_operations() {
                     // Quit path: let the close proceed
                     return;
                 }

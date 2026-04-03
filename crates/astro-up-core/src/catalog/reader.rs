@@ -196,6 +196,75 @@ impl SqliteCatalogReader {
     pub fn meta(&self) -> Result<CatalogMeta, CoreError> {
         Self::read_meta(&self.conn)
     }
+
+    /// Get detection config for a package from the operational `detection` table.
+    ///
+    /// Returns `None` if the table doesn't exist (old catalog) or the package has no detection config.
+    pub fn detection_config(
+        &self,
+        id: &PackageId,
+    ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
+        let result: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT config_json FROM detection WHERE package_id = ?1",
+                params![id.as_ref()],
+                |row| row.get(0),
+            )
+            .optional()
+            .unwrap_or(None); // Table may not exist in old catalogs
+
+        match result {
+            Some(json) => {
+                let config: crate::types::DetectionConfig =
+                    serde_json::from_str(&json).map_err(|e| CoreError::CatalogCorrupted)?;
+                Ok(Some(config))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// List all packages with their detection configs (for scanning).
+    ///
+    /// Returns `Software` objects with detection config populated from the `detection` table.
+    pub fn list_all_with_detection(&self) -> Result<Vec<crate::types::Software>, CoreError> {
+        let summaries = self.list_all()?;
+        let mut software = Vec::with_capacity(summaries.len());
+
+        for summary in summaries {
+            let detection = self.detection_config(&summary.id)?;
+            software.push(crate::types::Software {
+                id: summary.id,
+                slug: summary.slug,
+                name: summary.name,
+                software_type: summary.software_type,
+                category: summary.category,
+                os: vec![],
+                description: summary.description,
+                homepage: summary.homepage,
+                publisher: summary.publisher,
+                icon_url: None,
+                license: summary.license,
+                license_url: None,
+                aliases: summary.aliases,
+                tags: summary.tags,
+                notes: None,
+                docs_url: None,
+                channel: None,
+                min_os_version: None,
+                manifest_version: Some(summary.manifest_version),
+                detection,
+                install: None,
+                checkver: None,
+                dependencies: None,
+                hardware: None,
+                backup: None,
+                versioning: None,
+            });
+        }
+
+        Ok(software)
+    }
 }
 
 // ---------------------------------------------------------------------------
