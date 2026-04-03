@@ -63,6 +63,7 @@ fn read_pe_version(path: &str) -> DetectionResult {
         Err(_) => {
             return DetectionResult::InstalledUnknownVersion {
                 method: DetectionMethod::PeFile,
+                install_path: Some(path.to_string()),
             };
         }
     };
@@ -72,6 +73,7 @@ fn read_pe_version(path: &str) -> DetectionResult {
         Err(_) => {
             return DetectionResult::InstalledUnknownVersion {
                 method: DetectionMethod::PeFile,
+                install_path: Some(path.to_string()),
             };
         }
     };
@@ -83,6 +85,7 @@ fn read_pe_version(path: &str) -> DetectionResult {
         return DetectionResult::Installed {
             version: Version::parse(&version_str),
             method: DetectionMethod::PeFile,
+            install_path: Some(path.to_string()),
         };
     }
 
@@ -95,6 +98,7 @@ fn read_pe_version(path: &str) -> DetectionResult {
                 return DetectionResult::Installed {
                     version: Version::parse(trimmed),
                     method: DetectionMethod::PeFile,
+                    install_path: Some(path.to_string()),
                 };
             }
         }
@@ -102,6 +106,7 @@ fn read_pe_version(path: &str) -> DetectionResult {
 
     DetectionResult::InstalledUnknownVersion {
         method: DetectionMethod::PeFile,
+        install_path: Some(path.to_string()),
     }
 }
 

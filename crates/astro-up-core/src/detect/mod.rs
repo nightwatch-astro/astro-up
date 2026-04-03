@@ -28,9 +28,13 @@ pub enum DetectionResult {
     Installed {
         version: Version,
         method: DetectionMethod,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        install_path: Option<String>,
     },
     InstalledUnknownVersion {
         method: DetectionMethod,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        install_path: Option<String>,
     },
     NotInstalled,
     Unavailable {
@@ -152,6 +156,7 @@ mod tests {
         let result = DetectionResult::Installed {
             version: Version::parse("1.2.3"),
             method: DetectionMethod::Registry,
+            install_path: None,
         };
         assert!(result.is_installed());
     }
@@ -174,6 +179,7 @@ mod tests {
         let result = DetectionResult::Installed {
             version: Version::parse("3.2.1"),
             method: DetectionMethod::PeFile,
+            install_path: Some("C:\\Program Files\\Test".into()),
         };
         let json = serde_json::to_string(&result).unwrap();
         let back: DetectionResult = serde_json::from_str(&json).unwrap();

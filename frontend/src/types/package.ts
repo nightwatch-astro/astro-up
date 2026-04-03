@@ -51,8 +51,8 @@ export interface SearchResult {
 }
 
 export type DetectionResult =
-  | { type: "Installed"; version: string; method: string }
-  | { type: "InstalledUnknownVersion"; method: string }
+  | { type: "Installed"; version: string; method: string; install_path?: string | null }
+  | { type: "InstalledUnknownVersion"; method: string; install_path?: string | null }
   | { type: "NotInstalled" }
   | { type: "Unavailable"; reason: string };
 

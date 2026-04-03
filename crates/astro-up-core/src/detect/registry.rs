@@ -56,23 +56,31 @@ fn detect_windows(config: &DetectionConfig) -> DetectionResult {
             Err(_) => continue, // key not found, try next search
         };
 
+        // Extract install location from registry (used for backup path resolution)
+        let install_path: Option<String> = subkey
+            .get_value::<String, _>("InstallLocation")
+            .ok()
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.trim().to_string());
+
         match subkey.get_value::<String, _>(value_name) {
             Ok(version_str) if !version_str.trim().is_empty() => {
                 return DetectionResult::Installed {
                     version: Version::parse(version_str.trim()),
                     method: DetectionMethod::Registry,
+                    install_path,
                 };
             }
             Ok(_) => {
-                // Value exists but is empty
                 return DetectionResult::InstalledUnknownVersion {
                     method: DetectionMethod::Registry,
+                    install_path,
                 };
             }
             Err(_) => {
-                // Key exists but value missing — still installed
                 return DetectionResult::InstalledUnknownVersion {
                     method: DetectionMethod::Registry,
+                    install_path,
                 };
             }
         }

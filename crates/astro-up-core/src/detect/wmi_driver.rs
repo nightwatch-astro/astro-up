@@ -84,11 +84,13 @@ async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
                         return DetectionResult::Installed {
                             version: Version::parse(ver.trim()),
                             method: DetectionMethod::Wmi,
+                            install_path: None,
                         };
                     }
                 }
                 DetectionResult::InstalledUnknownVersion {
                     method: DetectionMethod::Wmi,
+                    install_path: None,
                 }
             } else {
                 DetectionResult::NotInstalled
