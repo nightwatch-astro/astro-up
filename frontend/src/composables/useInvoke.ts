@@ -68,6 +68,17 @@ export function useBackupPreview(archive: () => string | null) {
   });
 }
 
+export function useSyncCatalog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => invoke<string>("sync_catalog"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["software"] });
+      queryClient.invalidateQueries({ queryKey: ["updates"] });
+    },
+  });
+}
+
 // --- Mutations ---
 
 export function useSaveConfig() {

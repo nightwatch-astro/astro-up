@@ -60,6 +60,28 @@ fn forward_events(app: AppHandle, mut rx: broadcast::Receiver<Event>) {
     });
 }
 
+// --- Catalog sync ---
+
+#[tauri::command]
+pub async fn sync_catalog(app: AppHandle, state: State<'_, AppState>) -> Result<String, CoreError> {
+    tracing::info!(command = "sync_catalog", "Syncing catalog...");
+    let _ = app.emit("catalog-status", "syncing");
+
+    match state.catalog_manager.ensure_catalog().await {
+        Ok(result) => {
+            let status = format!("{result:?}");
+            tracing::info!(command = "sync_catalog", result = %status, "Catalog sync complete");
+            let _ = app.emit("catalog-status", "ready");
+            Ok(status)
+        }
+        Err(e) => {
+            tracing::error!(command = "sync_catalog", error = %e, "Catalog sync failed");
+            let _ = app.emit("catalog-status", "error");
+            Err(CoreError::from(e))
+        }
+    }
+}
+
 // --- Read commands (wired to core) ---
 
 #[tauri::command]

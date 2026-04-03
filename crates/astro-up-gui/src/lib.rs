@@ -1,5 +1,6 @@
 mod adapters;
 mod commands;
+mod log_layer;
 mod state;
 pub mod tray;
 
@@ -9,6 +10,9 @@ use state::AppState;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_window_state::StateFlags;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[tauri::command]
 fn get_version() -> String {
@@ -127,6 +131,16 @@ fn spawn_backup_scheduler(app: &AppHandle) {
 }
 
 pub fn run() {
+    // Init tracing: stderr fmt + frontend forwarding layer
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info,astro_up_core=debug,astro_up_gui=debug"));
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(tracing_subscriber::fmt::layer().with_target(true))
+        .with(log_layer::FrontendLogLayer)
+        .init();
+
     let mut builder = tauri::Builder::default();
 
     #[cfg(desktop)]
@@ -159,6 +173,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_version,
+            commands::sync_catalog,
             commands::list_software,
             commands::search_catalog,
             commands::check_for_updates,
@@ -180,6 +195,9 @@ pub fn run() {
             #[cfg(desktop)]
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
+
+            // Wire the app handle so the tracing layer can emit to the frontend
+            log_layer::set_app_handle(app.handle().clone());
 
             tracing::debug!("Plugins registered in {:?}", start.elapsed());
 
@@ -214,6 +232,24 @@ pub fn run() {
                     "Autostart status"
                 );
             }
+
+            // Startup catalog sync — fetch if missing or stale
+            let catalog_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let state = catalog_handle.state::<AppState>();
+                tracing::info!("Syncing catalog...");
+                let _ = catalog_handle.emit("catalog-status", "syncing");
+                match state.catalog_manager.ensure_catalog().await {
+                    Ok(result) => {
+                        tracing::info!(result = ?result, "Catalog sync complete");
+                        let _ = catalog_handle.emit("catalog-status", "ready");
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, "Catalog sync failed");
+                        let _ = catalog_handle.emit("catalog-status", "error");
+                    }
+                }
+            });
 
             // Startup self-update check (T029)
             let handle = app.handle().clone();
