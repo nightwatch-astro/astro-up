@@ -34,13 +34,11 @@ const showBackupConfirm = ref(false);
 const pkg = computed<PackageWithStatus | undefined>(() => {
   if (!software.value) return undefined;
   const found = (software.value as PackageWithStatus[]).find((p) => p.id === props.id);
-  if (found && !found.latest_version && versions.value) {
-    const vList = versions.value as VersionEntry[];
-    if (vList.length > 0) {
-      found.latest_version = vList[0].version;
-    }
-  }
-  return found;
+  if (!found) return undefined;
+  // Merge latest_version from versions query without mutating the readonly VueQuery cache
+  const vList = versions.value as VersionEntry[] | undefined;
+  const latestVersion = found.latest_version ?? (vList?.length ? vList[0].version : undefined);
+  return { ...found, latest_version: latestVersion };
 });
 
 
