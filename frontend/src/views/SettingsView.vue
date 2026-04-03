@@ -72,9 +72,7 @@ watch(serverConfig, (data) => {
 
 // Auto-save on any config change (debounced 500ms)
 watch(config, () => {
-  if (!initialized) return;
-
-  // Apply theme + font immediately
+  // Apply theme + font immediately (even before backend config loads)
   if (config.ui?.theme) {
     applyTheme(config.ui.theme);
   }
@@ -82,7 +80,9 @@ watch(config, () => {
     document.documentElement.dataset.fontSize = config.ui.font_size;
   }
 
-  // Debounced save to backend
+  // Only persist to backend once real config has loaded
+  if (!initialized) return;
+
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveMutation.mutate(config as unknown as Record<string, unknown>, {

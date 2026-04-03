@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type ThemeMode = "system" | "light" | "dark";
 
-const currentTheme = ref<ThemeMode>("system");
+const currentTheme = ref<ThemeMode>("dark");
 
 const isDark = computed(() => {
   if (currentTheme.value === "dark") return true;
@@ -61,10 +61,11 @@ export function useTheme() {
     try {
       const config = await invoke<Record<string, unknown>>("get_config");
       const ui = config?.ui as Record<string, unknown> | undefined;
-      const theme = (ui?.theme as ThemeMode) ?? "system";
+      const theme = (ui?.theme as ThemeMode) ?? "dark";
       applyTheme(theme);
     } catch {
-      applyTheme("system");
+      // Outside Tauri or backend unavailable — keep dark (set in index.html)
+      applyTheme("dark");
     }
   }
 
