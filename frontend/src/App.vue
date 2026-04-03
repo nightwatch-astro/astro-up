@@ -15,7 +15,7 @@ import type { CoreEvent } from "./types/commands";
 
 const toast = useToast();
 const { addEntry } = useErrorLog();
-const { updateProgress, completeOperation, failOperation, addStep } = useOperations();
+const { updateProgress, completeOperation, failOperation, addStep, startOperation, isRunning } = useOperations();
 const logVisible = ref(false);
 const logPanel = ref<InstanceType<typeof LogPanel> | null>(null);
 
@@ -65,7 +65,8 @@ useCoreEvents((event: CoreEvent) => {
 
   // Map events to operations progress
   if (event.type === "download_progress") {
-    updateProgress(event.data.progress, `Downloading: ${event.data.progress}%`);
+    const pct = Math.round(event.data.progress * 100);
+    updateProgress(pct, `Downloading: ${pct}%`);
   } else if (event.type === "scan_progress") {
     updateProgress(event.data.progress, `Scanning: ${event.data.current_id}`);
   } else if (event.type === "backup_progress") {
@@ -81,8 +82,19 @@ useCoreEvents((event: CoreEvent) => {
   ) {
     completeOperation();
     addStep("info", `${event.type}`);
-  } else if (event.type === "install_started" || event.type === "download_started" || event.type === "backup_started" || event.type === "restore_started" || event.type === "scan_started") {
+  } else if (event.type === "package_started") {
+    startOperation(event.data.package_id, `Installing ${event.data.package_id}`);
+  } else if (event.type === "download_started") {
+    if (!isRunning.value) startOperation(event.data.id, `Downloading ${event.data.id}`);
+    addStep("info", "Download started");
+  } else if (event.type === "install_started" || event.type === "backup_started" || event.type === "restore_started" || event.type === "scan_started") {
     addStep("info", `${event.type}`);
+  } else if (event.type === "package_complete") {
+    if (event.data.status === "failed") {
+      failOperation(`Package ${event.data.package_id} failed`);
+    } else {
+      completeOperation();
+    }
   }
 
   // Error handling -> toasts + error log (FR-028)
