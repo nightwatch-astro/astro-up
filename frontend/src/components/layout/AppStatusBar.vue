@@ -20,10 +20,8 @@ const installedCount = computed(() => {
 });
 const updateCount = computed(() => updates.value?.length ?? 0);
 
-const lastSync = computed(() => {
-  if (!software.value) return "Never";
-  return "Ready";
-});
+// TODO: persist scan timestamp to show real "Last scan: 14:30" (#TBD)
+const lastSync = "Never";
 </script>
 
 <template>
