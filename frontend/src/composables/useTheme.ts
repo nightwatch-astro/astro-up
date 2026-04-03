@@ -1,4 +1,4 @@
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
 export type ThemeMode = "system" | "light" | "dark";
@@ -38,6 +38,7 @@ function cleanupSystemWatch() {
   }
 }
 
+/** Apply theme visually without persisting. Safe to call from watchers. */
 function applyTheme(mode: ThemeMode) {
   currentTheme.value = mode;
   cleanupSystemWatch();
@@ -67,26 +68,10 @@ export function useTheme() {
     }
   }
 
-  async function setTheme(mode: ThemeMode) {
-    applyTheme(mode);
-    try {
-      const config = await invoke<Record<string, unknown>>("get_config");
-      const ui = (config?.ui as Record<string, unknown>) ?? {};
-      ui.theme = mode;
-      await invoke("save_config", { config: { ...config, ui } });
-    } catch (e) {
-      console.warn("Failed to save theme preference:", e);
-    }
-  }
-
-  onUnmounted(() => {
-    cleanupSystemWatch();
-  });
-
   return {
     currentTheme,
     isDark,
     init,
-    setTheme,
+    applyTheme,
   };
 }

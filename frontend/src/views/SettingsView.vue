@@ -19,7 +19,7 @@ import type { AppConfig } from "../types/config";
 const toast = useToast();
 const { data: serverConfig } = useConfig();
 const saveMutation = useSaveConfig();
-const { setTheme } = useTheme();
+const { applyTheme } = useTheme();
 
 const activeSection = ref("general");
 const showResetConfirm = ref(false);
@@ -76,7 +76,7 @@ watch(config, () => {
 
   // Apply theme + font immediately
   if (config.ui?.theme) {
-    setTheme(config.ui.theme);
+    applyTheme(config.ui.theme);
   }
   if (config.ui?.font_size) {
     document.documentElement.dataset.fontSize = config.ui.font_size;

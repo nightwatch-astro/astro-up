@@ -5,7 +5,7 @@ import Button from "primevue/button";
 import { useOperations } from "../../composables/useOperations";
 import { useCancelOperation } from "../../composables/useInvoke";
 
-const { operation, dismissOperation } = useOperations();
+const { operation, dismissOperation, cancelOperation } = useOperations();
 const cancelMutation = useCancelOperation();
 
 const expanded = ref(false);
@@ -13,7 +13,9 @@ let autoDismissTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleCancel() {
   if (operation.value) {
-    cancelMutation.mutate(operation.value.id);
+    cancelMutation.mutate(operation.value.id, {
+      onSuccess: () => cancelOperation(),
+    });
   }
 }
 
