@@ -5,6 +5,59 @@ use garde::Validate;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
+/// Theme preference for the UI.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum ThemeMode {
+    #[default]
+    System,
+    Dark,
+    Light,
+}
+
+/// Font size / UI scale preference.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum FontSize {
+    Small,
+    #[default]
+    Medium,
+    Large,
+}
+
+/// Install scope preference.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum InstallScope {
+    #[default]
+    User,
+    Machine,
+}
+
+/// Install method preference.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum InstallMethod {
+    #[default]
+    Silent,
+    Interactive,
+}
+
+/// Backup schedule frequency.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum BackupSchedule {
+    Daily,
+    #[default]
+    Weekly,
+    Monthly,
+}
+
 /// Log level for the application.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
@@ -43,11 +96,61 @@ fn validate_min_one_minute(value: &Duration, _ctx: &()) -> garde::Result {
     Ok(())
 }
 
+/// General UI settings (theme, font size, install defaults, update checking).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[garde(allow_unvalidated)]
+pub struct UiConfig {
+    pub theme: ThemeMode,
+    pub font_size: FontSize,
+    pub auto_scan_on_launch: bool,
+    pub default_install_scope: InstallScope,
+    pub default_install_method: InstallMethod,
+    pub auto_check_updates: bool,
+    #[serde(with = "humantime_serde")]
+    #[garde(custom(validate_min_one_minute))]
+    pub check_interval: Duration,
+    pub auto_notify_updates: bool,
+    pub auto_install_updates: bool,
+}
+
+/// Startup and window behavior.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
+#[garde(allow_unvalidated)]
+pub struct StartupConfig {
+    pub start_at_login: bool,
+    pub start_minimized: bool,
+    pub minimize_to_tray_on_close: bool,
+}
+
+/// Notification preferences.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[garde(allow_unvalidated)]
+pub struct NotificationsConfig {
+    pub enabled: bool,
+    pub display_duration: u32,
+    pub show_errors: bool,
+    pub show_warnings: bool,
+    pub show_update_available: bool,
+    pub show_operation_complete: bool,
+}
+
+/// Backup policy settings (scheduled backup, retention).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[garde(allow_unvalidated)]
+pub struct BackupPolicyConfig {
+    pub scheduled_enabled: bool,
+    pub schedule: BackupSchedule,
+    pub max_per_package: u32,
+    pub max_total_size_mb: u32,
+    pub max_age_days: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct CatalogConfig {
     #[garde(url)]
     pub url: String,
+    #[serde(with = "humantime_serde")]
     #[garde(custom(validate_positive_duration))]
     pub cache_ttl: Duration,
 }
@@ -67,8 +170,10 @@ pub struct PathsConfig {
 pub struct NetworkConfig {
     #[garde(inner(url))]
     pub proxy: Option<String>,
+    #[serde(with = "humantime_serde")]
     #[garde(custom(validate_positive_duration))]
     pub connect_timeout: Duration,
+    #[serde(with = "humantime_serde")]
     #[garde(custom(validate_positive_duration))]
     pub timeout: Duration,
     #[garde(length(min = 1))]
@@ -80,6 +185,7 @@ pub struct NetworkConfig {
 #[garde(allow_unvalidated)]
 pub struct UpdateConfig {
     pub auto_check: bool,
+    #[serde(with = "humantime_serde")]
     #[garde(custom(validate_min_one_minute))]
     pub check_interval: Duration,
 }
@@ -100,6 +206,14 @@ pub struct TelemetryConfig {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
 pub struct AppConfig {
+    #[garde(dive)]
+    pub ui: UiConfig,
+    #[garde(dive)]
+    pub startup: StartupConfig,
+    #[garde(dive)]
+    pub notifications: NotificationsConfig,
+    #[garde(dive)]
+    pub backup_policy: BackupPolicyConfig,
     #[garde(dive)]
     pub catalog: CatalogConfig,
     #[garde(dive)]
@@ -140,29 +254,24 @@ impl AppConfig {
 }
 
 /// Recursively collect dot-path keys from a serde_json::Value.
-/// Duration fields serialize as `{secs, nanos}` objects — treat them as leaf nodes.
+/// With `humantime_serde`, Duration fields serialize as strings (leaf nodes).
 fn collect_keys(value: &serde_json::Value, prefix: &str) -> Vec<String> {
     match value {
-        serde_json::Value::Object(map) => {
-            // Detect Duration objects: {secs: N, nanos: N}
-            if map.contains_key("secs") && map.contains_key("nanos") && map.len() == 2 {
-                return vec![prefix.to_string()];
-            }
-            map.iter()
-                .flat_map(|(k, v)| {
-                    let key = if prefix.is_empty() {
-                        k.clone()
-                    } else {
-                        format!("{prefix}.{k}")
-                    };
-                    if v.is_object() {
-                        collect_keys(v, &key)
-                    } else {
-                        vec![key]
-                    }
-                })
-                .collect()
-        }
+        serde_json::Value::Object(map) => map
+            .iter()
+            .flat_map(|(k, v)| {
+                let key = if prefix.is_empty() {
+                    k.clone()
+                } else {
+                    format!("{prefix}.{k}")
+                };
+                if v.is_object() {
+                    collect_keys(v, &key)
+                } else {
+                    vec![key]
+                }
+            })
+            .collect(),
         _ => vec![prefix.to_string()],
     }
 }

@@ -1,7 +1,53 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use super::model::{CatalogConfig, LogConfig, LogLevel, NetworkConfig, PathsConfig, UpdateConfig};
+use super::model::{
+    BackupPolicyConfig, CatalogConfig, LogConfig, LogLevel, NetworkConfig, NotificationsConfig,
+    PathsConfig, UiConfig, UpdateConfig,
+};
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            theme: Default::default(),
+            font_size: Default::default(),
+            auto_scan_on_launch: false,
+            default_install_scope: Default::default(),
+            default_install_method: Default::default(),
+            auto_check_updates: true,
+            check_interval: Duration::from_secs(86400), // 24h
+            auto_notify_updates: true,
+            auto_install_updates: false,
+        }
+    }
+}
+
+// StartupConfig: all fields false — uses #[derive(Default)] on the struct
+
+impl Default for NotificationsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            display_duration: 5,
+            show_errors: true,
+            show_warnings: true,
+            show_update_available: true,
+            show_operation_complete: true,
+        }
+    }
+}
+
+impl Default for BackupPolicyConfig {
+    fn default() -> Self {
+        Self {
+            scheduled_enabled: false,
+            schedule: Default::default(),
+            max_per_package: 5,
+            max_total_size_mb: 0,
+            max_age_days: 0,
+        }
+    }
+}
 
 impl Default for CatalogConfig {
     fn default() -> Self {
