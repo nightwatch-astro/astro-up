@@ -13,13 +13,11 @@ import PathsSection from "../components/settings/PathsSection.vue";
 import LoggingSection from "../components/settings/LoggingSection.vue";
 import AboutSection from "../components/settings/AboutSection.vue";
 import { useConfig, useSaveConfig } from "../composables/useInvoke";
-import { useTheme } from "../composables/useTheme";
 import type { AppConfig } from "../types/config";
 
 const toast = useToast();
 const { data: serverConfig } = useConfig();
 const saveMutation = useSaveConfig();
-const { applyTheme } = useTheme();
 
 const activeSection = ref("general");
 const showResetConfirm = ref(false);
@@ -72,10 +70,7 @@ watch(serverConfig, (data) => {
 
 // Auto-save on any config change (debounced 500ms)
 watch(config, () => {
-  // Apply theme + font immediately (even before backend config loads)
-  if (config.ui?.theme) {
-    applyTheme(config.ui.theme);
-  }
+  // Apply font size immediately (even before backend config loads)
   if (config.ui?.font_size) {
     document.documentElement.dataset.fontSize = config.ui.font_size;
   }

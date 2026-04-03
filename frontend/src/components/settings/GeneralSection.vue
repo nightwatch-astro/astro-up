@@ -5,12 +5,6 @@ import type { UiConfig } from "../../types/config";
 
 const config = defineModel<UiConfig>({ required: true });
 
-const themeOptions = [
-  { label: "Dark", value: "dark" },
-  { label: "Light", value: "light" },
-  { label: "System", value: "system" },
-];
-
 const fontOptions = [
   { label: "Small", value: "small" },
   { label: "Medium", value: "medium" },
@@ -40,15 +34,6 @@ const intervalOptions = [
 
 <template>
   <div class="settings-section">
-    <div class="field">
-      <label>Theme</label>
-      <Dropdown
-        v-model="config.theme"
-        :options="themeOptions"
-        option-label="label"
-        option-value="value"
-      />
-    </div>
     <div class="field">
       <label>Font Size</label>
       <Dropdown

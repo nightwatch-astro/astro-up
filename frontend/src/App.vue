@@ -3,7 +3,6 @@ import { onMounted, onUnmounted, ref } from "vue";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useTheme } from "./composables/useTheme";
 import { useCoreEvents } from "./composables/useCoreEvents";
 import { useKeyboard } from "./composables/useKeyboard";
 import { useOperations } from "./composables/useOperations";
@@ -15,7 +14,6 @@ import LogPanel from "./components/layout/LogPanel.vue";
 import type { CoreEvent } from "./types/commands";
 
 const toast = useToast();
-const { init: initTheme } = useTheme();
 const { addEntry } = useErrorLog();
 const { updateProgress, completeOperation, failOperation, addStep } = useOperations();
 const logVisible = ref(false);
@@ -152,7 +150,6 @@ function dismissUpdate() {
 }
 
 onMounted(() => {
-  initTheme();
   setupUpdateListener();
   setupBackendLogListener();
 });
