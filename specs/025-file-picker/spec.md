@@ -2,7 +2,7 @@
 
 **Feature Branch**: `025-file-picker`
 **Created**: 2026-04-04
-**Status**: Draft
+**Status**: Done
 **Project**: Rust Migration
 **Project Number**: 1
 **Project ID**: PVT_kwDOECmZr84BTDgZ
