@@ -80,10 +80,7 @@ pub async fn handle_lifecycle_test(
 }
 
 fn print_human_report(report: &LifecycleReport) {
-    println!(
-        "Lifecycle test: {} v{}",
-        report.package_id, report.version
-    );
+    println!("Lifecycle test: {} v{}", report.package_id, report.version);
     println!("{}", "-".repeat(60));
 
     for phase in &report.phases {

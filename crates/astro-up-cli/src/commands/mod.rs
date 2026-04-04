@@ -1,6 +1,7 @@
 pub mod backup;
 pub mod config;
 pub mod install;
+pub mod lifecycle_test;
 pub mod restore;
 pub mod scan;
 pub mod search;
