@@ -47,10 +47,8 @@ pub(crate) async fn purge(
                     // Also remove companion .etag file so the downloader
                     // won't send a stale If-None-Match on the next run.
                     if let Some(name) = path.file_name() {
-                        let etag_path = path.with_file_name(format!(
-                            "{}.etag",
-                            name.to_string_lossy()
-                        ));
+                        let etag_path =
+                            path.with_file_name(format!("{}.etag", name.to_string_lossy()));
                         let _ = tokio::fs::remove_file(&etag_path).await;
                     }
 
