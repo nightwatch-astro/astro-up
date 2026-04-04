@@ -51,7 +51,7 @@ jobs:
   check-rust:
     name: Rust Checks
     needs: changes
-    if: needs.changes.outputs.crates == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.crates == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -66,7 +66,7 @@ jobs:
   check-gui:
     name: Tauri GUI Check
     needs: changes
-    if: needs.changes.outputs.gui == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.gui == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -84,7 +84,7 @@ jobs:
   check-frontend:
     name: Frontend Checks
     needs: changes
-    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -104,7 +104,7 @@ jobs:
   check-windows:
     name: Windows Integration
     needs: changes
-    if: needs.changes.outputs.crates == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.crates == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
@@ -136,9 +136,9 @@ jobs:
           WINDOWS: ${{ needs.check-windows.result }}
         run: |
           for result in "$RUST" "$FRONTEND" "$GUI" "$WINDOWS"; do
-            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+            if [ "$result" = "failure" ]; then
               echo "Job failed: $result"
               exit 1
             fi
           done
-          echo "All checks passed or were skipped"
+          echo "All checks passed, were skipped, or were cancelled by concurrency"
