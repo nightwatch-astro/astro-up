@@ -119,10 +119,17 @@ jobs:
             echo "source=build" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Install sccache
+        if: steps.cli.outputs.source == 'build'
+        uses: mozilla-actions/sccache-action@v0.0.9
+
       - name: Build CLI (no release binary available)
         if: steps.cli.outputs.source == 'build'
         working-directory: astro-up
         shell: bash
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
         run: |
           rustup default stable
           cargo build --release -p astro-up-cli
