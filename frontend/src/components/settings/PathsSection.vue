@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
+import InputGroup from "primevue/inputgroup";
 import ToggleSwitch from "primevue/toggleswitch";
 import Button from "primevue/button";
 import type { PathsConfig } from "../../types/config";
+import { useFilePicker } from "../../composables/useFilePicker";
 
 const config = defineModel<PathsConfig>({ required: true });
 
@@ -11,17 +13,54 @@ defineEmits<{
   clearCache: [];
   clearDownloads: [];
 }>();
+
+const { pickDirectory } = useFilePicker();
+
+async function browseDirectory(field: keyof PathsConfig) {
+  const current = config.value[field];
+  const selected = await pickDirectory(
+    typeof current === "string" ? current : undefined,
+  );
+  if (selected) {
+    (config.value[field] as string) = selected;
+  }
+}
 </script>
 
 <template>
   <div class="settings-section">
     <div class="field">
       <label>Download Directory</label>
-      <InputText v-model="config.download_dir" />
+      <InputGroup>
+        <InputText v-model="config.download_dir" />
+        <Button
+          icon="pi pi-folder-open"
+          severity="secondary"
+          @click="browseDirectory('download_dir')"
+        />
+      </InputGroup>
     </div>
     <div class="field">
       <label>Cache Directory</label>
-      <InputText v-model="config.cache_dir" />
+      <InputGroup>
+        <InputText v-model="config.cache_dir" />
+        <Button
+          icon="pi pi-folder-open"
+          severity="secondary"
+          @click="browseDirectory('cache_dir')"
+        />
+      </InputGroup>
+    </div>
+    <div class="field">
+      <label>Data Directory</label>
+      <InputGroup>
+        <InputText v-model="config.data_dir" />
+        <Button
+          icon="pi pi-folder-open"
+          severity="secondary"
+          @click="browseDirectory('data_dir')"
+        />
+      </InputGroup>
     </div>
     <div class="field-toggle">
       <ToggleSwitch v-model="config.keep_installers" />

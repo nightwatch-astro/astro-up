@@ -15,8 +15,8 @@
 
 **Purpose**: Install frontend dependency and create shared composable
 
-- [ ] T001 Install `@tauri-apps/plugin-dialog` npm package in `frontend/package.json`
-- [ ] T002 Create `useFilePicker` composable with `pickDirectory()` and `pickLogFile()` functions in `frontend/src/composables/useFilePicker.ts`
+- [x] T001 Install `@tauri-apps/plugin-dialog` npm package in `frontend/package.json`
+- [x] T002 Create `useFilePicker` composable with `pickDirectory()` and `pickLogFile()` functions in `frontend/src/composables/useFilePicker.ts`
 
 **Checkpoint**: Dialog API available to components
 
@@ -28,9 +28,9 @@
 
 **Independent Test**: Click browse button next to any directory field, select a folder, verify path populates and auto-saves
 
-- [ ] T003 [US1] Add `data_dir` field as InputGroup (InputText + browse Button) to `frontend/src/components/settings/PathsSection.vue`
-- [ ] T004 [US1] Convert existing `download_dir` and `cache_dir` InputText fields to InputGroup pattern with browse Button in `frontend/src/components/settings/PathsSection.vue`
-- [ ] T005 [US1] Wire browse buttons to `pickDirectory()` from `useFilePicker` composable, passing current path as defaultPath, in `frontend/src/components/settings/PathsSection.vue`
+- [x] T003 [US1] Add `data_dir` field as InputGroup (InputText + browse Button) to `frontend/src/components/settings/PathsSection.vue`
+- [x] T004 [US1] Convert existing `download_dir` and `cache_dir` InputText fields to InputGroup pattern with browse Button in `frontend/src/components/settings/PathsSection.vue`
+- [x] T005 [US1] Wire browse buttons to `pickDirectory()` from `useFilePicker` composable, passing current path as defaultPath, in `frontend/src/components/settings/PathsSection.vue`
 
 **Checkpoint**: All 3 directory fields have working browse buttons
 
@@ -42,8 +42,8 @@
 
 **Independent Test**: Enable "Log to file", click browse button, select/name a `.log` file, verify path populates and auto-saves
 
-- [ ] T006 [US2] Replace read-only `<code>` display with InputGroup (InputText + browse Button) for `log_file` in `frontend/src/components/settings/LoggingSection.vue`
-- [ ] T007 [US2] Wire browse button to `pickLogFile()` from `useFilePicker` composable, passing current log_file as defaultPath, in `frontend/src/components/settings/LoggingSection.vue`
+- [x] T006 [US2] Replace read-only `<code>` display with InputGroup (InputText + browse Button) for `log_file` in `frontend/src/components/settings/LoggingSection.vue`
+- [x] T007 [US2] Wire browse button to `pickLogFile()` from `useFilePicker` composable, passing current log_file as defaultPath, in `frontend/src/components/settings/LoggingSection.vue`
 
 **Checkpoint**: Log file field has working browse button with `.log` filter
 
@@ -51,7 +51,7 @@
 
 ## Phase 4: Polish & Cross-Cutting Concerns
 
-- [ ] T008 Run `pnpm lint` and `pnpm vue-tsc --noEmit` to verify no type or lint errors in `frontend/`
+- [x] T008 Run `pnpm lint` and `pnpm vue-tsc --noEmit` to verify no type or lint errors in `frontend/`
 - [ ] T009 Verify all 4 browse buttons work with cancel (no path change) and selection (path updates + auto-saves) via manual testing [MANUAL]
 
 ---
