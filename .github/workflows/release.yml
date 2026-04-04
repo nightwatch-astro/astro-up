@@ -46,9 +46,6 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     environment: crates-io
-    permissions:
-      contents: write
-      id-token: write
     outputs:
       releases_created: ${{ steps.release-plz.outputs.releases_created }}
       tag: ${{ steps.release-plz.outputs.tag }}
@@ -73,6 +70,7 @@ jobs:
           command: release
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   build-cli:
     name: Build CLI (${{ matrix.target }})
@@ -110,7 +108,7 @@ jobs:
           TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           ARTIFACT="target/${TARGET}/release/${{ matrix.artifact }}"
           EXT="${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}"
-          UPLOAD_NAME="astro-up-${TARGET}${EXT}"
+          UPLOAD_NAME="astro-up${EXT}"
           cp "${ARTIFACT}" "${UPLOAD_NAME}"
           gh release upload "${TAG}" "${UPLOAD_NAME}" --clobber
 
