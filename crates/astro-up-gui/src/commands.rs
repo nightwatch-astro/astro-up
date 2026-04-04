@@ -383,6 +383,9 @@ pub async fn scan_installed(
 
 /// Shared helper: create an orchestrator, plan, and execute.
 /// Pass an empty slice for `ids` to plan all available updates.
+///
+/// Runs inside `spawn_blocking` + `Handle::block_on` because the
+/// InstallerService uses Windows APIs with `!Send` types (PCWSTR, HANDLE).
 async fn run_orchestrated_operation(
     app: &AppHandle,
     state: &AppState,
@@ -396,38 +399,18 @@ async fn run_orchestrated_operation(
     use astro_up_core::install::InstallerService;
 
     let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
-    let packages = CatalogPackageSource::new(catalog_path);
-    let ledger = SqliteLedgerStore::new(state.db_path.clone());
-
+    let db_path = state.db_path.clone();
     let config = state.config.lock().unwrap().clone();
-    let (event_tx, rx) = broadcast::channel::<Event>(64);
-    forward_events(app.clone(), rx);
-
-    let downloader = DownloadManager::new(&config.network, event_tx)?;
-    let installer = InstallerService::new(
-        std::time::Duration::from_secs(600),
-        std::env::temp_dir().join("astro-up").join("installs"),
-    );
     let backup_dir = state
         .db_path
         .parent()
         .unwrap_or(std::path::Path::new("."))
         .join("backups");
-    let backup = BackupService::new(backup_dir, 5);
-
-    let db_conn =
-        rusqlite::Connection::open(&state.db_path).map_err(|e| CoreError::from(e.to_string()))?;
-    let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
     let lock_path = state
         .db_path
         .parent()
         .unwrap_or(std::path::Path::new("."))
         .join("orchestration.lock");
-
-    let orchestrator = astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
-        &lock_path, packages, ledger, downloader, installer, backup, db,
-    )?;
-
     let pkg_ids: Vec<astro_up_core::catalog::PackageId> = ids
         .iter()
         .map(|id| {
@@ -435,23 +418,52 @@ async fn run_orchestrated_operation(
                 .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))
         })
         .collect::<Result<_, _>>()?;
-    let plan = orchestrator
-        .plan(UpdateRequest {
-            packages: pkg_ids,
-            allow_major: false,
-            allow_downgrade: false,
-            dry_run: false,
-            confirmed: true,
+
+    let app_for_events = app.clone();
+    let (event_tx, rx) = broadcast::channel::<Event>(64);
+    forward_events(app.clone(), rx);
+
+    let handle = tokio::runtime::Handle::current();
+    tokio::task::spawn_blocking(move || {
+        handle.block_on(async move {
+            let packages = CatalogPackageSource::new(catalog_path);
+            let ledger = SqliteLedgerStore::new(db_path.clone());
+            let downloader = DownloadManager::new(&config.network, event_tx)?;
+            let installer = InstallerService::new(
+                std::time::Duration::from_secs(600),
+                std::env::temp_dir().join("astro-up").join("installs"),
+            );
+            let backup = BackupService::new(backup_dir, 5);
+            let db_conn = rusqlite::Connection::open(&db_path)
+                .map_err(|e| CoreError::from(e.to_string()))?;
+            let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
+
+            let orchestrator =
+                astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
+                    &lock_path, packages, ledger, downloader, installer, backup, db,
+                )?;
+
+            let plan = orchestrator
+                .plan(UpdateRequest {
+                    packages: pkg_ids,
+                    allow_major: false,
+                    allow_downgrade: false,
+                    dry_run: false,
+                    confirmed: true,
+                })
+                .await?;
+
+            let on_event: astro_up_core::engine::orchestrator::EventCallback =
+                Box::new(move |event| {
+                    emit_event(&app_for_events, &event);
+                });
+
+            let result = orchestrator.execute(plan, on_event, cancel_token).await?;
+            serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
         })
-        .await?;
-
-    let app_clone = app.clone();
-    let on_event: astro_up_core::engine::orchestrator::EventCallback = Box::new(move |event| {
-        emit_event(&app_clone, &event);
-    });
-
-    let result = orchestrator.execute(plan, on_event, cancel_token).await?;
-    serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
+    })
+    .await
+    .map_err(|e| CoreError::from(e.to_string()))?
 }
 
 #[tauri::command]
