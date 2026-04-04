@@ -133,13 +133,23 @@ impl InstallerService {
                 }
             }
 
-            // Record ledger entry
-            let install_path = match &result {
+            // Resolve install_path: installer result -> detection chain -> None
+            let result_path = match &result {
                 Ok(InstallResult::Success { path })
-                | Ok(InstallResult::SuccessRebootRequired { path }) => path.as_deref(),
+                | Ok(InstallResult::SuccessRebootRequired { path }) => path.clone(),
                 _ => None,
             };
-            let entry = ledger::record_install(&request.package_id, &request.version, install_path);
+            let install_path = if result_path.is_some() {
+                result_path
+            } else {
+                self.resolve_install_path_via_detection(&request.detection_config)
+                    .await
+            };
+            let entry = ledger::record_install(
+                &request.package_id,
+                &request.version,
+                install_path.as_deref(),
+            );
             info!(package = %entry.package_id, "recorded install in ledger");
         }
 
@@ -291,6 +301,29 @@ impl InstallerService {
                         })?;
                 uninstall::run_uninstall(cmd, request.quiet).await
             }
+        }
+    }
+
+    /// Attempt to resolve the install path by running the detection chain.
+    ///
+    /// Returns the `install_path` from `DetectionResult::Installed` if detection
+    /// succeeds, or `None` if no config is provided or detection does not find
+    /// an installed path.
+    async fn resolve_install_path_via_detection(
+        &self,
+        detection_config: &Option<crate::types::DetectionConfig>,
+    ) -> Option<PathBuf> {
+        let Some(config) = detection_config else {
+            return None;
+        };
+        let resolver = crate::detect::PathResolver::new();
+        let result = crate::detect::run_chain(config, &resolver, None).await;
+        match result {
+            crate::detect::DetectionResult::Installed { install_path, .. }
+            | crate::detect::DetectionResult::InstalledUnknownVersion { install_path, .. } => {
+                install_path.map(PathBuf::from)
+            }
+            _ => None,
         }
     }
 

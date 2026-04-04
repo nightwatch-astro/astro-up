@@ -35,20 +35,29 @@ astro-up lifecycle-test zwo-firmware --manifest-path /tmp/manifests --install-di
 ## GitHub Actions Workflow
 
 ### Single package (manual)
-1. Go to Actions → "Lifecycle Test"
+1. Go to Actions -> "Lifecycle Test"
 2. Click "Run workflow"
 3. Enter package ID (e.g., `nina-app`)
 4. Optionally: version, dry-run checkbox
 5. Review job summary for results
 6. If detection found: PR auto-created against manifests repo
 
-### Matrix sweep (manual)
-1. Go to Actions → "Lifecycle Test"
-2. Click "Run workflow"
-3. Leave package ID empty or enter `all`
-4. System scans manifests for packages missing `[detection]`
-5. Each package runs as a parallel job (max 5 concurrent)
-6. Individual PRs created for each discovered config
+### Matrix sweep
+
+The matrix sweep (testing all packages missing `[detection]`) is available when
+the workflow is called via `workflow_call` or `repository_dispatch` without a
+`package_id` input. The `workflow_dispatch` UI requires a package ID.
+
+To trigger a sweep programmatically:
+
+```bash
+gh api repos/nightwatch-astro/astro-up/dispatches \
+  -f event_type=lifecycle-sweep
+```
+
+When triggered without a package ID, the workflow scans manifests for packages
+missing `[detection]` and runs each as a parallel job (max 5 concurrent).
+Individual PRs are created for each discovered config.
 
 ## Key Files
 

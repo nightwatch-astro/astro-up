@@ -48,6 +48,9 @@ jobs:
             frontend:
               - 'frontend/**'
 
+  # Fast path: core + cli only (~30s). Runs on every PR.
+  # Covers lifecycle-test subcommand compilation + cross-platform unit tests.
+  # Windows-only integration tests (install, detect, uninstall) run in check-windows.
   check-rust:
     name: Rust Checks
     needs: changes

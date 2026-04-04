@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       package_id:
-        description: 'Package ID (e.g., nina-app). Leave empty for matrix sweep of all missing.'
-        required: false
+        description: 'Package ID (e.g., nina-app)'
+        required: true
         type: string
       version:
         description: 'Specific version to test (default: latest)'
@@ -55,6 +55,9 @@ jobs:
         env:
           INPUT_PACKAGE_ID: ${{ inputs.package_id }}
         shell: bash
+        # Intentional: uses shell grep instead of Rust ManifestReader::list_missing_detection()
+        # because this runs on ubuntu-latest (no Windows binary) and the grep approach is
+        # functionally equivalent for TOML section detection in CI.
         run: |
           if [ -n "$INPUT_PACKAGE_ID" ]; then
             echo "matrix=[\"${INPUT_PACKAGE_ID}\"]" >> "$GITHUB_OUTPUT"
@@ -199,7 +202,11 @@ jobs:
           VERSION=$(jq -r '.version' "$REPORT_FILE")
           OVERALL=$(jq -r '.overall_status' "$REPORT_FILE")
 
-          # Generate TOML from JSON config
+          # Generate TOML from JSON config using jq.
+          # Limitation: jq-based TOML generation handles flat key-value pairs only.
+          # Nested fallback configs (e.g., fallback = { method = "file", ... }) are
+          # serialized as JSON strings. A proper TOML serializer in the Rust CLI
+          # (LifecycleRunner::config_to_toml) should be used for production PRs.
           DETECTION_TOML=$(echo "$CONFIG" | jq -r 'to_entries | map(select(.value != null and .value != false)) | map("\(.key) = \"\(.value)\"") | .[]')
 
           # Create branch and commit
@@ -221,8 +228,11 @@ jobs:
           git commit -m "feat: add detection config for ${PACKAGE_ID}"
           git push --force origin "$BRANCH"
 
-          # Build PR body
+          # Build PR body — use TOML code fence for discovered detection config
           PHASES=$(jq -r '.phases[] | "| \(.phase) | \(.status) | \(.duration)ms |"' "$REPORT_FILE")
+
+          # Generate TOML representation for the PR body
+          CONFIG_TOML="[detection]"$'\n'"${DETECTION_TOML}"
 
           BODY="## Detection Discovery: ${PACKAGE_ID} v${VERSION}
 
@@ -234,9 +244,18 @@ jobs:
 
           ### Discovered Config
 
+          \`\`\`toml
+          ${CONFIG_TOML}
+          \`\`\`
+
+          <details>
+          <summary>Raw JSON</summary>
+
           \`\`\`json
           ${CONFIG}
           \`\`\`
+
+          </details>
 
           ---
           [Workflow run](${RUN_URL})"
