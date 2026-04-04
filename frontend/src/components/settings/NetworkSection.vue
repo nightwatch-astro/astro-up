@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import type { NetworkConfig } from "../../types/config";
 
 const config = defineModel<NetworkConfig>({ required: true });
@@ -26,7 +26,7 @@ const timeoutOptions = [
     </div>
     <div class="field">
       <label>Connection Timeout</label>
-      <Dropdown
+      <Select
         v-model="config.connect_timeout"
         :options="timeoutOptions"
         option-label="label"
@@ -35,7 +35,7 @@ const timeoutOptions = [
     </div>
     <div class="field">
       <label>Request Timeout</label>
-      <Dropdown
+      <Select
         v-model="config.timeout"
         :options="timeoutOptions"
         option-label="label"

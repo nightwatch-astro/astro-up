@@ -55,13 +55,15 @@ async function setupBackendLogListener() {
 
 // Wire core events to operations dock, log panel, and error toasts (T036/T037)
 useCoreEvents((event: CoreEvent) => {
-  // Forward all events to log panel
-  logPanel.value?.addEntry({
-    timestamp: new Date().toISOString(),
-    level: event.type.includes("error") || event.type.includes("failed") ? "error" : "info",
-    target: "core",
-    message: `[${event.type}] ${JSON.stringify(event.data)}`,
-  });
+  // Forward events to log panel (skip high-frequency progress events — shown in operations dock)
+  if (event.type !== "download_progress" && event.type !== "scan_progress" && event.type !== "backup_progress") {
+    logPanel.value?.addEntry({
+      timestamp: new Date().toISOString(),
+      level: event.type.includes("error") || event.type.includes("failed") ? "error" : "info",
+      target: "core",
+      message: `[${event.type}] ${JSON.stringify(event.data)}`,
+    });
+  }
 
   // Map events to operations progress
   if (event.type === "download_progress") {

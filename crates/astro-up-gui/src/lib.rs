@@ -213,6 +213,17 @@ pub fn run() {
             tracing::debug!("Plugins registered in {:?}", start.elapsed());
 
             if let Some(window) = app.get_webview_window("main") {
+                // Enforce minimum size when window-state plugin restores a too-small window
+                const MIN_WIDTH: u32 = 1024;
+                const MIN_HEIGHT: u32 = 680;
+                if let Ok(size) = window.inner_size() {
+                    let w = size.width.max(MIN_WIDTH);
+                    let h = size.height.max(MIN_HEIGHT);
+                    if w != size.width || h != size.height {
+                        let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(w, h)));
+                        tracing::info!(width = w, height = h, "Enforced minimum window size");
+                    }
+                }
                 tracing::info!(label = "main", "Window created: {:?}", window.inner_size());
             }
 

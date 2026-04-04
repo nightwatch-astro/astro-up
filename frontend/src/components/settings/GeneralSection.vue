@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import ToggleSwitch from "primevue/toggleswitch";
 import type { UiConfig } from "../../types/config";
 
@@ -36,7 +36,7 @@ const intervalOptions = [
   <div class="settings-section">
     <div class="field">
       <label>Font Size</label>
-      <Dropdown
+      <Select
         v-model="config.font_size"
         :options="fontOptions"
         option-label="label"
@@ -49,7 +49,7 @@ const intervalOptions = [
     </div>
     <div class="field">
       <label>Default Install Scope</label>
-      <Dropdown
+      <Select
         v-model="config.default_install_scope"
         :options="scopeOptions"
         option-label="label"
@@ -58,7 +58,7 @@ const intervalOptions = [
     </div>
     <div class="field">
       <label>Default Install Method</label>
-      <Dropdown
+      <Select
         v-model="config.default_install_method"
         :options="methodOptions"
         option-label="label"
@@ -74,7 +74,7 @@ const intervalOptions = [
       class="field"
     >
       <label>Check Interval</label>
-      <Dropdown
+      <Select
         v-model="config.check_interval"
         :options="intervalOptions"
         option-label="label"
