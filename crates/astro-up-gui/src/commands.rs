@@ -444,7 +444,14 @@ async fn run_orchestrated_operation(
                 config.paths.download_dir.clone()
             };
             let orchestrator = astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
-                &lock_path, packages, ledger, downloader, installer, backup, db, download_dir,
+                &lock_path,
+                packages,
+                ledger,
+                downloader,
+                installer,
+                backup,
+                db,
+                download_dir,
             )?;
 
             let plan = orchestrator
