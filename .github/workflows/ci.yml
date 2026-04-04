@@ -62,9 +62,10 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: taiki-e/install-action@nextest
       - run: cargo fmt --all -- --check
-      - run: cargo clippy -p astro-up-core -p astro-up-cli -- -D warnings
-      - run: cargo test -p astro-up-core -p astro-up-cli
+      - run: cargo clippy -p astro-up-core -p astro-up-cli --all-targets -- -D warnings
+      - run: cargo nextest run -p astro-up-core -p astro-up-cli
 
   check-gui:
     name: Tauri GUI Check
@@ -121,13 +122,14 @@ jobs:
         with:
           components: clippy
       - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: taiki-e/install-action@nextest
       - name: Build test fixture catalog
         shell: bash
         run: |
           choco install sqlite -y --no-progress
           sqlite3 crates/astro-up-cli/tests/fixtures/test-catalog.db < crates/astro-up-cli/tests/fixtures/build_catalog.sql
-      - run: cargo clippy --workspace -- -D warnings
-      - run: cargo test --workspace
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo nextest run --workspace
 
   # Gate job: always runs, reports single required status.
   # Branch protection should require only "CI OK" — skipped jobs pass through.
