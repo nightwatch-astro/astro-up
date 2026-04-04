@@ -21,7 +21,7 @@ garde = { version = "0.22", features = ["derive", "url"] }
 humantime = "2"
 humantime-serde = "1"
 tracing = "0.1"
-astro-up-core = { path = "crates/astro-up-core" }
+astro-up-core = { version = "0.1.0", path = "crates/astro-up-core" }
 insta = { version = "1", features = ["json", "toml"] }
 pretty_assertions = "1"
 rstest = "0.26"
