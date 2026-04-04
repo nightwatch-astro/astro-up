@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/nightwatch-astro/astro-up/compare/astro-up-cli-v0.1.0...astro-up-cli-v0.1.1) - 2026-04-04
+
+### Documentation
+
+- add README.md to core and cli crates for crates.io ([#741](https://github.com/nightwatch-astro/astro-up/pull/741))
+
 ## [0.1.0](https://github.com/nightwatch-astro/astro-up/releases/tag/astro-up-cli-v0.1.0) - 2026-03-30
 
 ### Features
