@@ -245,6 +245,7 @@ impl SqliteCatalogReader {
             "ascom_profile" => crate::types::DetectionMethod::AscomProfile,
             "file_exists" => crate::types::DetectionMethod::FileExists,
             "config_file" => crate::types::DetectionMethod::ConfigFile,
+            "ledger" => crate::types::DetectionMethod::Ledger,
             _ => {
                 tracing::warn!(package = %id, method = %method_str, "unknown detection method");
                 return Ok(None);
