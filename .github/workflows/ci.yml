@@ -30,6 +30,7 @@ jobs:
     outputs:
       gui: ${{ steps.filter.outputs.gui }}
       crates: ${{ steps.filter.outputs.crates }}
+      frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
@@ -44,10 +45,13 @@ jobs:
               - 'crates/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
+            frontend:
+              - 'frontend/**'
 
-  # Fast path: core + cli only (~30s). Runs on every PR.
   check-rust:
     name: Rust Checks
+    needs: changes
+    if: needs.changes.outputs.crates == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -59,13 +63,11 @@ jobs:
       - run: cargo clippy -p astro-up-core -p astro-up-cli -- -D warnings
       - run: cargo test -p astro-up-core -p astro-up-cli
 
-  # Slow path: gui crate needs Tauri system deps (~3min cached).
-  # Only when gui crate or workspace Cargo files change.
   check-gui:
     name: Tauri GUI Check
     needs: changes
-    runs-on: ubuntu-latest
     if: needs.changes.outputs.gui == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Install Tauri system dependencies
@@ -81,6 +83,8 @@ jobs:
 
   check-frontend:
     name: Frontend Checks
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -97,13 +101,11 @@ jobs:
       - run: pnpm --dir frontend test
       - run: pnpm --dir frontend build
 
-  # Windows: full workspace including GUI. Primary target platform.
-  # Runs on crate changes (PRs) and always on push to main.
   check-windows:
     name: Windows Integration
     needs: changes
-    runs-on: windows-latest
     if: needs.changes.outputs.crates == 'true' || github.event_name == 'push'
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -117,3 +119,26 @@ jobs:
           sqlite3 crates/astro-up-cli/tests/fixtures/test-catalog.db < crates/astro-up-cli/tests/fixtures/build_catalog.sql
       - run: cargo clippy --workspace -- -D warnings
       - run: cargo test --workspace
+
+  # Gate job: always runs, reports single required status.
+  # Branch protection should require only "CI OK" — skipped jobs pass through.
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [check-rust, check-frontend, check-gui, check-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate results
+        env:
+          RUST: ${{ needs.check-rust.result }}
+          FRONTEND: ${{ needs.check-frontend.result }}
+          GUI: ${{ needs.check-gui.result }}
+          WINDOWS: ${{ needs.check-windows.result }}
+        run: |
+          for result in "$RUST" "$FRONTEND" "$GUI" "$WINDOWS"; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "Job failed: $result"
+              exit 1
+            fi
+          done
+          echo "All checks passed or were skipped"
