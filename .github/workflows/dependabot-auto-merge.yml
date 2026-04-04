@@ -1,5 +1,8 @@
 name: Dependabot auto-merge
 
+# SECURITY: pull_request_target runs with base-branch secrets and write permissions.
+# NEVER add actions/checkout with the PR head ref — that would expose secrets to
+# any contributor who modifies this workflow in a PR.
 on: pull_request_target
 
 permissions:
