@@ -1,6 +1,6 @@
 [package]
 name = "astro-up-core"
-version = "0.1.1"
+version = "0.1.2"
 description = "Shared library for astro-up — types, detection, download, install, engine"
 publish = true
 readme = "README.md"
