@@ -15,14 +15,12 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
         }));
     }
 
-    println!("astro-up {current}");
-
-    // GitHub Releases check will be implemented with reqwest + semver comparison.
-    // For now, report current version.
-    println!("You are running the latest version.");
-
-    if dry_run {
-        println!("(dry run — no changes would be made)");
+    if mode.should_print() {
+        println!("astro-up {current}");
+        println!("You are running the latest version.");
+        if dry_run {
+            println!("(dry run — no changes would be made)");
+        }
     }
 
     Ok(())

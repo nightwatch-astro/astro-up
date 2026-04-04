@@ -13,12 +13,13 @@ use super::ensure_catalog;
 
 /// T012: Main show handler — dispatches to the appropriate sub-view.
 pub async fn handle_show(filter: Option<ShowFilter>, mode: &OutputMode) -> Result<()> {
-    let reader = ensure_catalog().await?;
-
     match filter {
-        None | Some(ShowFilter::All) => show_all(&reader, mode),
-        Some(ShowFilter::Installed) => show_installed(&reader, mode),
-        Some(ShowFilter::Outdated) => show_outdated(&reader, mode),
+        None | Some(ShowFilter::All) => {
+            let reader = ensure_catalog().await?;
+            show_all(&reader, mode)
+        }
+        Some(ShowFilter::Installed) => show_installed(mode),
+        Some(ShowFilter::Outdated) => show_outdated(mode),
         Some(ShowFilter::Backups { package }) => show_backups(package.as_deref(), mode).await,
     }
 }
@@ -58,31 +59,37 @@ fn show_all(reader: &SqliteCatalogReader, mode: &OutputMode) -> Result<()> {
     }
 
     if packages.is_empty() {
-        println!("No packages in catalog.");
+        if mode.should_print() {
+            println!("No packages in catalog.");
+        }
         return Ok(());
     }
 
-    let rows: Vec<PackageRow> = packages.iter().map(PackageRow::from).collect();
-    print_table(&rows)?;
-    println!("\n{} packages in catalog", packages.len());
+    if mode.should_print() {
+        let rows: Vec<PackageRow> = packages.iter().map(PackageRow::from).collect();
+        print_table(&rows)?;
+        println!("\n{} packages in catalog", packages.len());
+    }
     Ok(())
 }
 
-fn show_installed(_reader: &SqliteCatalogReader, mode: &OutputMode) -> Result<()> {
-    // Detection requires Windows — on other platforms, show a helpful message.
-    // Full implementation depends on scanning infrastructure (T017).
+fn show_installed(mode: &OutputMode) -> Result<()> {
     if *mode == OutputMode::Json {
         return print_json(&serde_json::json!({"packages": [], "note": "scan not yet available"}));
     }
-    println!("No scan results available. Run `astro-up scan` first.");
+    if mode.should_print() {
+        println!("No scan results available. Run `astro-up scan` first.");
+    }
     Ok(())
 }
 
-fn show_outdated(_reader: &SqliteCatalogReader, mode: &OutputMode) -> Result<()> {
+fn show_outdated(mode: &OutputMode) -> Result<()> {
     if *mode == OutputMode::Json {
         return print_json(&serde_json::json!({"packages": [], "note": "scan not yet available"}));
     }
-    println!("No scan results available. Run `astro-up scan` first.");
+    if mode.should_print() {
+        println!("No scan results available. Run `astro-up scan` first.");
+    }
     Ok(())
 }
 
@@ -191,11 +198,12 @@ async fn show_backups(package: Option<&str>, mode: &OutputMode) -> Result<()> {
 
     let package_id = package.unwrap_or("*");
     let entries = if package_id == "*" {
-        // List all backups — not directly supported, show message
         if *mode == OutputMode::Json {
             return print_json(&serde_json::json!({"backups": []}));
         }
-        println!("Specify a package: `astro-up show backups <package>`");
+        if mode.should_print() {
+            println!("Specify a package: `astro-up show backups <package>`");
+        }
         return Ok(());
     } else {
         service.list(package_id).await?
@@ -206,7 +214,13 @@ async fn show_backups(package: Option<&str>, mode: &OutputMode) -> Result<()> {
     }
 
     if entries.is_empty() {
-        println!("No backups found for '{package_id}'.");
+        if mode.should_print() {
+            println!("No backups found for '{package_id}'.");
+        }
+        return Ok(());
+    }
+
+    if !mode.should_print() {
         return Ok(());
     }
 

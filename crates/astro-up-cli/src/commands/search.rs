@@ -19,13 +19,17 @@ pub async fn handle_search(query: &str, mode: &OutputMode) -> Result<()> {
     }
 
     if results.is_empty() {
-        println!("No packages matching '{query}'.");
+        if mode.should_print() {
+            println!("No packages matching '{query}'.");
+        }
         return Ok(());
     }
 
-    let rows: Vec<SearchRow> = results.iter().map(SearchRow::from).collect();
-    print_table(&rows)?;
-    println!("\n{} result(s)", results.len());
+    if mode.should_print() {
+        let rows: Vec<SearchRow> = results.iter().map(SearchRow::from).collect();
+        print_table(&rows)?;
+        println!("\n{} result(s)", results.len());
+    }
     Ok(())
 }
 

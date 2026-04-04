@@ -14,7 +14,8 @@ use crate::output::OutputMode;
 #[command(
     name = "astro-up",
     version,
-    about = "Astrophotography software manager"
+    about = "Astrophotography software manager for Windows",
+    long_about = "Astrophotography software manager for Windows.\n\nInstall, detect, and update imaging software from one place.\n\nDocumentation: https://nightwatch-astro.github.io/astro-up/"
 )]
 pub struct Cli {
     #[command(subcommand)]

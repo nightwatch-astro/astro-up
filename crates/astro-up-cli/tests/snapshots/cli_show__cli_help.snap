@@ -2,7 +2,11 @@
 source: crates/astro-up-cli/tests/cli_show.rs
 expression: stdout
 ---
-Astrophotography software manager
+Astrophotography software manager for Windows.
+
+Install, detect, and update imaging software from one place.
+
+Documentation: https://nightwatch-astro.github.io/astro-up/
 
 Usage: astro-up-cli [OPTIONS] <COMMAND>
 
@@ -19,9 +23,20 @@ Commands:
   help         Print this message or the help of the given subcommand(s)
 
 Options:
-      --json             Output format: JSON for scripting
-  -v, --verbose          Increase verbosity (show debug output)
-  -q, --quiet            Suppress non-error output
-      --config <CONFIG>  Path to config file
-  -h, --help             Print help
-  -V, --version          Print version
+      --json
+          Output format: JSON for scripting
+
+  -v, --verbose
+          Increase verbosity (show debug output)
+
+  -q, --quiet
+          Suppress non-error output
+
+      --config <CONFIG>
+          Path to config file
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version

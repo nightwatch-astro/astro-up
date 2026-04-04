@@ -21,7 +21,9 @@ pub async fn handle_backup(package: &str, mode: &OutputMode) -> Result<()> {
         );
     }
 
-    println!("Backup for '{package}' requires a backup configuration in the catalog.");
-    println!("Backup directory: {}", backup_dir.display());
+    if mode.should_print() {
+        println!("Backup for '{package}' requires a backup configuration in the catalog.");
+        println!("Backup directory: {}", backup_dir.display());
+    }
     Ok(())
 }

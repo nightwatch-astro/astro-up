@@ -27,7 +27,9 @@ fn handle_config_init(mode: &OutputMode) -> Result<()> {
                 "status": "already_exists"
             }));
         }
-        println!("Config file already exists: {}", config_path.display());
+        if mode.should_print() {
+            println!("Config file already exists: {}", config_path.display());
+        }
         return Ok(());
     }
 
@@ -41,7 +43,9 @@ fn handle_config_init(mode: &OutputMode) -> Result<()> {
             "status": "created"
         }));
     }
-    println!("Created config file: {}", config_path.display());
+    if mode.should_print() {
+        println!("Created config file: {}", config_path.display());
+    }
     Ok(())
 }
 
@@ -52,7 +56,9 @@ fn handle_config_show(mode: &OutputMode) -> Result<()> {
         return print_json(&config);
     }
 
-    let toml = toml::to_string_pretty(&config)?;
-    println!("{toml}");
+    if mode.should_print() {
+        let toml = toml::to_string_pretty(&config)?;
+        println!("{toml}");
+    }
     Ok(())
 }
