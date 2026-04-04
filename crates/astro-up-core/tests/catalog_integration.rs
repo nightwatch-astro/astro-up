@@ -3,7 +3,7 @@
 use std::path::Path;
 
 /// Test public key matching the keypair used to sign the fixture catalog.
-const TEST_PUBLIC_KEY: &str = "RWQK6Ny4IewwF5A+6bI/YNv08w/kZ7hy3xVAv+SWPT11w+7RvatDV0bg";
+const TEST_PUBLIC_KEY: &str = "RWRGtm/P68Q6FT0fNG387H0BsTYzgkqdwl5CAmbVIVyQgGyLE58GHvkj";
 
 fn fixture_dir() -> &'static Path {
     Path::new(concat!(
