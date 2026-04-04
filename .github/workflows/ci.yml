@@ -51,7 +51,7 @@ jobs:
   check-rust:
     name: Rust Checks
     needs: changes
-    if: needs.changes.outputs.crates == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.crates == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -66,7 +66,7 @@ jobs:
   check-gui:
     name: Tauri GUI Check
     needs: changes
-    if: needs.changes.outputs.gui == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.gui == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -84,7 +84,7 @@ jobs:
   check-frontend:
     name: Frontend Checks
     needs: changes
-    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -104,7 +104,7 @@ jobs:
   check-windows:
     name: Windows Integration
     needs: changes
-    if: needs.changes.outputs.crates == 'true' || github.event_name == 'push'
+    if: needs.changes.outputs.crates == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
