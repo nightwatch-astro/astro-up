@@ -7,7 +7,7 @@ use std::io::IsTerminal;
 /// Controls how output is rendered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputMode {
-    /// TTY with colors, tables, ratatui TUI.
+    /// TTY with colors, tables, progress bars.
     Interactive,
     /// No colors, no TUI (piped output).
     Plain,

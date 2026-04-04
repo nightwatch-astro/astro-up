@@ -10,8 +10,8 @@ use astro_up_core::detect::DetectionResult;
 use astro_up_core::detect::scanner::Scanner;
 use astro_up_core::events::Event;
 
-use crate::adapters::{CatalogPackageSource, SqliteLedgerStore};
 use crate::state::{AppState, OperationId};
+use astro_up_core::adapters::{CatalogPackageSource, SqliteLedgerStore};
 
 /// Error type returned to the frontend via Tauri invoke.
 #[derive(Debug, Clone, Serialize)]

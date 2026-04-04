@@ -1,4 +1,3 @@
-mod adapters;
 mod commands;
 mod log_layer;
 mod state;

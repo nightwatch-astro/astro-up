@@ -1,13 +1,14 @@
-//! T036: Integration tests for the show command using assert_cmd.
+//! Integration tests for the CLI using assert_cmd.
 //!
-//! These tests run the actual binary and verify output structure.
-//! They do NOT require a catalog (they test help output and argument parsing).
+//! These tests invoke the binary which requires Windows.
+
+#![cfg(target_os = "windows")]
 
 use assert_cmd::Command;
 use predicates::prelude::*;
 
 fn cmd() -> Command {
-    Command::cargo_bin("astro-up-cli").unwrap()
+    Command::cargo_bin("astro-up").unwrap()
 }
 
 #[test]
@@ -80,9 +81,9 @@ fn global_json_flag_accepted() {
     cmd().args(["--json", "scan"]).assert().success();
 }
 
-/// Normalize binary name across platforms (astro-up-cli.exe → astro-up-cli).
+/// Normalize binary name across platforms (astro-up.exe → astro-up).
 fn normalize_binary_name(s: &str) -> String {
-    s.replace("astro-up-cli.exe", "astro-up-cli")
+    s.replace("astro-up.exe", "astro-up")
 }
 
 #[test]

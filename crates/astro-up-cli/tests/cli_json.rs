@@ -1,12 +1,13 @@
-//! T037: JSON output validation tests.
+//! JSON output validation tests.
 //!
-//! Verify that --json produces valid, parseable JSON for commands
-//! that don't require network access or a catalog.
+//! These tests invoke the binary which requires Windows.
+
+#![cfg(target_os = "windows")]
 
 use assert_cmd::Command;
 
 fn cmd() -> Command {
-    Command::cargo_bin("astro-up-cli").unwrap()
+    Command::cargo_bin("astro-up").unwrap()
 }
 
 #[test]

@@ -6,11 +6,11 @@ use crate::output::OutputMode;
 use crate::output::json::print_json;
 use crate::output::table::print_table;
 
-use super::ensure_catalog;
+use crate::state::CliState;
 
 /// T019: Search the catalog via FTS5.
-pub async fn handle_search(query: &str, mode: &OutputMode) -> Result<()> {
-    let reader = ensure_catalog().await?;
+pub async fn handle_search(state: &CliState, query: &str, mode: &OutputMode) -> Result<()> {
+    let reader = state.open_catalog_reader_ensure().await?;
     let results = reader.search(query)?;
 
     if *mode == OutputMode::Json {
