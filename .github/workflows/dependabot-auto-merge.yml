@@ -1,5 +1,8 @@
 name: Dependabot auto-merge
 
+# SECURITY: pull_request_target runs with base-branch secrets and write permissions.
+# NEVER add actions/checkout with the PR head ref — that would expose secrets to
+# any contributor who modifies this workflow in a PR.
 on: pull_request_target
 
 permissions:
@@ -13,7 +16,7 @@ jobs:
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@ffa630c65fa7e0ecfa0625b5ceda64399aea1b36 # v2
         with:
           github-token: ${{ github.token }}
 
