@@ -78,5 +78,5 @@ fn known_keys_discovers_all_fields() {
     assert!(keys.contains(&"network.timeout".to_string()));
     assert!(keys.contains(&"logging.level".to_string()));
     assert!(keys.contains(&"telemetry.enabled".to_string()));
-    assert_eq!(keys.len(), 18); // 18 leaf fields (14 original + 4 download config)
+    assert_eq!(keys.len(), 41);
 }
