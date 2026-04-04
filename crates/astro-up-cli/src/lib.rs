@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod logging;
 pub mod output;
+pub mod state;
 
 use std::path::PathBuf;
 
@@ -9,6 +10,7 @@ use color_eyre::eyre::Result;
 use tokio_util::sync::CancellationToken;
 
 use crate::output::OutputMode;
+use crate::state::CliState;
 
 #[derive(Parser)]
 #[command(
@@ -147,20 +149,35 @@ pub enum ConfigAction {
 pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
     let mode = OutputMode::detect(cli.json, cli.quiet);
 
+    // Commands that don't need shared state (config, self-update) run without it.
+    // All others initialize CliState lazily.
+    match cli.command {
+        Commands::Config { action } => {
+            return commands::config::handle_config(action, &mode).await;
+        }
+        Commands::SelfUpdate { dry_run } => {
+            return commands::self_update::handle_self_update(dry_run, &mode).await;
+        }
+        _ => {}
+    }
+
+    // Initialize shared state for commands that need catalog/ledger/backup.
+    let state = CliState::new()?;
+
     match cli.command {
         Commands::Show { package, filter } => {
             if let Some(ref pkg) = package {
-                let reader = commands::ensure_catalog().await?;
+                let reader = state.open_catalog_reader_ensure().await?;
                 commands::show::handle_show_detail(&reader, pkg, &mode)
             } else {
-                commands::show::handle_show(filter, &mode).await
+                commands::show::handle_show(&state, filter, &mode).await
             }
         }
         Commands::Install {
             ref package,
             dry_run,
             yes,
-        } => commands::install::handle_install(package, dry_run, yes, &mode, cancel).await,
+        } => commands::install::handle_install(&state, package, dry_run, yes, &mode, cancel).await,
         Commands::Update {
             ref package,
             all,
@@ -169,6 +186,7 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
             yes,
         } => {
             commands::update::handle_update(
+                &state,
                 package.as_deref(),
                 all,
                 dry_run,
@@ -179,18 +197,18 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
             )
             .await
         }
-        Commands::Scan => commands::scan::handle_scan(&mode).await,
-        Commands::Search { ref query } => commands::search::handle_search(query, &mode).await,
-        Commands::Backup { ref package } => commands::backup::handle_backup(package, &mode).await,
+        Commands::Scan => commands::scan::handle_scan(&state, &mode).await,
+        Commands::Search { ref query } => {
+            commands::search::handle_search(&state, query, &mode).await
+        }
+        Commands::Backup { ref package } => {
+            commands::backup::handle_backup(&state, package, &mode).await
+        }
         Commands::Restore {
             ref package,
             ref path,
             yes,
-        } => commands::restore::handle_restore(package, path.as_deref(), yes, &mode).await,
-        Commands::Config { action } => commands::config::handle_config(action, &mode).await,
-        Commands::SelfUpdate { dry_run } => {
-            commands::self_update::handle_self_update(dry_run, &mode).await
-        }
+        } => commands::restore::handle_restore(&state, package, path.as_deref(), yes, &mode).await,
         Commands::LifecycleTest {
             ref package,
             ref manifest_path,
@@ -210,6 +228,8 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
             )
             .await
         }
+        // Already handled above
+        Commands::Config { .. } | Commands::SelfUpdate { .. } => unreachable!(),
     }
 }
 

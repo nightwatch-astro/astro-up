@@ -4,8 +4,8 @@ expression: stdout
 ---
 Show software status
 
-Usage: astro-up-cli show [OPTIONS] [PACKAGE]
-       astro-up-cli show <COMMAND>
+Usage: astro-up show [OPTIONS] [PACKAGE]
+       astro-up show <COMMAND>
 
 Commands:
   all        Show all catalog packages (default)
