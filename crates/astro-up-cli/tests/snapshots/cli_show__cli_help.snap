@@ -11,16 +11,17 @@ Documentation: https://nightwatch-astro.github.io/astro-up/
 Usage: astro-up [OPTIONS] <COMMAND>
 
 Commands:
-  show         Show software status
-  install      Install a package
-  update       Update installed packages
-  scan         Scan for installed software
-  search       Search the catalog
-  backup       Create a backup
-  restore      Restore from a backup
-  config       Manage configuration
-  self-update  Update astro-up itself
-  help         Print this message or the help of the given subcommand(s)
+  show            Show software status
+  install         Install a package
+  update          Update installed packages
+  scan            Scan for installed software
+  search          Search the catalog
+  backup          Create a backup
+  restore         Restore from a backup
+  config          Manage configuration
+  self-update     Update astro-up itself
+  lifecycle-test  Run lifecycle test for a package (download, install, detect, uninstall)
+  help            Print this message or the help of the given subcommand(s)
 
 Options:
       --json
