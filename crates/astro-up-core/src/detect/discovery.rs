@@ -591,14 +591,42 @@ impl DiscoveryScanner {
         let search_name = software.name.to_lowercase();
         let publisher = software.publisher.as_deref().unwrap_or("").to_lowercase();
 
-        let wmi_result: Result<Option<Vec<std::collections::HashMap<String, wmi::Variant>>>, _> =
+        // WMI Variant contains COM pointers (NonNull<c_void>) which aren't Send.
+        // Extract string data inside spawn_blocking so only Send types cross the boundary.
+        #[derive(Debug)]
+        struct WmiDriver {
+            provider: String,
+            version: Option<String>,
+            device_class: Option<String>,
+            inf_name: Option<String>,
+        }
+
+        let wmi_result: Result<Option<Vec<WmiDriver>>, _> =
             tokio::time::timeout(std::time::Duration::from_secs(10), async {
                 tokio::task::spawn_blocking(move || {
                     let com = wmi::COMLibrary::new().ok()?;
                     let wmi_con = wmi::WMIConnection::new(com).ok()?;
-                    wmi_con
+                    let rows: Vec<std::collections::HashMap<String, wmi::Variant>> = wmi_con
                         .raw_query("SELECT DriverProviderName, DriverVersion, DeviceClass, InfName FROM Win32_PnPSignedDriver")
-                        .ok()
+                        .ok()?;
+                    let drivers: Vec<WmiDriver> = rows
+                        .iter()
+                        .map(|row| {
+                            let get_str = |key: &str| -> Option<String> {
+                                row.get(key).and_then(|v| match v {
+                                    wmi::Variant::String(s) => Some(s.clone()),
+                                    _ => None,
+                                })
+                            };
+                            WmiDriver {
+                                provider: get_str("DriverProviderName").unwrap_or_default(),
+                                version: get_str("DriverVersion"),
+                                device_class: get_str("DeviceClass"),
+                                inf_name: get_str("InfName"),
+                            }
+                        })
+                        .collect();
+                    Some(drivers)
                 })
                 .await
                 .ok()?
@@ -618,13 +646,7 @@ impl DiscoveryScanner {
         };
 
         for driver in &drivers {
-            let provider = driver
-                .get("DriverProviderName")
-                .and_then(|v| match v {
-                    wmi::Variant::String(s) => Some(s.as_str()),
-                    _ => None,
-                })
-                .unwrap_or("");
+            let provider = driver.provider.as_str();
 
             let matches = provider.to_lowercase().contains(&search_name)
                 || (!publisher.is_empty() && provider.to_lowercase().contains(&publisher));
@@ -633,18 +655,9 @@ impl DiscoveryScanner {
                 continue;
             }
 
-            let version_str = driver.get("DriverVersion").and_then(|v| match v {
-                wmi::Variant::String(s) => Some(s.clone()),
-                _ => None,
-            });
-            let device_class = driver.get("DeviceClass").and_then(|v| match v {
-                wmi::Variant::String(s) => Some(s.clone()),
-                _ => None,
-            });
-            let inf_name = driver.get("InfName").and_then(|v| match v {
-                wmi::Variant::String(s) => Some(s.clone()),
-                _ => None,
-            });
+            let version_str = driver.version.clone();
+            let device_class = driver.device_class.clone();
+            let inf_name = driver.inf_name.clone();
 
             probed.push(ProbedLocation {
                 method: DetectionMethod::Wmi,
