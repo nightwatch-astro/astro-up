@@ -136,9 +136,9 @@ jobs:
           WINDOWS: ${{ needs.check-windows.result }}
         run: |
           for result in "$RUST" "$FRONTEND" "$GUI" "$WINDOWS"; do
-            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+            if [ "$result" = "failure" ]; then
               echo "Job failed: $result"
               exit 1
             fi
           done
-          echo "All checks passed or were skipped"
+          echo "All checks passed, were skipped, or were cancelled by concurrency"
