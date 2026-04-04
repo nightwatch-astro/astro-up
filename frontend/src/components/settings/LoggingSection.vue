@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import Select from "primevue/select";
-import InputText from "primevue/inputtext";
-import InputGroup from "primevue/inputgroup";
 import ToggleSwitch from "primevue/toggleswitch";
 import Button from "primevue/button";
 import type { LogConfig } from "../../types/config";
@@ -47,17 +45,16 @@ async function browseLogFile() {
       class="field"
     >
       <label>Log file</label>
-      <InputGroup>
-        <InputText
-          :model-value="config.log_file"
-          readonly
-        />
+      <div class="path-row">
+        <code class="path-display">{{ config.log_file || "Not set" }}</code>
         <Button
+          label="Browse"
           icon="pi pi-file"
-          severity="secondary"
+          outlined
+          size="small"
           @click="browseLogFile"
         />
-      </InputGroup>
+      </div>
     </div>
   </div>
 </template>
@@ -68,4 +65,15 @@ async function browseLogFile() {
 .field label { font-size: 13px; font-weight: 500; color: var(--p-surface-300); }
 .field-toggle { display: flex; align-items: center; gap: 10px; }
 .field-toggle label { font-size: 13px; color: var(--p-surface-300); }
+.path-row { display: flex; align-items: center; gap: 8px; }
+.path-display {
+  flex: 1;
+  font-size: 12px;
+  color: var(--p-surface-300);
+  background: var(--p-surface-800);
+  padding: 6px 10px;
+  border-radius: 6px;
+  word-break: break-all;
+  min-height: 20px;
+}
 </style>

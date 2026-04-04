@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
-import InputGroup from "primevue/inputgroup";
 import ToggleSwitch from "primevue/toggleswitch";
 import Button from "primevue/button";
 import type { PathsConfig } from "../../types/config";
@@ -31,45 +29,42 @@ async function browseDirectory(field: keyof PathsConfig) {
   <div class="settings-section">
     <div class="field">
       <label>Download Directory</label>
-      <InputGroup>
-        <InputText
-          :model-value="config.download_dir"
-          readonly
-        />
+      <div class="path-row">
+        <code class="path-display">{{ config.download_dir || "Not set" }}</code>
         <Button
+          label="Browse"
           icon="pi pi-folder-open"
-          severity="secondary"
+          outlined
+          size="small"
           @click="browseDirectory('download_dir')"
         />
-      </InputGroup>
+      </div>
     </div>
     <div class="field">
       <label>Cache Directory</label>
-      <InputGroup>
-        <InputText
-          :model-value="config.cache_dir"
-          readonly
-        />
+      <div class="path-row">
+        <code class="path-display">{{ config.cache_dir || "Not set" }}</code>
         <Button
+          label="Browse"
           icon="pi pi-folder-open"
-          severity="secondary"
+          outlined
+          size="small"
           @click="browseDirectory('cache_dir')"
         />
-      </InputGroup>
+      </div>
     </div>
     <div class="field">
       <label>Data Directory</label>
-      <InputGroup>
-        <InputText
-          :model-value="config.data_dir"
-          readonly
-        />
+      <div class="path-row">
+        <code class="path-display">{{ config.data_dir || "Not set" }}</code>
         <Button
+          label="Browse"
           icon="pi pi-folder-open"
-          severity="secondary"
+          outlined
+          size="small"
           @click="browseDirectory('data_dir')"
         />
-      </InputGroup>
+      </div>
     </div>
     <div class="field-toggle">
       <ToggleSwitch v-model="config.keep_installers" />
@@ -110,4 +105,15 @@ async function browseDirectory(field: keyof PathsConfig) {
 .field-toggle { display: flex; align-items: center; gap: 10px; }
 .field-toggle label { font-size: 13px; color: var(--p-surface-300); }
 .field-actions { display: flex; gap: 8px; }
+.path-row { display: flex; align-items: center; gap: 8px; }
+.path-display {
+  flex: 1;
+  font-size: 12px;
+  color: var(--p-surface-300);
+  background: var(--p-surface-800);
+  padding: 6px 10px;
+  border-radius: 6px;
+  word-break: break-all;
+  min-height: 20px;
+}
 </style>
