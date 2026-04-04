@@ -101,6 +101,27 @@ pub enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+
+    /// Run lifecycle test for a package (download, install, detect, uninstall)
+    LifecycleTest {
+        /// Package ID from the manifests repo
+        package: String,
+        /// Path to the manifests repo checkout
+        #[arg(long)]
+        manifest_path: PathBuf,
+        /// Specific version to test (default: latest)
+        #[arg(long)]
+        version: Option<String>,
+        /// Install directory for download_only packages
+        #[arg(long)]
+        install_dir: Option<PathBuf>,
+        /// Download and probe only, skip install/uninstall
+        #[arg(long)]
+        dry_run: bool,
+        /// Write JSON report to file
+        #[arg(long)]
+        report_file: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -169,6 +190,25 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
         Commands::Config { action } => commands::config::handle_config(action, &mode).await,
         Commands::SelfUpdate { dry_run } => {
             commands::self_update::handle_self_update(dry_run, &mode).await
+        }
+        Commands::LifecycleTest {
+            ref package,
+            ref manifest_path,
+            ref version,
+            ref install_dir,
+            dry_run,
+            ref report_file,
+        } => {
+            commands::lifecycle_test::handle_lifecycle_test(
+                package,
+                manifest_path,
+                version.as_deref(),
+                install_dir.as_deref(),
+                dry_run,
+                report_file.as_deref(),
+                &mode,
+            )
+            .await
         }
     }
 }

@@ -1,0 +1,264 @@
+name: Lifecycle Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: 'Package ID (e.g., nina-app). Leave empty for matrix sweep of all missing.'
+        required: false
+        type: string
+      version:
+        description: 'Specific version to test (default: latest)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry-run mode (download + probe only, skip install/uninstall)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: lifecycle-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare Package List
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.packages.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: astro-up
+
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.NIGHTWATCH_APP_ID }}
+          private-key: ${{ secrets.NIGHTWATCH_APP_PRIVATE_KEY }}
+          repositories: astro-up-manifests
+
+      - uses: actions/checkout@v6
+        with:
+          repository: nightwatch-astro/astro-up-manifests
+          token: ${{ steps.app-token.outputs.token }}
+          path: manifests
+
+      - name: Determine packages
+        id: packages
+        env:
+          INPUT_PACKAGE_ID: ${{ inputs.package_id }}
+        shell: bash
+        run: |
+          if [ -n "$INPUT_PACKAGE_ID" ]; then
+            echo "matrix=[\"${INPUT_PACKAGE_ID}\"]" >> "$GITHUB_OUTPUT"
+          else
+            MISSING=$(cd manifests && \
+              for f in manifests/*.toml; do
+                if grep -q '^\[install\]' "$f" && ! grep -q '^\[detection\]' "$f"; then
+                  basename "$f" .toml
+                fi
+              done | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "matrix=${MISSING}" >> "$GITHUB_OUTPUT"
+            echo "Found packages missing detection: ${MISSING}"
+          fi
+
+  test:
+    name: Test ${{ matrix.package }}
+    needs: prepare
+    if: needs.prepare.outputs.matrix != '[]'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      max-parallel: 5
+      fail-fast: false
+
+    env:
+      PACKAGE_ID: ${{ matrix.package }}
+      INPUT_VERSION: ${{ inputs.version }}
+      INPUT_DRY_RUN: ${{ inputs.dry_run }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: astro-up
+
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.NIGHTWATCH_APP_ID }}
+          private-key: ${{ secrets.NIGHTWATCH_APP_PRIVATE_KEY }}
+          repositories: astro-up-manifests
+
+      - uses: actions/checkout@v6
+        with:
+          repository: nightwatch-astro/astro-up-manifests
+          token: ${{ steps.app-token.outputs.token }}
+          path: manifests
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: astro-up
+
+      - name: Build lifecycle-test CLI
+        working-directory: astro-up
+        run: cargo build --release -p astro-up-cli
+
+      - name: Run lifecycle test
+        id: lifecycle
+        working-directory: astro-up
+        shell: pwsh
+        run: |
+          $args = @(
+            "lifecycle-test",
+            $env:PACKAGE_ID,
+            "--manifest-path", "${{ github.workspace }}/manifests",
+            "--json",
+            "--report-file", "${{ github.workspace }}/report.json"
+          )
+          if ($env:INPUT_VERSION -ne "") {
+            $args += "--version"
+            $args += $env:INPUT_VERSION
+          }
+          if ($env:INPUT_DRY_RUN -eq "true") {
+            $args += "--dry-run"
+          }
+          & ./target/release/astro-up-cli.exe @args
+          echo "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          # Don't fail the step — exit codes handled in PR step
+          exit 0
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecycle-report-${{ matrix.package }}
+          path: report.json
+          retention-days: 30
+
+      - name: Create detection PR
+        if: steps.lifecycle.outputs.exit_code == '0'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          MANIFESTS_DIR: ${{ github.workspace }}/manifests
+          REPORT_FILE: ${{ github.workspace }}/report.json
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          cd "$MANIFESTS_DIR"
+
+          # Extract detection config from report
+          CONFIG=$(jq -c '.discovered_config // empty' "$REPORT_FILE")
+          if [ -z "$CONFIG" ] || [ "$CONFIG" = "null" ]; then
+            echo "No detection config discovered — skipping PR"
+            exit 0
+          fi
+
+          MANIFEST_FILE="manifests/${PACKAGE_ID}.toml"
+          if [ ! -f "$MANIFEST_FILE" ]; then
+            echo "Manifest not found: $MANIFEST_FILE"
+            exit 0
+          fi
+
+          # Check if detection already exists and matches
+          if grep -q '^\[detection\]' "$MANIFEST_FILE"; then
+            echo "Detection section exists — will update if different"
+          fi
+
+          # Write detection TOML via the CLI tool
+          VERSION=$(jq -r '.version' "$REPORT_FILE")
+          OVERALL=$(jq -r '.overall_status' "$REPORT_FILE")
+
+          # Generate TOML from JSON config
+          DETECTION_TOML=$(echo "$CONFIG" | jq -r 'to_entries | map(select(.value != null and .value != false)) | map("\(.key) = \"\(.value)\"") | .[]')
+
+          # Create branch and commit
+          BRANCH="lifecycle/${PACKAGE_ID}"
+          git config user.name "nightwatch-bot[bot]"
+          git config user.email "nightwatch-bot[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+
+          # For now, append raw detection section
+          # (Full TOML manipulation deferred to when we have a proper serializer in CI)
+          if ! grep -q '^\[detection\]' "$MANIFEST_FILE"; then
+            echo "" >> "$MANIFEST_FILE"
+            echo "[detection]" >> "$MANIFEST_FILE"
+            echo "$DETECTION_TOML" >> "$MANIFEST_FILE"
+          fi
+
+          git add "$MANIFEST_FILE"
+          git diff --cached --quiet && { echo "No changes to commit"; exit 0; }
+          git commit -m "feat: add detection config for ${PACKAGE_ID}"
+          git push --force origin "$BRANCH"
+
+          # Build PR body
+          PHASES=$(jq -r '.phases[] | "| \(.phase) | \(.status) | \(.duration)ms |"' "$REPORT_FILE")
+
+          BODY="## Detection Discovery: ${PACKAGE_ID} v${VERSION}
+
+          **Overall**: ${OVERALL}
+
+          | Phase | Status | Duration |
+          |-------|--------|----------|
+          ${PHASES}
+
+          ### Discovered Config
+
+          \`\`\`json
+          ${CONFIG}
+          \`\`\`
+
+          ---
+          [Workflow run](${RUN_URL})"
+
+          # Create or update PR
+          EXISTING_PR=$(gh pr list --repo nightwatch-astro/astro-up-manifests --head "$BRANCH" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING_PR" ]; then
+            echo "$BODY" | gh pr edit "$EXISTING_PR" --repo nightwatch-astro/astro-up-manifests --body-file -
+            echo "Updated PR #${EXISTING_PR}"
+          else
+            echo "$BODY" | gh pr create --repo nightwatch-astro/astro-up-manifests \
+              --title "feat: detection config for ${PACKAGE_ID}" \
+              --body-file - \
+              --head "$BRANCH" \
+              --base main
+          fi
+
+      - name: Cleanup (uninstall)
+        if: always() && inputs.dry_run != 'true'
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          # Best-effort: find and run uninstall command from registry
+          $paths = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+            "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+          )
+          foreach ($regPath in $paths) {
+            Get-ChildItem -Path $regPath -ErrorAction SilentlyContinue | ForEach-Object {
+              $props = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
+              $name = $props.DisplayName
+              if ($name -and $name -match $env:PACKAGE_ID) {
+                $cmd = if ($props.QuietUninstallString) { $props.QuietUninstallString } else { $props.UninstallString }
+                if ($cmd) {
+                  Write-Host "Running uninstall: $cmd"
+                  Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $cmd -Wait -NoNewWindow -ErrorAction SilentlyContinue
+                }
+              }
+            }
+          }
+          # Kill remaining processes
+          Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.Path -and $_.Path -match $env:PACKAGE_ID
+          } | Stop-Process -Force -ErrorAction SilentlyContinue

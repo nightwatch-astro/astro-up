@@ -120,6 +120,9 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - Vue 3 + vue-router 4 (hash mode), PrimeVue 4 (Aura), @tanstack/vue-query 5, @vueuse/core 14, valibot 1, TypeScript 5 (022-vue-frontend)
 - localStorage for config snapshots, mock data layer for stubbed Tauri commands (022-vue-frontend)
 
+- Rust 2024 edition (1.85+) + pelite 0.10 (PE, existing), winreg (registry, existing), wmi (WMI, existing), reqwest (downloads, existing), toml 0.9 (manifest reading, promoted from dev-dep), serde_json (fallback serialization, existing) (023-lifecycle-testing)
+- SQLite (existing — catalog detection table expansion, ledger install_path recording) (023-lifecycle-testing)
+
 ## Recent Changes
 - 022-vue-frontend: Complete Vue 3 frontend — 6 views (Dashboard, Catalog, Installed, Detail, Backup, Settings), 30+ components, vue-router hash mode, valibot validation, mock data layer, keyboard shortcuts, operations dock + log panel
 - 016-tauri-app-shell: Tauri v2 shell — 11 commands (6 wired to core), system tray with badge, theme switching, error toasts, self-update check, close-during-operation prompt

@@ -68,6 +68,34 @@ impl PathResolver {
         }
         // Windows-only tokens unavailable on other platforms — left unresolved
     }
+
+    /// Reverse of expand: convert an absolute path back to a token template.
+    ///
+    /// Replaces known directory prefixes with `{token}` placeholders.
+    /// Prefers more specific tokens (program_files_x86 before program_files).
+    pub fn tokenize(&self, path: &str) -> String {
+        let mut result = path.to_string();
+        // Sort by value length descending so longer (more specific) paths match first
+        let mut entries: Vec<_> = self.tokens.iter().collect();
+        entries.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+
+        for (token, value) in entries {
+            // Case-insensitive replacement for Windows paths
+            let lower_result = result.to_lowercase();
+            let lower_value = value.to_lowercase();
+            if let Some(pos) = lower_result.find(&lower_value) {
+                let placeholder = format!("{{{token}}}");
+                result = format!(
+                    "{}{}{}",
+                    &result[..pos],
+                    placeholder,
+                    &result[pos + value.len()..]
+                );
+                break; // Only replace the first (most specific) match
+            }
+        }
+        result
+    }
 }
 
 impl Default for PathResolver {

@@ -3,6 +3,7 @@
 pub mod fetch;
 pub mod lock;
 pub mod manager;
+pub mod manifest;
 pub mod reader;
 pub mod sidecar;
 pub mod types;
