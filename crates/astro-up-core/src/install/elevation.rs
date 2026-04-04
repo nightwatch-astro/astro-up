@@ -97,7 +97,7 @@ pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
             }
         })
         .await
-        .map_err(|e| CoreError::Io(std::io::Error::other(e)))??
+        .map_err(|e| CoreError::Io(std::io::Error::other(e)))?
     }
 }
 
