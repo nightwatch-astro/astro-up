@@ -50,8 +50,8 @@ async fn chain_pe_fallback_on_non_windows() {
         // Registry returns Unavailable which is not "installed", so chain falls through
         match result {
             DetectionResult::Installed {
-            version, method, ..
-        } => {
+                version, method, ..
+            } => {
                 assert_eq!(version.raw, "3.2.1");
                 assert_eq!(method, DetectionMethod::PeFile);
             }
