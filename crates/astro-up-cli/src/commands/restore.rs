@@ -8,8 +8,11 @@ use crate::output::table::print_table;
 
 use super::confirm;
 
+use crate::state::CliState;
+
 /// T028: Restore from a backup archive.
 pub async fn handle_restore(
+    _state: &CliState,
     package: &str,
     _path: Option<&str>,
     yes: bool,

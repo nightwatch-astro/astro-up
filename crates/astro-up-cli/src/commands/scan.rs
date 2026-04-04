@@ -2,40 +2,102 @@ use color_eyre::eyre::Result;
 use serde::Serialize;
 use tabled::Tabled;
 
+use astro_up_core::adapters::{CatalogPackageSource, SqliteLedgerStore};
+use astro_up_core::detect::scanner::Scanner;
+
 use crate::output::OutputMode;
 use crate::output::json::print_json;
+use crate::output::table::print_table;
+use crate::state::CliState;
 
-/// T017: Scan for installed software using the detection engine.
-pub async fn handle_scan(mode: &OutputMode) -> Result<()> {
-    // Detection requires Windows APIs (registry, PE, WMI).
-    // On non-Windows platforms, show a clear message.
-    if !cfg!(target_os = "windows") {
-        if *mode == OutputMode::Json {
-            return print_json(&ScanOutput {
-                results: vec![],
-                errors: vec![],
-                note: Some("detection requires Windows".into()),
-            });
+/// Wire scan command to core Scanner (T006).
+pub async fn handle_scan(state: &CliState, mode: &OutputMode) -> Result<()> {
+    // Ensure catalog is available
+    state.open_catalog_reader_ensure().await?;
+
+    let packages = CatalogPackageSource::new(state.catalog_path().to_path_buf());
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+    let scanner = Scanner::new(packages, ledger);
+
+    let scan_result = scanner
+        .scan()
+        .await
+        .map_err(|e| color_eyre::eyre::eyre!("scan failed: {e}"))?;
+
+    // Persist scan results to ledger (FR-004)
+    {
+        use astro_up_core::detect::scanner::LedgerStore;
+        let persist_ledger = SqliteLedgerStore::new(state.db_path.clone());
+        for r in &scan_result.results {
+            if let astro_up_core::detect::DetectionResult::Installed { version, .. } = &r.result {
+                let _ = persist_ledger.upsert_acknowledged(&r.package_id, version);
+            }
         }
-        if mode.should_print() {
-            println!(
-                "Software detection requires Windows. Scan is not available on this platform."
-            );
-        }
-        return Ok(());
     }
 
-    // On Windows: run full catalog scan
-    // TODO(T017): Wire Scanner from core once catalog + ledger are available on this platform
+    use astro_up_core::detect::DetectionResult;
+
+    let rows: Vec<ScanRow> = scan_result
+        .results
+        .iter()
+        .map(|r| match &r.result {
+            DetectionResult::Installed {
+                version, method, ..
+            } => ScanRow {
+                package: r.package_id.clone(),
+                version: version.to_string(),
+                method: format!("{method:?}"),
+                status: "Installed".into(),
+            },
+            DetectionResult::InstalledUnknownVersion { method, .. } => ScanRow {
+                package: r.package_id.clone(),
+                version: "unknown".into(),
+                method: format!("{method:?}"),
+                status: "Installed".into(),
+            },
+            DetectionResult::NotInstalled => ScanRow {
+                package: r.package_id.clone(),
+                version: "-".into(),
+                method: "-".into(),
+                status: "Not found".into(),
+            },
+            DetectionResult::Unavailable { reason } => ScanRow {
+                package: r.package_id.clone(),
+                version: "-".into(),
+                method: "-".into(),
+                status: format!("Unavailable: {reason}"),
+            },
+        })
+        .collect();
+
     if *mode == OutputMode::Json {
         return print_json(&ScanOutput {
-            results: vec![],
-            errors: vec![],
+            results: rows,
+            errors: scan_result
+                .errors
+                .iter()
+                .map(|e| format!("{}: {}", e.package_id, e.error))
+                .collect(),
             note: None,
         });
     }
-    if mode.should_print() {
-        println!("No packages detected.");
+
+    if !mode.should_print() {
+        return Ok(());
+    }
+
+    let installed_count = rows.iter().filter(|r| r.status == "Installed").count();
+
+    if rows.is_empty() {
+        println!("No packages in catalog.");
+    } else {
+        print_table(&rows)?;
+        println!(
+            "\n{} detected, {} not found, {} errors",
+            installed_count,
+            rows.len() - installed_count,
+            scan_result.errors.len()
+        );
     }
     Ok(())
 }
@@ -56,4 +118,6 @@ struct ScanRow {
     version: String,
     #[tabled(rename = "Method")]
     method: String,
+    #[tabled(rename = "Status")]
+    status: String,
 }

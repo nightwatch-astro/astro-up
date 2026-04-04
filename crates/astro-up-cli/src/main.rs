@@ -4,7 +4,18 @@ use clap::Parser;
 use tokio_util::sync::CancellationToken;
 
 #[tokio::main]
+#[allow(unreachable_code)]
 async fn main() -> ExitCode {
+    if cfg!(not(target_os = "windows")) {
+        eprintln!(
+            "astro-up requires Windows. Astrophotography software detection, installation, and management depend on Windows APIs (registry, PE headers, WMI)."
+        );
+        return ExitCode::from(1);
+    }
+
+    // Clean up leftover .old binary from a previous self-update
+    astro_up_cli::commands::self_update::cleanup_old_binary();
+
     #[cfg(not(debug_assertions))]
     human_panic::setup_panic!();
 

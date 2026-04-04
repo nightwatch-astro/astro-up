@@ -12,17 +12,19 @@ pub mod update;
 // Re-export subcommand enums used by command handlers.
 pub use crate::{ConfigAction, ShowFilter};
 
-use color_eyre::eyre::{Result, eyre};
+use color_eyre::eyre::Result;
 use dialoguer::Confirm;
+use indicatif::ProgressBar;
+use tokio::sync::broadcast;
 
-use astro_up_core::catalog::{CatalogManager, SqliteCatalogReader};
-use astro_up_core::config::CatalogConfig;
+use astro_up_core::events::Event;
 
 use crate::output::OutputMode;
+use crate::output::progress::{create_download_bar, render_event};
 
-/// Prompt user for confirmation. Returns `true` immediately in JSON mode or if `--yes`.
+/// Prompt user for confirmation. Returns `true` immediately in JSON/Quiet mode or if `--yes`.
 pub fn confirm(prompt: &str, mode: &OutputMode, yes: bool) -> Result<bool> {
-    if yes || *mode == OutputMode::Json {
+    if yes || *mode == OutputMode::Json || *mode == OutputMode::Quiet {
         return Ok(true);
     }
     Ok(Confirm::new()
@@ -31,21 +33,24 @@ pub fn confirm(prompt: &str, mode: &OutputMode, yes: bool) -> Result<bool> {
         .interact()?)
 }
 
-/// T015: Ensure catalog is available, downloading if needed.
-/// Returns a ready-to-use catalog reader.
-pub async fn ensure_catalog() -> Result<SqliteCatalogReader> {
-    let data_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up")
-        .map(|dirs| dirs.data_dir().to_owned())
-        .ok_or_else(|| eyre!("could not determine data directory"))?;
+/// Spawn a background task that forwards core events to the progress renderer.
+/// Returns the download progress bar (for Interactive mode) and a JoinHandle.
+pub fn forward_events(
+    mut rx: broadcast::Receiver<Event>,
+    mode: OutputMode,
+) -> (Option<ProgressBar>, tokio::task::JoinHandle<()>) {
+    let download_bar = if mode == OutputMode::Interactive {
+        Some(create_download_bar(0))
+    } else {
+        None
+    };
+    let bar_clone = download_bar.clone();
 
-    std::fs::create_dir_all(&data_dir)?;
+    let handle = tokio::spawn(async move {
+        while let Ok(event) = rx.recv().await {
+            render_event(&event, &mode, bar_clone.as_ref());
+        }
+    });
 
-    let config = CatalogConfig::default();
-    let manager = CatalogManager::new(&data_dir, config);
-
-    let result = manager.ensure_catalog().await?;
-    tracing::info!(?result, "catalog status");
-
-    let reader = manager.open_reader()?;
-    Ok(reader)
+    (download_bar, handle)
 }
