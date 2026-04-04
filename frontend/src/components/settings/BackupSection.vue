@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ToggleSwitch from "primevue/toggleswitch";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import InputNumber from "primevue/inputnumber";
 import type { BackupPolicyConfig } from "../../types/config";
 
@@ -24,7 +24,7 @@ const scheduleOptions = [
       class="field"
     >
       <label>Schedule</label>
-      <Dropdown
+      <Select
         v-model="config.schedule"
         :options="scheduleOptions"
         option-label="label"

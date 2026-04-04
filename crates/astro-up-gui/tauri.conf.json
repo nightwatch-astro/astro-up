@@ -14,10 +14,10 @@
       {
         "label": "main",
         "title": "Astro-Up",
-        "width": 1024,
-        "height": 768,
+        "width": 1100,
+        "height": 900,
         "minWidth": 1024,
-        "minHeight": 600,
+        "minHeight": 680,
         "center": true
       }
     ],

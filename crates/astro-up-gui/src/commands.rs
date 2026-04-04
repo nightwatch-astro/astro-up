@@ -1,7 +1,7 @@
 use std::fmt;
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::broadcast;
 
 use astro_up_core::catalog::CatalogFilter;
@@ -383,6 +383,9 @@ pub async fn scan_installed(
 
 /// Shared helper: create an orchestrator, plan, and execute.
 /// Pass an empty slice for `ids` to plan all available updates.
+///
+/// Runs inside `spawn_blocking` + `Handle::block_on` because the
+/// InstallerService uses Windows APIs with `!Send` types (PCWSTR, HANDLE).
 async fn run_orchestrated_operation(
     app: &AppHandle,
     state: &AppState,
@@ -396,38 +399,18 @@ async fn run_orchestrated_operation(
     use astro_up_core::install::InstallerService;
 
     let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
-    let packages = CatalogPackageSource::new(catalog_path);
-    let ledger = SqliteLedgerStore::new(state.db_path.clone());
-
+    let db_path = state.db_path.clone();
     let config = state.config.lock().unwrap().clone();
-    let (event_tx, rx) = broadcast::channel::<Event>(64);
-    forward_events(app.clone(), rx);
-
-    let downloader = DownloadManager::new(&config.network, event_tx)?;
-    let installer = InstallerService::new(
-        std::time::Duration::from_secs(600),
-        std::env::temp_dir().join("astro-up").join("installs"),
-    );
     let backup_dir = state
         .db_path
         .parent()
         .unwrap_or(std::path::Path::new("."))
         .join("backups");
-    let backup = BackupService::new(backup_dir, 5);
-
-    let db_conn =
-        rusqlite::Connection::open(&state.db_path).map_err(|e| CoreError::from(e.to_string()))?;
-    let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
     let lock_path = state
         .db_path
         .parent()
         .unwrap_or(std::path::Path::new("."))
         .join("orchestration.lock");
-
-    let orchestrator = astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
-        &lock_path, packages, ledger, downloader, installer, backup, db,
-    )?;
-
     let pkg_ids: Vec<astro_up_core::catalog::PackageId> = ids
         .iter()
         .map(|id| {
@@ -435,23 +418,51 @@ async fn run_orchestrated_operation(
                 .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))
         })
         .collect::<Result<_, _>>()?;
-    let plan = orchestrator
-        .plan(UpdateRequest {
-            packages: pkg_ids,
-            allow_major: false,
-            allow_downgrade: false,
-            dry_run: false,
-            confirmed: true,
+
+    let app_for_events = app.clone();
+    let (event_tx, rx) = broadcast::channel::<Event>(64);
+    forward_events(app.clone(), rx);
+
+    let handle = tokio::runtime::Handle::current();
+    tokio::task::spawn_blocking(move || {
+        handle.block_on(async move {
+            let packages = CatalogPackageSource::new(catalog_path);
+            let ledger = SqliteLedgerStore::new(db_path.clone());
+            let downloader = DownloadManager::new(&config.network, event_tx)?;
+            let installer = InstallerService::new(
+                std::time::Duration::from_secs(600),
+                std::env::temp_dir().join("astro-up").join("installs"),
+            );
+            let backup = BackupService::new(backup_dir, 5);
+            let db_conn =
+                rusqlite::Connection::open(&db_path).map_err(|e| CoreError::from(e.to_string()))?;
+            let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
+
+            let orchestrator = astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
+                &lock_path, packages, ledger, downloader, installer, backup, db,
+            )?;
+
+            let plan = orchestrator
+                .plan(UpdateRequest {
+                    packages: pkg_ids,
+                    allow_major: false,
+                    allow_downgrade: false,
+                    dry_run: false,
+                    confirmed: true,
+                })
+                .await?;
+
+            let on_event: astro_up_core::engine::orchestrator::EventCallback =
+                Box::new(move |event| {
+                    emit_event(&app_for_events, &event);
+                });
+
+            let result = orchestrator.execute(plan, on_event, cancel_token).await?;
+            serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
         })
-        .await?;
-
-    let app_clone = app.clone();
-    let on_event: astro_up_core::engine::orchestrator::EventCallback = Box::new(move |event| {
-        emit_event(&app_clone, &event);
-    });
-
-    let result = orchestrator.execute(plan, on_event, cancel_token).await?;
-    serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
+    })
+    .await
+    .map_err(|e| CoreError::from(e.to_string()))?
 }
 
 #[tauri::command]
@@ -469,35 +480,28 @@ pub async fn install_software(
         "Command invoked"
     );
 
-    let app_clone = app.clone();
-    let op_id_clone = op_id.clone();
-
-    tauri::async_runtime::spawn(async move {
-        let state_ref = app_clone.state::<AppState>();
-        match run_orchestrated_operation(&app_clone, &state_ref, &[&id], &op_id_clone, token).await
-        {
-            Ok(_) => {
-                tracing::info!(command = "install_software", package = id, "Completed");
-            }
-            Err(e) => {
-                tracing::error!(command = "install_software", package = id, error = %e, "Failed");
-                emit_event(
-                    &app_clone,
-                    &Event::InstallFailed {
-                        id: id.clone(),
-                        error: e.message,
-                    },
-                );
-            }
+    match run_orchestrated_operation(&app, &state, &[&id], &op_id, token).await {
+        Ok(_) => {
+            tracing::info!(command = "install_software", package = id, "Completed");
         }
-        state_ref.remove_operation(&op_id_clone.id);
-    });
+        Err(e) => {
+            tracing::error!(command = "install_software", package = id, error = %e, "Failed");
+            emit_event(
+                &app,
+                &Event::InstallFailed {
+                    id: id.clone(),
+                    error: e.message,
+                },
+            );
+        }
+    }
+    state.remove_operation(&op_id.id);
 
     tracing::debug!(
         command = "install_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command dispatched"
+        "Command completed"
     );
     Ok(op_id)
 }
@@ -517,35 +521,28 @@ pub async fn update_software(
         "Command invoked"
     );
 
-    let app_clone = app.clone();
-    let op_id_clone = op_id.clone();
-
-    tauri::async_runtime::spawn(async move {
-        let state_ref = app_clone.state::<AppState>();
-        match run_orchestrated_operation(&app_clone, &state_ref, &[&id], &op_id_clone, token).await
-        {
-            Ok(_) => {
-                tracing::info!(command = "update_software", package = id, "Completed");
-            }
-            Err(e) => {
-                tracing::error!(command = "update_software", package = id, error = %e, "Failed");
-                emit_event(
-                    &app_clone,
-                    &Event::InstallFailed {
-                        id: id.clone(),
-                        error: e.message,
-                    },
-                );
-            }
+    match run_orchestrated_operation(&app, &state, &[&id], &op_id, token).await {
+        Ok(_) => {
+            tracing::info!(command = "update_software", package = id, "Completed");
         }
-        state_ref.remove_operation(&op_id_clone.id);
-    });
+        Err(e) => {
+            tracing::error!(command = "update_software", package = id, error = %e, "Failed");
+            emit_event(
+                &app,
+                &Event::InstallFailed {
+                    id: id.clone(),
+                    error: e.message,
+                },
+            );
+        }
+    }
+    state.remove_operation(&op_id.id);
 
     tracing::debug!(
         command = "update_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command dispatched"
+        "Command completed"
     );
     Ok(op_id)
 }
@@ -563,35 +560,28 @@ pub async fn update_all(
         "Updating all packages..."
     );
 
-    let app_clone = app.clone();
-    let op_id_clone = op_id.clone();
-
-    tauri::async_runtime::spawn(async move {
-        let state_ref = app_clone.state::<AppState>();
-        // Empty packages vec → plan_all() plans every package with an available update
-        match run_orchestrated_operation(&app_clone, &state_ref, &[], &op_id_clone, token).await {
-            Ok(_) => {
-                tracing::info!(command = "update_all", "Completed");
-            }
-            Err(e) => {
-                tracing::error!(command = "update_all", error = %e, "Failed");
-                emit_event(
-                    &app_clone,
-                    &Event::Error {
-                        id: "update-all".into(),
-                        error: e.message,
-                    },
-                );
-            }
+    match run_orchestrated_operation(&app, &state, &[], &op_id, token).await {
+        Ok(_) => {
+            tracing::info!(command = "update_all", "Completed");
         }
-        state_ref.remove_operation(&op_id_clone.id);
-    });
+        Err(e) => {
+            tracing::error!(command = "update_all", error = %e, "Failed");
+            emit_event(
+                &app,
+                &Event::Error {
+                    id: "update-all".into(),
+                    error: e.message,
+                },
+            );
+        }
+    }
+    state.remove_operation(&op_id.id);
 
     tracing::debug!(
         command = "update_all",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command dispatched"
+        "Command completed"
     );
     Ok(op_id)
 }

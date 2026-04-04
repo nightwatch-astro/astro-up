@@ -3,11 +3,15 @@ source: crates/astro-up-core/tests/config/defaults_test.rs
 expression: value
 ---
 {
+  "backup_policy": {
+    "max_age_days": 0,
+    "max_per_package": 5,
+    "max_total_size_mb": 0,
+    "schedule": "weekly",
+    "scheduled_enabled": false
+  },
   "catalog": {
-    "cache_ttl": {
-      "nanos": 0,
-      "secs": 86400
-    },
+    "cache_ttl": "1day",
     "url": "https://github.com/nightwatch-astro/astro-up-manifests/releases/download/catalog/latest/catalog.db"
   },
   "logging": {
@@ -16,17 +20,19 @@ expression: value
     "log_to_file": false
   },
   "network": {
-    "connect_timeout": {
-      "nanos": 0,
-      "secs": 10
-    },
+    "connect_timeout": "10s",
     "download_speed_limit": 0,
     "proxy": null,
-    "timeout": {
-      "nanos": 0,
-      "secs": 30
-    },
+    "timeout": "30s",
     "user_agent": "astro-up/0.1.0"
+  },
+  "notifications": {
+    "display_duration": 5,
+    "enabled": true,
+    "show_errors": true,
+    "show_operation_complete": true,
+    "show_update_available": true,
+    "show_warnings": true
   },
   "paths": {
     "cache_dir": "[platform_path]",
@@ -35,14 +41,27 @@ expression: value
     "keep_installers": true,
     "purge_installers_after_days": 30
   },
+  "startup": {
+    "minimize_to_tray_on_close": false,
+    "start_at_login": false,
+    "start_minimized": false
+  },
   "telemetry": {
     "enabled": false
   },
+  "ui": {
+    "auto_check_updates": true,
+    "auto_install_updates": false,
+    "auto_notify_updates": true,
+    "auto_scan_on_launch": false,
+    "check_interval": "1day",
+    "default_install_method": "silent",
+    "default_install_scope": "user",
+    "font_size": "medium",
+    "theme": "system"
+  },
   "updates": {
     "auto_check": true,
-    "check_interval": {
-      "nanos": 0,
-      "secs": 86400
-    }
+    "check_interval": "1day"
   }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import ToggleSwitch from "primevue/toggleswitch";
 import type { LogConfig } from "../../types/config";
 
@@ -18,7 +18,7 @@ const levelOptions = [
   <div class="settings-section">
     <div class="field">
       <label>Log Level</label>
-      <Dropdown
+      <Select
         v-model="config.level"
         :options="levelOptions"
         option-label="label"

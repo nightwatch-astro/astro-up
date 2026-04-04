@@ -92,12 +92,12 @@ describe("View smoke tests", () => {
     expect(wrapper.text()).toContain("Re-scan");
   });
 
-  it("Backup renders quick restore section", async () => {
+  it("Backup renders empty state", async () => {
     const wrapper = mountApp();
     await router.push("/backup");
     await router.isReady();
     expect(wrapper.text()).toContain("Backup");
-    expect(wrapper.text()).toContain("Quick Restore");
+    expect(wrapper.text()).toContain("No backups yet");
   });
 
   it("Settings renders sidebar nav with 9 sections", async () => {

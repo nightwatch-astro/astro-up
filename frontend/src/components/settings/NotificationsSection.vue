@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ToggleSwitch from "primevue/toggleswitch";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import type { NotificationsConfig } from "../../types/config";
 
 const config = defineModel<NotificationsConfig>({ required: true });
@@ -24,7 +24,7 @@ const durationOptions = [
       class="field"
     >
       <label>Display Duration</label>
-      <Dropdown
+      <Select
         v-model="config.display_duration"
         :options="durationOptions"
         option-label="label"
