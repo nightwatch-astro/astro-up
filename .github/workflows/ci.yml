@@ -120,6 +120,5 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy -p astro-up-core -p astro-up-cli -- -D warnings
-      - run: cargo check -p astro-up-gui
+      - run: cargo clippy --workspace -- -D warnings
       - run: cargo test --workspace
