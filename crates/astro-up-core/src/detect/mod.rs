@@ -128,13 +128,7 @@ async fn run_single_method(
         DetectionMethod::AscomProfile => ascom::detect(config).await,
         DetectionMethod::FileExists => file::detect_exists(config, resolver).await,
         DetectionMethod::ConfigFile => file::detect_config(config, resolver).await,
-        DetectionMethod::Ledger => DetectionResult {
-            detected: false,
-            version: None,
-            install_path: None,
-            duration: std::time::Duration::ZERO,
-            method: DetectionMethod::Ledger,
-        },
+        DetectionMethod::Ledger => DetectionResult::NotInstalled,
     }
 }
 
