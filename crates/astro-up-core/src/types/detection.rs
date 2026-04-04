@@ -12,6 +12,9 @@ pub enum DetectionMethod {
     AscomProfile,
     FileExists,
     ConfigFile,
+    /// Package is tracked by the ledger only (e.g., firmware flashed to hardware).
+    /// No auto-detection possible — version is recorded when Astro-Up handles the download.
+    Ledger,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
