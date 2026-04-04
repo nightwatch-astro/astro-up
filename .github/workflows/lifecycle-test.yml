@@ -105,14 +105,27 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           path: manifests
 
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: astro-up
+      - name: Get CLI binary
+        id: cli
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          mkdir -p astro-up/target/release
+          if gh release download --repo nightwatch-astro/astro-up --pattern 'astro-up-cli-x86_64-pc-windows-msvc.exe' --dir astro-up/target/release --clobber 2>/dev/null; then
+            mv astro-up/target/release/astro-up-cli-x86_64-pc-windows-msvc.exe astro-up/target/release/astro-up-cli.exe
+            echo "source=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "source=build" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Build lifecycle-test CLI
+      - name: Build CLI (no release binary available)
+        if: steps.cli.outputs.source == 'build'
         working-directory: astro-up
-        run: cargo build --release -p astro-up-cli
+        shell: bash
+        run: |
+          rustup default stable
+          cargo build --release -p astro-up-cli
 
       - name: Run lifecycle test
         id: lifecycle
