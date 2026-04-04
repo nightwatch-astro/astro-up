@@ -64,8 +64,7 @@ impl DiscoveryScanner {
         candidates.append(&mut reg_candidates);
         probed.append(&mut reg_probed);
 
-        let (mut pe_candidates, mut pe_probed) =
-            self.probe_pe_files(software, &candidates).await;
+        let (mut pe_candidates, mut pe_probed) = self.probe_pe_files(software, &candidates).await;
         candidates.append(&mut pe_candidates);
         probed.append(&mut pe_probed);
 
@@ -140,15 +139,123 @@ impl DiscoveryScanner {
         Some(config)
     }
 
-    // -- Probe methods (stubbed for now, implemented in T004-T006) --
+    // -- Probe methods --
 
+    // T004: Registry discovery probe
     #[cfg(windows)]
     async fn probe_registry(
         &self,
-        _software: &Software,
+        software: &Software,
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
-        // T004: Implement registry discovery probe
-        (vec![], vec![])
+        use winreg::RegKey;
+        use winreg::enums::*;
+
+        let mut candidates = Vec::new();
+        let mut probed = Vec::new();
+
+        let search_name = software.name.to_lowercase();
+        let search_id = software.id.as_ref().to_lowercase();
+
+        let search_paths: &[(winreg::HKEY, u32, &str)] = &[
+            (
+                HKEY_LOCAL_MACHINE,
+                KEY_READ | KEY_WOW64_64KEY,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            ),
+            (
+                HKEY_LOCAL_MACHINE,
+                KEY_READ | KEY_WOW64_32KEY,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            ),
+            (
+                HKEY_CURRENT_USER,
+                KEY_READ,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            ),
+        ];
+
+        for (hive, flags, path) in search_paths {
+            let root = RegKey::predef(*hive);
+            let Ok(uninstall_key) = root.open_subkey_with_flags(path, *flags) else {
+                probed.push(ProbedLocation {
+                    method: DetectionMethod::Registry,
+                    location: path.to_string(),
+                    result: "not_found".into(),
+                });
+                continue;
+            };
+
+            for subkey_name in uninstall_key.enum_keys().flatten() {
+                let Ok(subkey) = uninstall_key.open_subkey(&subkey_name) else {
+                    continue;
+                };
+
+                let display_name: String = subkey.get_value("DisplayName").unwrap_or_default();
+                if display_name.is_empty() {
+                    continue;
+                }
+
+                let display_lower = display_name.to_lowercase();
+
+                // Match: manifest name (primary), package ID (fallback)
+                let matched =
+                    display_lower.contains(&search_name) || display_lower.contains(&search_id);
+
+                let location = format!("{path}\\{subkey_name}");
+                probed.push(ProbedLocation {
+                    method: DetectionMethod::Registry,
+                    location: location.clone(),
+                    result: if matched { "found" } else { "not_found" }.into(),
+                });
+
+                if !matched {
+                    continue;
+                }
+
+                let version_str: Option<String> = subkey
+                    .get_value::<String, _>("DisplayVersion")
+                    .ok()
+                    .filter(|s| !s.trim().is_empty());
+                let install_location: Option<String> = subkey
+                    .get_value::<String, _>("InstallLocation")
+                    .ok()
+                    .filter(|s| !s.trim().is_empty());
+
+                let version = version_str.as_deref().map(|s| Version::parse(s.trim()));
+                let confidence = if version.is_some() {
+                    DiscoveryConfidence::High
+                } else {
+                    DiscoveryConfidence::Medium
+                };
+
+                let registry_key =
+                    format!(r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{subkey_name}");
+
+                candidates.push(DiscoveryCandidate {
+                    method: DetectionMethod::Registry,
+                    config: DetectionConfig {
+                        method: DetectionMethod::Registry,
+                        registry_key: Some(subkey_name.clone()),
+                        registry_value: Some("DisplayVersion".into()),
+                        file_path: None,
+                        version_regex: None,
+                        product_code: None,
+                        upgrade_code: None,
+                        inf_provider: None,
+                        device_class: None,
+                        inf_name: None,
+                        fallback: None,
+                    },
+                    confidence,
+                    version,
+                    install_path: install_location.map(|s| s.trim().to_string()),
+                    display_name: Some(display_name),
+                    registry_key_name: Some(subkey_name),
+                });
+            }
+        }
+
+        (candidates, probed)
     }
 
     #[cfg(not(windows))]
@@ -159,14 +266,153 @@ impl DiscoveryScanner {
         (vec![], vec![])
     }
 
+    // T005: PE discovery probe
     #[cfg(windows)]
     async fn probe_pe_files(
         &self,
-        _software: &Software,
-        _registry_candidates: &[DiscoveryCandidate],
+        software: &Software,
+        registry_candidates: &[DiscoveryCandidate],
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
-        // T005: Implement PE discovery probe
-        (vec![], vec![])
+        let mut candidates = Vec::new();
+        let mut probed = Vec::new();
+
+        // Collect directories to search: InstallLocation from registry + common dirs
+        let mut search_dirs: Vec<String> = Vec::new();
+
+        for reg in registry_candidates {
+            if let Some(ref path) = reg.install_path {
+                search_dirs.push(path.clone());
+            }
+        }
+
+        // Add common program dirs
+        let name = &software.name;
+        let slug = &software.slug;
+        for token in ["{program_files}", "{program_files_x86}"] {
+            for dir_name in [name.as_str(), slug.as_str()] {
+                let template = format!("{token}\\{dir_name}");
+                if let Some(expanded) = self.resolver.expand(&template) {
+                    if std::path::Path::new(&expanded).is_dir() {
+                        search_dirs.push(expanded);
+                    }
+                }
+            }
+        }
+
+        search_dirs.dedup();
+
+        for dir in &search_dirs {
+            let dir_path = std::path::Path::new(dir);
+            if !dir_path.is_dir() {
+                probed.push(ProbedLocation {
+                    method: DetectionMethod::PeFile,
+                    location: dir.clone(),
+                    result: "not_found".into(),
+                });
+                continue;
+            }
+
+            // Find .exe files (non-recursive, top level only for speed)
+            let entries: Vec<_> = match std::fs::read_dir(dir_path) {
+                Ok(entries) => entries
+                    .flatten()
+                    .filter(|e| {
+                        e.path()
+                            .extension()
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("exe"))
+                    })
+                    .collect(),
+                Err(_) => {
+                    probed.push(ProbedLocation {
+                        method: DetectionMethod::PeFile,
+                        location: dir.clone(),
+                        result: "error: cannot read directory".into(),
+                    });
+                    continue;
+                }
+            };
+
+            for entry in entries {
+                let exe_path = entry.path();
+                let exe_str = exe_path.to_string_lossy().to_string();
+
+                let pe_result = tokio::task::spawn_blocking({
+                    let exe_path = exe_path.clone();
+                    move || -> Option<(Option<Version>, Option<String>)> {
+                        let data = std::fs::read(&exe_path).ok()?;
+                        let pe = pelite::PeFile::from_bytes(&data).ok()?;
+                        let resources = pe.resources().ok()?;
+                        let version_info = resources.version_info().ok()?;
+
+                        // Try binary version first
+                        let version = version_info.fixed().map(|fixed| {
+                            let v = fixed.dwFileVersion;
+                            Version::parse(&format!("{}.{}.{}", v.Major, v.Minor, v.Patch))
+                        });
+
+                        // Try ProductName from string info
+                        let product_name = version_info.translation().first().and_then(|&lang| {
+                            version_info
+                                .value(lang, "ProductName")
+                                .map(|s| s.trim_end_matches('\0').to_string())
+                        });
+
+                        Some((version, product_name))
+                    }
+                })
+                .await
+                .ok()
+                .flatten();
+
+                let Some((version, _product_name)) = pe_result else {
+                    probed.push(ProbedLocation {
+                        method: DetectionMethod::PeFile,
+                        location: exe_str,
+                        result: "error: cannot read PE".into(),
+                    });
+                    continue;
+                };
+
+                let confidence = if version.is_some() {
+                    DiscoveryConfidence::High
+                } else {
+                    DiscoveryConfidence::Medium
+                };
+
+                // Tokenize the path for the config
+                let tokenized = self.resolver.tokenize(&exe_str);
+
+                probed.push(ProbedLocation {
+                    method: DetectionMethod::PeFile,
+                    location: exe_str,
+                    result: "found".into(),
+                });
+
+                candidates.push(DiscoveryCandidate {
+                    method: DetectionMethod::PeFile,
+                    config: DetectionConfig {
+                        method: DetectionMethod::PeFile,
+                        file_path: Some(tokenized),
+                        registry_key: None,
+                        registry_value: None,
+                        version_regex: None,
+                        product_code: None,
+                        upgrade_code: None,
+                        inf_provider: None,
+                        device_class: None,
+                        inf_name: None,
+                        fallback: None,
+                    },
+                    confidence,
+                    version,
+                    install_path: Some(dir.clone()),
+                    display_name: None,
+                    registry_key_name: None,
+                });
+            }
+        }
+
+        (candidates, probed)
     }
 
     #[cfg(not(windows))]
@@ -177,30 +423,153 @@ impl DiscoveryScanner {
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
         (vec![], vec![])
     }
+
+    // T006: Remaining probes — file_exists, config_file, ascom, wmi, driver_store
 
     async fn probe_file_exists(
         &self,
-        _software: &Software,
+        software: &Software,
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
-        // T006: Implement file exists probe
-        (vec![], vec![])
+        let mut candidates = Vec::new();
+        let mut probed = Vec::new();
+
+        // Check common locations for the package executable
+        let name = &software.name;
+        let slug = &software.slug;
+        let patterns = [
+            format!("{{program_files}}\\{name}\\{slug}.exe"),
+            format!("{{program_files}}\\{name}\\{name}.exe"),
+            format!("{{program_files_x86}}\\{name}\\{slug}.exe"),
+            format!("{{local_app_data}}\\{name}\\{slug}.exe"),
+        ];
+
+        for pattern in &patterns {
+            let Some(expanded) = self.resolver.expand(pattern) else {
+                continue;
+            };
+            let exists = std::path::Path::new(&expanded).exists();
+            probed.push(ProbedLocation {
+                method: DetectionMethod::FileExists,
+                location: expanded.clone(),
+                result: if exists { "found" } else { "not_found" }.into(),
+            });
+
+            if exists {
+                let tokenized = self.resolver.tokenize(&expanded);
+                candidates.push(DiscoveryCandidate {
+                    method: DetectionMethod::FileExists,
+                    config: DetectionConfig {
+                        method: DetectionMethod::FileExists,
+                        file_path: Some(tokenized),
+                        registry_key: None,
+                        registry_value: None,
+                        version_regex: None,
+                        product_code: None,
+                        upgrade_code: None,
+                        inf_provider: None,
+                        device_class: None,
+                        inf_name: None,
+                        fallback: None,
+                    },
+                    confidence: DiscoveryConfidence::Medium,
+                    version: None,
+                    install_path: Some(expanded),
+                    display_name: None,
+                    registry_key_name: None,
+                });
+            }
+        }
+
+        (candidates, probed)
     }
 
     async fn probe_config_file(
         &self,
         _software: &Software,
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
-        // T006: Implement config file probe
+        // ConfigFile detection requires knowing the config path and version regex.
+        // Discovery can't infer these — they must be provided in the manifest.
+        // No-op for blind discovery.
         (vec![], vec![])
     }
 
     #[cfg(windows)]
     async fn probe_ascom(
         &self,
-        _software: &Software,
+        software: &Software,
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
-        // T006: Implement ASCOM probe
-        (vec![], vec![])
+        use winreg::RegKey;
+        use winreg::enums::*;
+
+        let mut candidates = Vec::new();
+        let mut probed = Vec::new();
+
+        let search_name = software.name.to_lowercase();
+
+        // ASCOM drivers register under HKLM\SOFTWARE\ASCOM\{DeviceType} Drivers
+        let device_types = [
+            "Camera",
+            "Telescope",
+            "Focuser",
+            "FilterWheel",
+            "Dome",
+            "Rotator",
+            "Switch",
+            "SafetyMonitor",
+            "ObservingConditions",
+        ];
+
+        let root = RegKey::predef(HKEY_LOCAL_MACHINE);
+        for device_type in device_types {
+            let path = format!(r"SOFTWARE\ASCOM\{device_type} Drivers");
+            let Ok(drivers_key) = root.open_subkey_with_flags(&path, KEY_READ) else {
+                continue;
+            };
+
+            for subkey_name in drivers_key.enum_keys().flatten() {
+                let Ok(subkey) = drivers_key.open_subkey(&subkey_name) else {
+                    continue;
+                };
+
+                // Check if the driver name matches
+                let driver_name: String = subkey.get_value("").unwrap_or_default();
+                let matches = driver_name.to_lowercase().contains(&search_name)
+                    || subkey_name.to_lowercase().contains(&search_name);
+
+                let location = format!("{path}\\{subkey_name}");
+                probed.push(ProbedLocation {
+                    method: DetectionMethod::AscomProfile,
+                    location: location.clone(),
+                    result: if matches { "found" } else { "not_found" }.into(),
+                });
+
+                if matches {
+                    candidates.push(DiscoveryCandidate {
+                        method: DetectionMethod::AscomProfile,
+                        config: DetectionConfig {
+                            method: DetectionMethod::AscomProfile,
+                            registry_key: Some(format!("{device_type} Drivers\\{subkey_name}")),
+                            registry_value: None,
+                            file_path: None,
+                            version_regex: None,
+                            product_code: None,
+                            upgrade_code: None,
+                            inf_provider: None,
+                            device_class: None,
+                            inf_name: None,
+                            fallback: None,
+                        },
+                        confidence: DiscoveryConfidence::Low,
+                        version: None,
+                        install_path: None,
+                        display_name: Some(driver_name),
+                        registry_key_name: Some(subkey_name),
+                    });
+                }
+            }
+        }
+
+        (candidates, probed)
     }
 
     #[cfg(not(windows))]
@@ -214,10 +583,99 @@ impl DiscoveryScanner {
     #[cfg(windows)]
     async fn probe_wmi(
         &self,
-        _software: &Software,
+        software: &Software,
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
-        // T006: Implement WMI probe
-        (vec![], vec![])
+        let mut candidates = Vec::new();
+        let mut probed = Vec::new();
+
+        let search_name = software.name.to_lowercase();
+        let publisher = software.publisher.as_deref().unwrap_or("").to_lowercase();
+
+        let wmi_result: Result<Vec<std::collections::HashMap<String, wmi::Variant>>, _> =
+            tokio::time::timeout(std::time::Duration::from_secs(10), async {
+                tokio::task::spawn_blocking(move || {
+                    let com = wmi::COMLibrary::new().ok()?;
+                    let wmi_con = wmi::WMIConnection::new(com).ok()?;
+                    wmi_con
+                        .raw_query("SELECT DriverProviderName, DriverVersion, DeviceClass, InfName FROM Win32_PnPSignedDriver")
+                        .ok()
+                })
+                .await
+                .ok()?
+            })
+            .await;
+
+        let drivers = match wmi_result {
+            Ok(Some(drivers)) => drivers,
+            _ => {
+                probed.push(ProbedLocation {
+                    method: DetectionMethod::Wmi,
+                    location: "Win32_PnPSignedDriver".into(),
+                    result: "error: WMI query failed or timed out".into(),
+                });
+                return (candidates, probed);
+            }
+        };
+
+        for driver in &drivers {
+            let provider = driver
+                .get("DriverProviderName")
+                .and_then(|v| match v {
+                    wmi::Variant::String(s) => Some(s.as_str()),
+                    _ => None,
+                })
+                .unwrap_or("");
+
+            let matches = provider.to_lowercase().contains(&search_name)
+                || (!publisher.is_empty() && provider.to_lowercase().contains(&publisher));
+
+            if !matches {
+                continue;
+            }
+
+            let version_str = driver.get("DriverVersion").and_then(|v| match v {
+                wmi::Variant::String(s) => Some(s.clone()),
+                _ => None,
+            });
+            let device_class = driver.get("DeviceClass").and_then(|v| match v {
+                wmi::Variant::String(s) => Some(s.clone()),
+                _ => None,
+            });
+            let inf_name = driver.get("InfName").and_then(|v| match v {
+                wmi::Variant::String(s) => Some(s.clone()),
+                _ => None,
+            });
+
+            probed.push(ProbedLocation {
+                method: DetectionMethod::Wmi,
+                location: format!("WMI: {provider}"),
+                result: "found".into(),
+            });
+
+            candidates.push(DiscoveryCandidate {
+                method: DetectionMethod::Wmi,
+                config: DetectionConfig {
+                    method: DetectionMethod::Wmi,
+                    inf_provider: Some(provider.to_string()),
+                    device_class: device_class.clone(),
+                    inf_name: inf_name.clone(),
+                    registry_key: None,
+                    registry_value: None,
+                    file_path: None,
+                    version_regex: None,
+                    product_code: None,
+                    upgrade_code: None,
+                    fallback: None,
+                },
+                confidence: DiscoveryConfidence::Low,
+                version: version_str.map(|s| Version::parse(&s)),
+                install_path: None,
+                display_name: Some(provider.to_string()),
+                registry_key_name: None,
+            });
+        }
+
+        (candidates, probed)
     }
 
     #[cfg(not(windows))]
@@ -231,9 +689,12 @@ impl DiscoveryScanner {
     #[cfg(windows)]
     async fn probe_driver_store(
         &self,
-        _software: &Software,
+        software: &Software,
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
-        // T006: Implement driver store probe
+        // DriverStore detection uses WMI backend with InfName filter.
+        // Discovery delegates to probe_wmi which already captures InfName.
+        // No separate probe needed — WMI results with InfName are sufficient.
+        let _ = software;
         (vec![], vec![])
     }
 
@@ -353,11 +814,7 @@ mod tests {
                 DiscoveryConfidence::High,
                 Some("1.0.0"),
             ),
-            make_candidate(
-                DetectionMethod::Registry,
-                DiscoveryConfidence::Medium,
-                None,
-            ),
+            make_candidate(DetectionMethod::Registry, DiscoveryConfidence::Medium, None),
             make_candidate(
                 DetectionMethod::PeFile,
                 DiscoveryConfidence::High,
