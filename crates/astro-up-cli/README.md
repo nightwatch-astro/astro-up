@@ -8,7 +8,7 @@ CLI for [Astro-Up](https://github.com/nightwatch-astro/astro-up) — manage astr
 cargo install astro-up-cli
 ```
 
-Or download a pre-built binary from [GitHub Releases](https://github.com/nightwatch-astro/astro-up/releases).
+Or download a pre-built binary from the [latest release](https://github.com/nightwatch-astro/astro-up/releases/latest).
 
 ## Documentation
 
