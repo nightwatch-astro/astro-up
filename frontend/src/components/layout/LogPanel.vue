@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from "vue";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import type { LogEntry } from "../../types/operations";
 
 const props = defineProps<{
@@ -115,7 +115,7 @@ defineExpose({ addEntry, clearLog });
     />
     <div class="log-header">
       <span class="log-title">Log</span>
-      <Dropdown
+      <Select
         v-model="logFilter"
         :options="filterOptions"
         option-label="label"
@@ -206,7 +206,7 @@ defineExpose({ addEntry, clearLog });
   font-size: 11px;
 }
 
-:deep(.log-filter .p-dropdown-label) {
+:deep(.log-filter .p-select-label) {
   padding: 2px 8px;
   font-size: 11px;
 }

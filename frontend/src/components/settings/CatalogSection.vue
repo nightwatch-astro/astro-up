@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import InputText from "primevue/inputtext";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import Button from "primevue/button";
 import { invoke } from "@tauri-apps/api/core";
 import type { CatalogConfig } from "../../types/config";
@@ -37,7 +37,7 @@ async function redownloadCatalog() {
     </div>
     <div class="field">
       <label>Cache TTL</label>
-      <Dropdown
+      <Select
         v-model="config.cache_ttl"
         :options="cacheTtlOptions"
         option-label="label"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import Button from "primevue/button";
 import type { BackupListEntry } from "../../types/backup";
 
@@ -42,7 +42,7 @@ watch(selectedApp, () => {
       Quick Restore
     </h3>
     <div class="restore-controls">
-      <Dropdown
+      <Select
         v-model="selectedApp"
         :options="apps"
         option-label="label"
@@ -50,7 +50,7 @@ watch(selectedApp, () => {
         placeholder="Select application..."
         class="restore-dropdown"
       />
-      <Dropdown
+      <Select
         v-model="selectedBackup"
         :options="filteredBackups"
         option-label="label"
