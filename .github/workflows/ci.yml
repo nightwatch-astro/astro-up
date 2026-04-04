@@ -30,6 +30,8 @@ jobs:
     outputs:
       gui: ${{ steps.filter.outputs.gui }}
       crates: ${{ steps.filter.outputs.crates }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docs: ${{ steps.filter.outputs.docs }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
@@ -44,11 +46,17 @@ jobs:
               - 'crates/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
+            frontend:
+              - 'frontend/**'
+            docs:
+              - 'docs/**'
 
-  # Fast path: core + cli only (~30s). Runs on every PR.
+  # Fast path: core + cli only (~30s). Skip on docs-only changes.
   check-rust:
     name: Rust Checks
+    needs: changes
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.docs != 'true' || needs.changes.outputs.crates == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -81,7 +89,9 @@ jobs:
 
   check-frontend:
     name: Frontend Checks
+    needs: changes
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.docs != 'true' || needs.changes.outputs.frontend == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5

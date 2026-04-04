@@ -9,8 +9,10 @@ use std::io::IsTerminal;
 pub enum OutputMode {
     /// TTY with colors, tables, ratatui TUI.
     Interactive,
-    /// No colors, no TUI (piped output or --quiet).
+    /// No colors, no TUI (piped output).
     Plain,
+    /// Suppress non-error output (--quiet).
+    Quiet,
     /// Structured JSON to stdout.
     Json,
 }
@@ -19,10 +21,17 @@ impl OutputMode {
     pub fn detect(json: bool, quiet: bool) -> Self {
         if json {
             Self::Json
-        } else if !std::io::stdout().is_terminal() || quiet {
+        } else if quiet {
+            Self::Quiet
+        } else if !std::io::stdout().is_terminal() {
             Self::Plain
         } else {
             Self::Interactive
         }
+    }
+
+    /// Whether user-facing messages should be printed.
+    pub fn should_print(&self) -> bool {
+        !matches!(self, Self::Quiet)
     }
 }

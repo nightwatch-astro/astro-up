@@ -28,7 +28,9 @@ pub async fn handle_restore(
         if *mode == OutputMode::Json {
             return print_json(&serde_json::json!({"package": package, "backups": []}));
         }
-        println!("No backups found for '{package}'.");
+        if mode.should_print() {
+            println!("No backups found for '{package}'.");
+        }
         return Ok(());
     }
 

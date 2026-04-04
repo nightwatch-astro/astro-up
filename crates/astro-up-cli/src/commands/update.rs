@@ -27,7 +27,9 @@ pub async fn handle_update(
                 &serde_json::json!({"updates": [], "note": "update requires Windows"}),
             );
         }
-        println!("Update requires Windows for software detection.");
+        if mode.should_print() {
+            println!("Update requires Windows for software detection.");
+        }
         return Ok(());
     }
 
@@ -40,24 +42,34 @@ pub async fn handle_update(
     }
 
     if updates.is_empty() {
-        println!("All packages are up to date.");
+        if mode.should_print() {
+            println!("All packages are up to date.");
+        }
         return Ok(());
     }
 
-    print_update_plan(&updates)?;
+    if mode.should_print() {
+        print_update_plan(&updates)?;
+    }
 
     if dry_run {
-        println!("\n(dry run — no changes made)");
+        if mode.should_print() {
+            println!("\n(dry run — no changes made)");
+        }
         return Ok(());
     }
 
     if !confirm("Proceed with updates?", mode, yes)? {
-        println!("Cancelled.");
+        if mode.should_print() {
+            println!("Cancelled.");
+        }
         return Ok(());
     }
 
-    println!("Updating...");
-    println!("Update complete.");
+    if mode.should_print() {
+        println!("Updating...");
+        println!("Update complete.");
+    }
     Ok(())
 }
 

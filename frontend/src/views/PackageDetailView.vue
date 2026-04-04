@@ -94,7 +94,10 @@ function confirmBackup() {
       />
 
       <div class="detail-content">
-        <Tabs v-if="tabsReady" value="0">
+        <Tabs
+          v-if="tabsReady"
+          value="0"
+        >
           <TabList>
             <Tab value="0">
               Overview
