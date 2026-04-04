@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import Select from "primevue/select";
 import ToggleSwitch from "primevue/toggleswitch";
+import Button from "primevue/button";
 import type { LogConfig } from "../../types/config";
+import { useFilePicker } from "../../composables/useFilePicker";
 
 const config = defineModel<LogConfig>({ required: true });
 
@@ -12,6 +14,15 @@ const levelOptions = [
   { label: "Debug", value: "debug" },
   { label: "Trace", value: "trace" },
 ];
+
+const { pickLogFile } = useFilePicker();
+
+async function browseLogFile() {
+  const selected = await pickLogFile(config.value.log_file || undefined);
+  if (selected) {
+    config.value.log_file = selected;
+  }
+}
 </script>
 
 <template>
@@ -30,11 +41,20 @@ const levelOptions = [
       <label>Log to file</label>
     </div>
     <div
-      v-if="config.log_to_file && config.log_file"
-      class="log-path"
+      v-if="config.log_to_file"
+      class="field"
     >
-      <span class="log-path-label">Log file:</span>
-      <code class="log-path-value">{{ config.log_file }}</code>
+      <label>Log file</label>
+      <div class="path-row">
+        <code class="path-display">{{ config.log_file || "Not set" }}</code>
+        <Button
+          label="Browse"
+          icon="pi pi-file"
+          outlined
+          size="small"
+          @click="browseLogFile"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -45,7 +65,15 @@ const levelOptions = [
 .field label { font-size: 13px; font-weight: 500; color: var(--p-surface-300); }
 .field-toggle { display: flex; align-items: center; gap: 10px; }
 .field-toggle label { font-size: 13px; color: var(--p-surface-300); }
-.log-path { display: flex; align-items: center; gap: 8px; }
-.log-path-label { font-size: 12px; color: var(--p-surface-400); }
-.log-path-value { font-size: 12px; color: var(--p-surface-300); background: var(--p-surface-800); padding: 4px 8px; border-radius: 4px; word-break: break-all; }
+.path-row { display: flex; align-items: center; gap: 8px; }
+.path-display {
+  flex: 1;
+  font-size: 12px;
+  color: var(--p-surface-300);
+  background: var(--p-surface-800);
+  padding: 6px 10px;
+  border-radius: 6px;
+  word-break: break-all;
+  min-height: 20px;
+}
 </style>
