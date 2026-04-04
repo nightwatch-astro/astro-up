@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::catalog::manifest::ManifestReader;
 use crate::detect::PathResolver;
-use crate::detect::discovery::{DiscoveryResult, DiscoveryScanner};
+use crate::detect::discovery::DiscoveryScanner;
 use crate::error::CoreError;
 use crate::types::{DetectionConfig, Software, Version};
 
@@ -95,7 +95,7 @@ impl LifecycleRunner {
         let mut discovered_config = None;
 
         // Phase 1: Download
-        let download_result = Self::run_download(&software, &version_str, &options).await;
+        let download_result = Self::run_download(&software, &version_str, options).await;
         let download_ok = matches!(download_result.status, PhaseStatus::Pass);
         let download_path = if download_ok {
             download_result.logs.first().cloned().map(PathBuf::from)
@@ -134,7 +134,7 @@ impl LifecycleRunner {
 
             // Phase 2: Install
             let install_result =
-                Self::run_install(&software, download_path.as_deref(), &options).await;
+                Self::run_install(&software, download_path.as_deref(), options).await;
             let install_ok = matches!(install_result.status, PhaseStatus::Pass);
             phases.push(install_result);
 
@@ -253,7 +253,7 @@ impl LifecycleRunner {
     async fn run_download(
         software: &Software,
         version: &str,
-        options: &LifecycleOptions,
+        _options: &LifecycleOptions,
     ) -> PhaseResult {
         let start = Instant::now();
 
@@ -294,14 +294,14 @@ impl LifecycleRunner {
         // This is a placeholder for the orchestration structure.
         #[cfg(not(windows))]
         {
-            return PhaseResult {
+            PhaseResult {
                 phase: "install".into(),
                 status: PhaseStatus::Skipped,
                 duration: start.elapsed(),
                 exit_code: None,
                 logs: vec![],
                 warnings: vec!["install requires Windows".into()],
-            };
+            }
         }
 
         #[cfg(windows)]
@@ -422,14 +422,14 @@ impl LifecycleRunner {
         #[cfg(not(windows))]
         {
             let _ = package_id;
-            return PhaseResult {
+            PhaseResult {
                 phase: "uninstall".into(),
                 status: PhaseStatus::Skipped,
                 duration: start.elapsed(),
                 exit_code: None,
                 logs: vec![],
                 warnings: vec!["uninstall requires Windows".into()],
-            };
+            }
         }
 
         #[cfg(windows)]
