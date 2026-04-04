@@ -469,35 +469,28 @@ pub async fn install_software(
         "Command invoked"
     );
 
-    let app_clone = app.clone();
-    let op_id_clone = op_id.clone();
-
-    tauri::async_runtime::spawn(async move {
-        let state_ref = app_clone.state::<AppState>();
-        match run_orchestrated_operation(&app_clone, &state_ref, &[&id], &op_id_clone, token).await
-        {
-            Ok(_) => {
-                tracing::info!(command = "install_software", package = id, "Completed");
-            }
-            Err(e) => {
-                tracing::error!(command = "install_software", package = id, error = %e, "Failed");
-                emit_event(
-                    &app_clone,
-                    &Event::InstallFailed {
-                        id: id.clone(),
-                        error: e.message,
-                    },
-                );
-            }
+    match run_orchestrated_operation(&app, &state, &[&id], &op_id, token).await {
+        Ok(_) => {
+            tracing::info!(command = "install_software", package = id, "Completed");
         }
-        state_ref.remove_operation(&op_id_clone.id);
-    });
+        Err(e) => {
+            tracing::error!(command = "install_software", package = id, error = %e, "Failed");
+            emit_event(
+                &app,
+                &Event::InstallFailed {
+                    id: id.clone(),
+                    error: e.message,
+                },
+            );
+        }
+    }
+    state.remove_operation(&op_id.id);
 
     tracing::debug!(
         command = "install_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command dispatched"
+        "Command completed"
     );
     Ok(op_id)
 }
@@ -517,35 +510,28 @@ pub async fn update_software(
         "Command invoked"
     );
 
-    let app_clone = app.clone();
-    let op_id_clone = op_id.clone();
-
-    tauri::async_runtime::spawn(async move {
-        let state_ref = app_clone.state::<AppState>();
-        match run_orchestrated_operation(&app_clone, &state_ref, &[&id], &op_id_clone, token).await
-        {
-            Ok(_) => {
-                tracing::info!(command = "update_software", package = id, "Completed");
-            }
-            Err(e) => {
-                tracing::error!(command = "update_software", package = id, error = %e, "Failed");
-                emit_event(
-                    &app_clone,
-                    &Event::InstallFailed {
-                        id: id.clone(),
-                        error: e.message,
-                    },
-                );
-            }
+    match run_orchestrated_operation(&app, &state, &[&id], &op_id, token).await {
+        Ok(_) => {
+            tracing::info!(command = "update_software", package = id, "Completed");
         }
-        state_ref.remove_operation(&op_id_clone.id);
-    });
+        Err(e) => {
+            tracing::error!(command = "update_software", package = id, error = %e, "Failed");
+            emit_event(
+                &app,
+                &Event::InstallFailed {
+                    id: id.clone(),
+                    error: e.message,
+                },
+            );
+        }
+    }
+    state.remove_operation(&op_id.id);
 
     tracing::debug!(
         command = "update_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command dispatched"
+        "Command completed"
     );
     Ok(op_id)
 }
@@ -563,35 +549,28 @@ pub async fn update_all(
         "Updating all packages..."
     );
 
-    let app_clone = app.clone();
-    let op_id_clone = op_id.clone();
-
-    tauri::async_runtime::spawn(async move {
-        let state_ref = app_clone.state::<AppState>();
-        // Empty packages vec → plan_all() plans every package with an available update
-        match run_orchestrated_operation(&app_clone, &state_ref, &[], &op_id_clone, token).await {
-            Ok(_) => {
-                tracing::info!(command = "update_all", "Completed");
-            }
-            Err(e) => {
-                tracing::error!(command = "update_all", error = %e, "Failed");
-                emit_event(
-                    &app_clone,
-                    &Event::Error {
-                        id: "update-all".into(),
-                        error: e.message,
-                    },
-                );
-            }
+    match run_orchestrated_operation(&app, &state, &[], &op_id, token).await {
+        Ok(_) => {
+            tracing::info!(command = "update_all", "Completed");
         }
-        state_ref.remove_operation(&op_id_clone.id);
-    });
+        Err(e) => {
+            tracing::error!(command = "update_all", error = %e, "Failed");
+            emit_event(
+                &app,
+                &Event::Error {
+                    id: "update-all".into(),
+                    error: e.message,
+                },
+            );
+        }
+    }
+    state.remove_operation(&op_id.id);
 
     tracing::debug!(
         command = "update_all",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
-        "Command dispatched"
+        "Command completed"
     );
     Ok(op_id)
 }
