@@ -194,6 +194,7 @@ fn build_success_orchestrator(
         SuccessInstaller,
         MockBackupManager,
         Arc::new(std::sync::Mutex::new(db)),
+        std::env::temp_dir().join("astro-up").join("downloads"),
     )
 }
 
@@ -218,6 +219,7 @@ fn build_failing_installer_with_backup_orchestrator(
         FailingInstaller,
         BackupWithPathManager,
         Arc::new(std::sync::Mutex::new(db)),
+        std::env::temp_dir().join("astro-up").join("downloads"),
     )
 }
 
