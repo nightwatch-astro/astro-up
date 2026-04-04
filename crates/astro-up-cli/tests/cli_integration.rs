@@ -30,7 +30,9 @@ fn short_help_shows_about() {
         .arg("-h")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Astrophotography software manager"));
+        .stdout(predicate::str::contains(
+            "Astrophotography software manager",
+        ));
 }
 
 #[test]
@@ -145,10 +147,7 @@ fn config_missing_subcommand_fails() {
 
 #[test]
 fn unknown_command_fails() {
-    cmd()
-        .arg("frobnicate")
-        .assert()
-        .failure();
+    cmd().arg("frobnicate").assert().failure();
 }
 
 // =========================================================================
@@ -157,10 +156,7 @@ fn unknown_command_fails() {
 
 #[test]
 fn json_scan_returns_valid_json() {
-    let output = cmd()
-        .args(["--json", "scan"])
-        .output()
-        .unwrap();
+    let output = cmd().args(["--json", "scan"]).output().unwrap();
     assert!(output.status.success());
     let parsed: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON");
@@ -170,10 +166,7 @@ fn json_scan_returns_valid_json() {
 
 #[test]
 fn json_config_show_returns_valid_json() {
-    let output = cmd()
-        .args(["--json", "config", "show"])
-        .output()
-        .unwrap();
+    let output = cmd().args(["--json", "config", "show"]).output().unwrap();
     assert!(output.status.success());
     let parsed: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON");
@@ -183,10 +176,7 @@ fn json_config_show_returns_valid_json() {
 
 #[test]
 fn json_self_update_returns_valid_json() {
-    let output = cmd()
-        .args(["--json", "self-update"])
-        .output()
-        .unwrap();
+    let output = cmd().args(["--json", "self-update"]).output().unwrap();
     assert!(output.status.success());
     let parsed: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON");
@@ -207,10 +197,7 @@ fn json_self_update_dry_run_returns_valid_json() {
 
 #[test]
 fn json_update_returns_valid_json() {
-    let output = cmd()
-        .args(["--json", "update"])
-        .output()
-        .unwrap();
+    let output = cmd().args(["--json", "update"]).output().unwrap();
     assert!(output.status.success());
     let parsed: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON");
@@ -231,10 +218,7 @@ fn json_show_installed_returns_valid_json() {
 
 #[test]
 fn json_show_outdated_returns_valid_json() {
-    let output = cmd()
-        .args(["--json", "show", "outdated"])
-        .output()
-        .unwrap();
+    let output = cmd().args(["--json", "show", "outdated"]).output().unwrap();
     assert!(output.status.success());
     let parsed: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON");
@@ -243,10 +227,7 @@ fn json_show_outdated_returns_valid_json() {
 
 #[test]
 fn json_show_backups_returns_valid_json() {
-    let output = cmd()
-        .args(["--json", "show", "backups"])
-        .output()
-        .unwrap();
+    let output = cmd().args(["--json", "show", "backups"]).output().unwrap();
     assert!(output.status.success());
     let parsed: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("stdout should be valid JSON");
@@ -351,26 +332,17 @@ fn self_update_dry_run_mentions_dry_run() {
 #[test]
 fn show_installed_does_not_fail_without_catalog() {
     // This should succeed immediately without trying to download the catalog
-    cmd()
-        .args(["show", "installed"])
-        .assert()
-        .success();
+    cmd().args(["show", "installed"]).assert().success();
 }
 
 #[test]
 fn show_outdated_does_not_fail_without_catalog() {
-    cmd()
-        .args(["show", "outdated"])
-        .assert()
-        .success();
+    cmd().args(["show", "outdated"]).assert().success();
 }
 
 #[test]
 fn show_backups_does_not_fail_without_catalog() {
-    cmd()
-        .args(["show", "backups"])
-        .assert()
-        .success();
+    cmd().args(["show", "backups"]).assert().success();
 }
 
 // =========================================================================
@@ -401,23 +373,15 @@ mod non_windows {
 
     #[test]
     fn json_scan_includes_platform_note() {
-        let output = cmd()
-            .args(["--json", "scan"])
-            .output()
-            .unwrap();
-        let parsed: serde_json::Value =
-            serde_json::from_slice(&output.stdout).unwrap();
+        let output = cmd().args(["--json", "scan"]).output().unwrap();
+        let parsed: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(parsed["note"], "detection requires Windows");
     }
 
     #[test]
     fn json_update_includes_platform_note() {
-        let output = cmd()
-            .args(["--json", "update"])
-            .output()
-            .unwrap();
-        let parsed: serde_json::Value =
-            serde_json::from_slice(&output.stdout).unwrap();
+        let output = cmd().args(["--json", "update"]).output().unwrap();
+        let parsed: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(parsed["note"], "update requires Windows");
     }
 }
@@ -433,29 +397,19 @@ mod windows {
     #[test]
     fn scan_runs_on_windows() {
         // On Windows, scan should succeed (even with empty results)
-        cmd()
-            .arg("scan")
-            .assert()
-            .success();
+        cmd().arg("scan").assert().success();
     }
 
     #[test]
     fn json_scan_on_windows_has_no_platform_note() {
-        let output = cmd()
-            .args(["--json", "scan"])
-            .output()
-            .unwrap();
-        let parsed: serde_json::Value =
-            serde_json::from_slice(&output.stdout).unwrap();
+        let output = cmd().args(["--json", "scan"]).output().unwrap();
+        let parsed: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
         assert!(parsed.get("note").is_none() || parsed["note"].is_null());
     }
 
     #[test]
     fn update_runs_on_windows() {
-        cmd()
-            .arg("update")
-            .assert()
-            .success();
+        cmd().arg("update").assert().success();
     }
 
     #[test]

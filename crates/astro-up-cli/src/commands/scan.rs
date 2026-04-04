@@ -18,7 +18,9 @@ pub async fn handle_scan(mode: &OutputMode) -> Result<()> {
             });
         }
         if mode.should_print() {
-            println!("Software detection requires Windows. Scan is not available on this platform.");
+            println!(
+                "Software detection requires Windows. Scan is not available on this platform."
+            );
         }
         return Ok(());
     }
