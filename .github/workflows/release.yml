@@ -79,10 +79,10 @@ jobs:
         include:
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            artifact: astro-up-cli.exe
+            artifact: astro-up.exe
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact: astro-up-cli
+            artifact: astro-up
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -96,12 +96,13 @@ jobs:
       - name: Upload to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release.outputs.tag }}
           TARGET: ${{ matrix.target }}
         shell: bash
         run: |
+          TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           ARTIFACT="target/${TARGET}/release/${{ matrix.artifact }}"
-          UPLOAD_NAME="astro-up-cli-${TARGET}${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}"
+          EXT="${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}"
+          UPLOAD_NAME="astro-up-${TARGET}${EXT}"
           cp "${ARTIFACT}" "${UPLOAD_NAME}"
           gh release upload "${TAG}" "${UPLOAD_NAME}" --clobber
 
