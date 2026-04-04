@@ -380,7 +380,7 @@ async fn single_package_happy_path_events_in_order() {
 
     // Verify PackageComplete content
     assert!(
-        matches!(&captured[2], Event::PackageComplete { package_id, status }
+        matches!(&captured[2], Event::PackageComplete { package_id, status, .. }
             if *package_id == PackageId::new("nina-app").unwrap() && status == "succeeded"),
         "PackageComplete should report succeeded"
     );

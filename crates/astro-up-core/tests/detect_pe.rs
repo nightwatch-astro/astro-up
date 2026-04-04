@@ -4,7 +4,9 @@ use astro_up_core::detect::pe;
 fn pe_fixture_extracts_version() {
     let result = pe::read_pe_version_sync("tests/fixtures/test.exe");
     match result {
-        astro_up_core::detect::DetectionResult::Installed { version, method } => {
+        astro_up_core::detect::DetectionResult::Installed {
+            version, method, ..
+        } => {
             assert_eq!(version.raw, "3.2.1");
             assert_eq!(method, astro_up_core::types::DetectionMethod::PeFile);
         }
