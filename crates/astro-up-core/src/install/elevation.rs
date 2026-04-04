@@ -55,48 +55,49 @@ pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
             Err(CoreError::ElevationRequired)
         }
     } else {
-        use super::wide::to_wide_null;
-
+        // ShellExecuteExW uses PCWSTR (*const u16) which is !Send.
+        // Move the entire call into spawn_blocking to keep the async future Send.
+        let exe_path = current_exe.to_string_lossy().to_string();
         let args_str = args.join(" ");
-        let exe_wide = to_wide_null(&current_exe.to_string_lossy());
-        let args_wide = to_wide_null(&args_str);
-        let verb_wide = to_wide_null("runas");
 
-        use windows::Win32::UI::Shell::*;
-        use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
-        use windows::core::PCWSTR;
+        tokio::task::spawn_blocking(move || {
+            use super::wide::to_wide_null;
+            use windows::Win32::UI::Shell::*;
+            use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
+            use windows::core::PCWSTR;
 
-        let mut sei = SHELLEXECUTEINFOW {
-            cbSize: std::mem::size_of::<SHELLEXECUTEINFOW>() as u32,
-            fMask: SEE_MASK_NOCLOSEPROCESS,
-            lpVerb: PCWSTR(verb_wide.as_ptr()),
-            lpFile: PCWSTR(exe_wide.as_ptr()),
-            lpParameters: PCWSTR(args_wide.as_ptr()),
-            nShow: SW_HIDE.0,
-            ..Default::default()
-        };
+            let exe_wide = to_wide_null(&exe_path);
+            let args_wide = to_wide_null(&args_str);
+            let verb_wide = to_wide_null("runas");
 
-        let success = unsafe { ShellExecuteExW(&mut sei) };
-        if success.is_ok() {
-            if !sei.hProcess.is_invalid() {
-                // Extract raw handle as isize so it's Send-safe across spawn_blocking
-                let raw_handle = sei.hProcess.0 as isize;
-                tokio::task::spawn_blocking(move || unsafe {
-                    use windows::Win32::Foundation::HANDLE;
-                    let handle = HANDLE(raw_handle as *mut std::ffi::c_void);
-                    windows::Win32::System::Threading::WaitForSingleObject(
-                        handle,
-                        windows::Win32::System::Threading::INFINITE,
-                    );
-                    windows::Win32::Foundation::CloseHandle(handle).ok();
-                })
-                .await
-                .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
+            let mut sei = SHELLEXECUTEINFOW {
+                cbSize: std::mem::size_of::<SHELLEXECUTEINFOW>() as u32,
+                fMask: SEE_MASK_NOCLOSEPROCESS,
+                lpVerb: PCWSTR(verb_wide.as_ptr()),
+                lpFile: PCWSTR(exe_wide.as_ptr()),
+                lpParameters: PCWSTR(args_wide.as_ptr()),
+                nShow: SW_HIDE.0,
+                ..Default::default()
+            };
+
+            let success = unsafe { ShellExecuteExW(&mut sei) };
+            if success.is_ok() {
+                if !sei.hProcess.is_invalid() {
+                    unsafe {
+                        windows::Win32::System::Threading::WaitForSingleObject(
+                            sei.hProcess,
+                            windows::Win32::System::Threading::INFINITE,
+                        );
+                        windows::Win32::Foundation::CloseHandle(sei.hProcess).ok();
+                    }
+                }
+                Ok(())
+            } else {
+                Err(CoreError::ElevationRequired)
             }
-            Ok(())
-        } else {
-            Err(CoreError::ElevationRequired)
-        }
+        })
+        .await
+        .map_err(|e| CoreError::Io(std::io::Error::other(e)))??
     }
 }
 
