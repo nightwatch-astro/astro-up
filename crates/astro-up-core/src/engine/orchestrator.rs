@@ -323,7 +323,28 @@ where
 
         check_cancel!();
 
-        // 4. Download
+        // 4. Download — validate URL first
+        if planned.version_entry.url.is_empty() {
+            let err_msg = format!(
+                "no download URL in catalog for {} {}",
+                pkg_id, planned.version_entry.version
+            );
+            on_event(Event::PackageComplete {
+                package_id: pkg_id.clone(),
+                status: "failed".into(),
+                error: Some(err_msg.clone()),
+            });
+            return PackageResult {
+                package_id: pkg_id.clone(),
+                from_version: planned.current_version.clone(),
+                to_version: planned.target_version.clone(),
+                status: super::history::OperationStatus::Failed,
+                duration: start.elapsed(),
+                error: Some(err_msg),
+                backup_path: None,
+            };
+        }
+
         let download_request = crate::download::DownloadRequest {
             url: planned.version_entry.url.clone(),
             expected_hash: planned.version_entry.sha256.clone(),
@@ -658,6 +679,16 @@ where
                     continue;
                 }
             };
+
+            // Skip packages with empty download URLs (catalog data issue)
+            if ve.url.is_empty() {
+                tracing::warn!(
+                    package = %sw.id,
+                    version = %ve.version,
+                    "skipping package: catalog entry has no download URL"
+                );
+                continue;
+            }
 
             let version_format: VersionFormat = sw
                 .versioning
