@@ -1,3 +1,4 @@
+pub mod adapters;
 pub mod backup;
 pub mod catalog;
 pub mod config;
@@ -13,6 +14,9 @@ pub mod metrics;
 pub mod release;
 pub mod traits;
 pub mod types;
+
+// Re-export rusqlite for consumers that need direct Connection access (orchestrator).
+pub use rusqlite;
 
 /// Returns the version of astro-up-core.
 pub fn version() -> &'static str {

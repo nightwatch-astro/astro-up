@@ -8,7 +8,7 @@ Install, detect, and update imaging software from one place.
 
 Documentation: https://nightwatch-astro.github.io/astro-up/
 
-Usage: astro-up-cli [OPTIONS] <COMMAND>
+Usage: astro-up [OPTIONS] <COMMAND>
 
 Commands:
   show         Show software status

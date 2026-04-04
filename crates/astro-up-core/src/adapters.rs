@@ -1,12 +1,17 @@
+//! Concrete adapters for Scanner traits.
+//!
+//! These bridge the catalog/ledger storage to the trait interfaces used by
+//! the detection scanner. Shared by both the CLI and GUI crates.
+
 use std::path::PathBuf;
 
-use astro_up_core::catalog::SqliteCatalogReader;
-use astro_up_core::detect::DetectionError;
-use astro_up_core::detect::scanner::{LedgerStore, PackageSource};
-use astro_up_core::ledger::{LedgerEntry, LedgerSource};
-use astro_up_core::types::{Software, Version};
+use crate::catalog::SqliteCatalogReader;
+use crate::detect::DetectionError;
+use crate::detect::scanner::{LedgerStore, PackageSource};
+use crate::ledger::{LedgerEntry, LedgerSource};
+use crate::types::{Software, Version};
 
-/// Adapter: catalog reader → PackageSource trait for the scanner.
+/// Adapter: catalog reader -> PackageSource trait for the scanner.
 pub struct CatalogPackageSource {
     catalog_path: PathBuf,
 }
@@ -28,8 +33,8 @@ impl PackageSource for CatalogPackageSource {
 
     fn latest_version(
         &self,
-        id: &astro_up_core::catalog::PackageId,
-    ) -> Result<Option<astro_up_core::catalog::VersionEntry>, DetectionError> {
+        id: &crate::catalog::PackageId,
+    ) -> Result<Option<crate::catalog::VersionEntry>, DetectionError> {
         let reader = SqliteCatalogReader::open(&self.catalog_path)
             .map_err(|e| DetectionError::CatalogError(e.to_string()))?;
         reader
@@ -38,9 +43,7 @@ impl PackageSource for CatalogPackageSource {
     }
 }
 
-/// Adapter: SQLite → LedgerStore trait for the scanner.
-///
-/// Stores Acknowledged detection results in the app database.
+/// Adapter: SQLite -> LedgerStore trait for the scanner.
 pub struct SqliteLedgerStore {
     db_path: PathBuf,
 }

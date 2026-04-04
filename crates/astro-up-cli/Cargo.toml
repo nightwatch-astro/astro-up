@@ -1,22 +1,28 @@
 [package]
 name = "astro-up-cli"
 version = "0.1.0"
-description = "CLI for astro-up — clap + ratatui astrophotography software manager"
+description = "CLI for astro-up — astrophotography software manager"
 publish = false
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[[bin]]
+name = "astro-up"
+path = "src/main.rs"
+
 [dependencies]
 astro-up-core.workspace = true
-anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
 color-eyre = "0.6"
 dialoguer = "0.11"
 directories = "6.0"
 human-panic = "2"
+indicatif = { version = "0.18", features = ["tokio"] }
 ratatui = "0.29"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
+semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tabled = "0.17"
