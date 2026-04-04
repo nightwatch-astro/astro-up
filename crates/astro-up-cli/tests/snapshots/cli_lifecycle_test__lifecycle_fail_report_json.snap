@@ -1,0 +1,29 @@
+---
+source: crates/astro-up-cli/tests/cli_lifecycle_test.rs
+expression: json
+---
+{
+  "package_id": "test-pkg",
+  "version": "1.0.0",
+  "phases": [
+    {
+      "phase": "download",
+      "status": "pass",
+      "duration": 100,
+      "logs": [
+        "https://example.com/test.exe"
+      ],
+      "warnings": []
+    },
+    {
+      "phase": "detect",
+      "status": "fail",
+      "duration": 50,
+      "logs": [],
+      "warnings": [
+        "no detection signatures found"
+      ]
+    }
+  ],
+  "overall_status": "fail"
+}

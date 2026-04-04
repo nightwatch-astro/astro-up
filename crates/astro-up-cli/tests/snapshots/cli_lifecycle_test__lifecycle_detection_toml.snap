@@ -1,0 +1,12 @@
+---
+source: crates/astro-up-cli/tests/cli_lifecycle_test.rs
+expression: toml
+---
+[detection]
+method = "registry"
+registry_key = "NINA 2"
+registry_value = "DisplayVersion"
+
+[fallback]
+method = "pe_file"
+file_path = 'C:\Program Files\NINA\NINA.exe'

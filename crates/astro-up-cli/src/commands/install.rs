@@ -111,7 +111,14 @@ pub async fn handle_install(
         state.config.paths.download_dir.clone()
     };
     let orchestrator = UpdateOrchestrator::new(
-        &lock_path, packages, ledger, downloader, installer, backup, db, download_dir,
+        &lock_path,
+        packages,
+        ledger,
+        downloader,
+        installer,
+        backup,
+        db,
+        download_dir,
     )
     .map_err(|e| eyre!("failed to create orchestrator: {e}"))?;
 

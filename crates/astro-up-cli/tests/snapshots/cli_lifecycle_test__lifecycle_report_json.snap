@@ -1,0 +1,42 @@
+---
+source: crates/astro-up-cli/tests/cli_lifecycle_test.rs
+expression: json
+---
+{
+  "package_id": "nina-app",
+  "version": "3.1.2",
+  "phases": [
+    {
+      "phase": "download",
+      "status": "pass",
+      "duration": 1234,
+      "logs": [
+        "https://github.com/nina/releases/download/v3.1.2/NINA-3.1.2.exe"
+      ],
+      "warnings": []
+    },
+    {
+      "phase": "detect",
+      "status": "pass",
+      "duration": 567,
+      "logs": [
+        "{\"method\":\"registry\",\"registry_key\":\"NINA 2\",\"registry_value\":\"DisplayVersion\"}"
+      ],
+      "warnings": []
+    }
+  ],
+  "discovered_config": {
+    "method": "registry",
+    "registry_key": "NINA 2",
+    "registry_value": "DisplayVersion",
+    "file_path": null,
+    "version_regex": null,
+    "product_code": null,
+    "upgrade_code": null,
+    "inf_provider": null,
+    "device_class": null,
+    "inf_name": null,
+    "fallback": null
+  },
+  "overall_status": "pass"
+}
