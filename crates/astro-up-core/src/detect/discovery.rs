@@ -228,7 +228,7 @@ impl DiscoveryScanner {
                     DiscoveryConfidence::Medium
                 };
 
-                let registry_key =
+                let _registry_key =
                     format!(r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{subkey_name}");
 
                 candidates.push(DiscoveryCandidate {
@@ -591,7 +591,7 @@ impl DiscoveryScanner {
         let search_name = software.name.to_lowercase();
         let publisher = software.publisher.as_deref().unwrap_or("").to_lowercase();
 
-        let wmi_result: Result<Vec<std::collections::HashMap<String, wmi::Variant>>, _> =
+        let wmi_result: Result<Option<Vec<std::collections::HashMap<String, wmi::Variant>>>, _> =
             tokio::time::timeout(std::time::Duration::from_secs(10), async {
                 tokio::task::spawn_blocking(move || {
                     let com = wmi::COMLibrary::new().ok()?;
