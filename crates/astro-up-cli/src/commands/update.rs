@@ -64,8 +64,13 @@ pub async fn handle_update(
     let db = state.open_db()?;
     let lock_path = state.data_dir.join("orchestration.lock");
 
+    let download_dir = if state.config.paths.download_dir.as_os_str().is_empty() {
+        std::env::temp_dir().join("astro-up").join("downloads")
+    } else {
+        state.config.paths.download_dir.clone()
+    };
     let orchestrator = UpdateOrchestrator::new(
-        &lock_path, packages, ledger, downloader, installer, backup, db,
+        &lock_path, packages, ledger, downloader, installer, backup, db, download_dir,
     )
     .map_err(|e| eyre!("failed to create orchestrator: {e}"))?;
 

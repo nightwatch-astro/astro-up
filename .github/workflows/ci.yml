@@ -56,12 +56,15 @@ jobs:
     needs: changes
     if: needs.changes.outputs.crates == 'true'
     runs-on: ubuntu-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - run: cargo fmt --all -- --check
       - run: cargo clippy -p astro-up-core -p astro-up-cli -- -D warnings
       - run: cargo test -p astro-up-core -p astro-up-cli
@@ -71,6 +74,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.gui == 'true'
     runs-on: ubuntu-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
     steps:
       - uses: actions/checkout@v6
       - name: Install Tauri system dependencies
@@ -80,7 +86,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - run: cargo clippy -p astro-up-gui -- -D warnings
       - run: cargo test -p astro-up-gui
 
@@ -109,12 +115,15 @@ jobs:
     needs: changes
     if: needs.changes.outputs.crates == 'true'
     runs-on: windows-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - name: Build test fixture catalog
         shell: bash
         run: |

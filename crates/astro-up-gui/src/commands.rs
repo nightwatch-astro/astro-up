@@ -438,8 +438,13 @@ async fn run_orchestrated_operation(
                 rusqlite::Connection::open(&db_path).map_err(|e| CoreError::from(e.to_string()))?;
             let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
 
+            let download_dir = if config.paths.download_dir.as_os_str().is_empty() {
+                std::env::temp_dir().join("astro-up").join("downloads")
+            } else {
+                config.paths.download_dir.clone()
+            };
             let orchestrator = astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
-                &lock_path, packages, ledger, downloader, installer, backup, db,
+                &lock_path, packages, ledger, downloader, installer, backup, db, download_dir,
             )?;
 
             let plan = orchestrator

@@ -161,6 +161,8 @@ where
     /// Shared database connection for history recording.
     #[allow(dead_code)]
     pub(crate) db: std::sync::Arc<std::sync::Mutex<rusqlite::Connection>>,
+    /// Directory for downloaded installers (from config `paths.download_dir`).
+    pub(crate) download_dir: PathBuf,
     /// Global orchestration lock — held for the lifetime of this struct.
     #[allow(dead_code)]
     pub(crate) lock: super::lock::OrchestrationLock,
@@ -201,6 +203,7 @@ where
         installer: I,
         backup: B,
         db: std::sync::Arc<std::sync::Mutex<rusqlite::Connection>>,
+        download_dir: PathBuf,
     ) -> Result<Self, CoreError> {
         let lock = super::lock::OrchestrationLock::acquire(lock_path)?;
 
@@ -211,6 +214,7 @@ where
             installer,
             backup,
             db,
+            download_dir,
             lock,
         })
     }
@@ -348,7 +352,7 @@ where
         let download_request = crate::download::DownloadRequest {
             url: planned.version_entry.url.clone(),
             expected_hash: planned.version_entry.sha256.clone(),
-            dest_dir: std::env::temp_dir().join("astro-up").join("downloads"),
+            dest_dir: self.download_dir.clone(),
             filename: Self::installer_filename(planned),
             resume: true,
         };
@@ -946,6 +950,7 @@ mod tests {
             MockInstaller,
             MockBackupManager,
             std::sync::Arc::new(std::sync::Mutex::new(db)),
+            std::env::temp_dir().join("astro-up").join("downloads"),
         )
     }
 
@@ -1029,6 +1034,7 @@ mod tests {
             SuccessInstaller,
             MockBackupManager,
             std::sync::Arc::new(std::sync::Mutex::new(db)),
+            std::env::temp_dir().join("astro-up").join("downloads"),
         )
     }
 
@@ -1054,6 +1060,7 @@ mod tests {
             CancellingInstaller,
             MockBackupManager,
             std::sync::Arc::new(std::sync::Mutex::new(db)),
+            std::env::temp_dir().join("astro-up").join("downloads"),
         )
     }
 
