@@ -48,7 +48,10 @@ async function browseLogFile() {
     >
       <label>Log file</label>
       <InputGroup>
-        <InputText v-model="config.log_file" />
+        <InputText
+          :model-value="config.log_file"
+          readonly
+        />
         <Button
           icon="pi pi-file"
           severity="secondary"

@@ -32,7 +32,10 @@ async function browseDirectory(field: keyof PathsConfig) {
     <div class="field">
       <label>Download Directory</label>
       <InputGroup>
-        <InputText v-model="config.download_dir" />
+        <InputText
+          :model-value="config.download_dir"
+          readonly
+        />
         <Button
           icon="pi pi-folder-open"
           severity="secondary"
@@ -43,7 +46,10 @@ async function browseDirectory(field: keyof PathsConfig) {
     <div class="field">
       <label>Cache Directory</label>
       <InputGroup>
-        <InputText v-model="config.cache_dir" />
+        <InputText
+          :model-value="config.cache_dir"
+          readonly
+        />
         <Button
           icon="pi pi-folder-open"
           severity="secondary"
@@ -54,7 +60,10 @@ async function browseDirectory(field: keyof PathsConfig) {
     <div class="field">
       <label>Data Directory</label>
       <InputGroup>
-        <InputText v-model="config.data_dir" />
+        <InputText
+          :model-value="config.data_dir"
+          readonly
+        />
         <Button
           icon="pi pi-folder-open"
           severity="secondary"
