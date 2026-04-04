@@ -61,7 +61,7 @@ jobs:
           else
             MISSING=$(cd manifests && \
               for f in manifests/*.toml; do
-                if grep -q '^\[install\]' "$f" && ! grep -q '^\[detection\]' "$f" && ! grep -q '^type = "resource"' "$f"; then
+                if grep -q '^\[install\]' "$f" && ! grep -q '^\[detection\]' "$f"; then
                   basename "$f" .toml
                 fi
               done | jq -R -s -c 'split("\n") | map(select(length > 0))')
