@@ -128,7 +128,12 @@ async fn run_single_method(
         DetectionMethod::AscomProfile => ascom::detect(config).await,
         DetectionMethod::FileExists => file::detect_exists(config, resolver).await,
         DetectionMethod::ConfigFile => file::detect_config(config, resolver).await,
-        DetectionMethod::Ledger => DetectionResult::NotInstalled,
+        // Ledger-only packages (e.g., firmware) have no auto-detection — the version
+        // is recorded when Astro-Up handles the download. Detection always reports
+        // Unavailable so the scanner falls through to ledger lookup.
+        DetectionMethod::Ledger => DetectionResult::Unavailable {
+            reason: "ledger-only detection — version tracked via download ledger".into(),
+        },
     }
 }
 

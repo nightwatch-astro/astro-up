@@ -446,6 +446,7 @@ where
             installer_path,
             install_dir: None,
             install_config,
+            detection_config: planned.software.detection.clone(),
             timeout,
             quiet: true,
             cancel_token: cancel.child_token(),

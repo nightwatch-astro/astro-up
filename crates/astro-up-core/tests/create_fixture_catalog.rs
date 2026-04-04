@@ -53,6 +53,21 @@ fn create_fixture_catalog() {
         );
         CREATE INDEX IF NOT EXISTS idx_versions_package ON versions(package_id);
 
+        CREATE TABLE IF NOT EXISTS detection (
+            package_id TEXT PRIMARY KEY REFERENCES packages(id),
+            method TEXT NOT NULL,
+            file_path TEXT,
+            registry_key TEXT,
+            registry_value TEXT,
+            version_regex TEXT,
+            product_code TEXT,
+            upgrade_code TEXT,
+            inf_provider TEXT,
+            device_class TEXT,
+            inf_name TEXT,
+            fallback_config TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS meta (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
@@ -215,6 +230,90 @@ fn create_fixture_catalog() {
             "INSERT INTO versions (package_id, version, url, sha256, discovered_at, release_notes_url, pre_release)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![pid, ver, url, sha, disc, rn, *pre as i32],
+        )
+        .unwrap();
+    }
+
+    // Insert detection configs
+    let detections = vec![
+        (
+            "nina",
+            "registry",
+            None::<&str>,           // file_path
+            Some("NINA 2"),         // registry_key
+            Some("DisplayVersion"), // registry_value
+            None::<&str>,           // version_regex
+            None::<&str>,           // product_code
+            None::<&str>,           // upgrade_code
+            None::<&str>,           // inf_provider
+            None::<&str>,           // device_class
+            None::<&str>,           // inf_name
+            Some(r#"{"method":"pe_file","file_path":"C:\\Program Files\\NINA\\NINA.exe"}"#), // fallback_config
+        ),
+        (
+            "phd2",
+            "registry",
+            None,
+            Some("PHD2"),
+            Some("DisplayVersion"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ),
+        (
+            "ascom-platform",
+            "registry",
+            None,
+            Some("ASCOM Platform 6"),
+            Some("DisplayVersion"),
+            Some(r"^(\d+\.\d+)"),
+            Some("{B3A4F860-DA18-4B76-8E4A-3E29C2C01738}"),
+            None,
+            None,
+            None,
+            None,
+            None,
+        ),
+    ];
+
+    for (
+        pid,
+        method,
+        file_path,
+        reg_key,
+        reg_val,
+        ver_regex,
+        product_code,
+        upgrade_code,
+        inf_prov,
+        dev_class,
+        inf_name,
+        fallback_cfg,
+    ) in &detections
+    {
+        conn.execute(
+            "INSERT INTO detection (package_id, method, file_path, registry_key, registry_value,
+                                    version_regex, product_code, upgrade_code, inf_provider,
+                                    device_class, inf_name, fallback_config)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            params![
+                pid,
+                method,
+                file_path,
+                reg_key,
+                reg_val,
+                ver_regex,
+                product_code,
+                upgrade_code,
+                inf_prov,
+                dev_class,
+                inf_name,
+                fallback_cfg
+            ],
         )
         .unwrap();
     }
