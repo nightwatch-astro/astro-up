@@ -1,7 +1,7 @@
 use std::fmt;
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::broadcast;
 
 use astro_up_core::catalog::CatalogFilter;
@@ -434,14 +434,13 @@ async fn run_orchestrated_operation(
                 std::env::temp_dir().join("astro-up").join("installs"),
             );
             let backup = BackupService::new(backup_dir, 5);
-            let db_conn = rusqlite::Connection::open(&db_path)
-                .map_err(|e| CoreError::from(e.to_string()))?;
+            let db_conn =
+                rusqlite::Connection::open(&db_path).map_err(|e| CoreError::from(e.to_string()))?;
             let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
 
-            let orchestrator =
-                astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
-                    &lock_path, packages, ledger, downloader, installer, backup, db,
-                )?;
+            let orchestrator = astro_up_core::engine::orchestrator::UpdateOrchestrator::new(
+                &lock_path, packages, ledger, downloader, installer, backup, db,
+            )?;
 
             let plan = orchestrator
                 .plan(UpdateRequest {
