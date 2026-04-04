@@ -1,0 +1,62 @@
+name: Bug Report
+description: Report a bug in Astro-Up
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill in the details below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly
+      placeholder: What did you expect vs what actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Run `astro-up ...`
+        2. Click on ...
+        3. See error
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Astro-Up version
+      description: Run `astro-up --version` or check Settings > About
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Windows version
+      description: e.g., Windows 11 23H2
+      placeholder: "Windows 11 23H2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      options:
+        - GUI (desktop app)
+        - CLI (command line)
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / verbose output
+      description: Run with `--verbose` and paste the output here
+      render: shell
