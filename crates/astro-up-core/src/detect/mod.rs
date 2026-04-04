@@ -1,5 +1,6 @@
 pub mod ascom;
 mod cache;
+pub mod discovery;
 mod file;
 pub mod hardware;
 mod path;
