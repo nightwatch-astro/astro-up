@@ -100,6 +100,7 @@ pub type EventCallback = Box<dyn Fn(Event) + Send + Sync>;
 // ---------------------------------------------------------------------------
 
 /// Main engine trait — plans, executes, and records update operations.
+#[allow(clippy::trait_duplication_in_bounds)]
 #[trait_variant::make(OrchestratorDyn: Send)]
 pub trait Orchestrator: Send {
     /// Build an update plan for the given request.
@@ -507,6 +508,7 @@ where
         check_cancel!();
 
         // 7. Verify: re-detect installed version and compare with target (FR-009)
+        #[allow(clippy::branches_sharing_code)]
         let final_status = if let Some(ref detection_config) = planned.software.detection {
             let resolver = crate::detect::PathResolver::new();
             let detection = crate::detect::run_chain(detection_config, &resolver, None).await;
@@ -673,16 +675,13 @@ where
             });
 
             // Look up the latest version entry from the catalog
-            let ve = match self
+            let Some(ve) = self
                 .catalog
                 .latest_version(&sw.id)
                 .map_err(|e| CoreError::Database(format!("catalog version lookup: {e}")))?
-            {
-                Some(ve) => ve,
-                None => {
-                    tracing::debug!(package = %sw.id, "no version entries in catalog, skipping");
-                    continue;
-                }
+            else {
+                tracing::debug!(package = %sw.id, "no version entries in catalog, skipping");
+                continue;
             };
 
             // Skip packages with empty download URLs (catalog data issue)
@@ -766,7 +765,7 @@ where
             if let Some(failed_dep) = dep_failed {
                 on_event(Event::PackageSkipped {
                     package_id: planned.package_id.clone(),
-                    reason: format!("dependency {} failed", failed_dep),
+                    reason: format!("dependency {failed_dep} failed"),
                 });
                 failed_ids.insert(planned.package_id.clone());
                 skipped_deps.push(super::planner::SkippedPackage {

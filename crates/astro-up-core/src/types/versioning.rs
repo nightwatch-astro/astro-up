@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, EnumString, EnumIter)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, EnumString, EnumIter)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum PolicyLevel {
@@ -13,7 +13,7 @@ pub enum PolicyLevel {
     None,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionOverride {
     #[serde(default)]
     pub install_dir: Option<String>,
@@ -21,7 +21,7 @@ pub struct VersionOverride {
     pub registry_key: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersioningConfig {
     #[serde(default)]
     pub side_by_side: bool,
@@ -31,7 +31,7 @@ pub struct VersioningConfig {
     pub overrides: HashMap<String, VersionOverride>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpdatePolicy {
     pub default: PolicyLevel,
     #[serde(default)]

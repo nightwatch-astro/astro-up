@@ -7,7 +7,7 @@ use astro_up_core::catalog::{CatalogManager, SqliteCatalogReader};
 use astro_up_core::config::{self, AppConfig, PathsConfig};
 
 /// Shared CLI state, initialized once per invocation.
-/// Mirrors the GUI's AppState pattern without Tauri dependency.
+/// Mirrors the GUI's `AppState` pattern without Tauri dependency.
 pub struct CliState {
     pub data_dir: PathBuf,
     pub db_path: PathBuf,

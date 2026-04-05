@@ -314,7 +314,7 @@ pub async fn save_config(
 
     // Reload config to pick up changes
     let paths = current.paths.clone();
-    let log_file = current.logging.log_file.clone();
+    let log_file = current.logging.log_file;
     let new_config = config::load_config(&state.db_path, paths, log_file, &[])?;
     *state.config.lock().unwrap() = new_config;
 
@@ -385,7 +385,7 @@ pub async fn scan_installed(
 /// Pass an empty slice for `ids` to plan all available updates.
 ///
 /// Runs inside `spawn_blocking` + `Handle::block_on` because the
-/// InstallerService uses Windows APIs with `!Send` types (PCWSTR, HANDLE).
+/// `InstallerService` uses Windows APIs with `!Send` types (PCWSTR, HANDLE).
 async fn run_orchestrated_operation(
     app: &AppHandle,
     state: &AppState,
@@ -404,12 +404,12 @@ async fn run_orchestrated_operation(
     let backup_dir = state
         .db_path
         .parent()
-        .unwrap_or(std::path::Path::new("."))
+        .unwrap_or_else(|| std::path::Path::new("."))
         .join("backups");
     let lock_path = state
         .db_path
         .parent()
-        .unwrap_or(std::path::Path::new("."))
+        .unwrap_or_else(|| std::path::Path::new("."))
         .join("orchestration.lock");
     let pkg_ids: Vec<astro_up_core::catalog::PackageId> = ids
         .iter()

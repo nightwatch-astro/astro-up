@@ -37,7 +37,7 @@ pub(crate) fn try_parse_lenient(raw: &str) -> Option<semver::Version> {
     // Strip leading 'v' or 'V'
     let s = trimmed
         .strip_prefix('v')
-        .or(trimmed.strip_prefix('V'))
+        .or_else(|| trimmed.strip_prefix('V'))
         .unwrap_or(trimmed);
 
     // Try again after stripping prefix

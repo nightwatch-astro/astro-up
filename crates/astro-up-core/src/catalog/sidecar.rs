@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// JSON sidecar stored as `catalog.db.meta` alongside the catalog file.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CatalogSidecar {
     pub etag: Option<String>,
     pub fetched_at: DateTime<Utc>,

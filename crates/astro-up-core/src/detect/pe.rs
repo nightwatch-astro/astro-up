@@ -58,24 +58,18 @@ fn read_pe_version(path: &str) -> DetectionResult {
         }
     };
 
-    let resources = match pe.resources() {
-        Ok(r) => r,
-        Err(_) => {
-            return DetectionResult::InstalledUnknownVersion {
-                method: DetectionMethod::PeFile,
-                install_path: Some(path.to_string()),
-            };
-        }
+    let Ok(resources) = pe.resources() else {
+        return DetectionResult::InstalledUnknownVersion {
+            method: DetectionMethod::PeFile,
+            install_path: Some(path.to_string()),
+        };
     };
 
-    let version_info = match resources.version_info() {
-        Ok(vi) => vi,
-        Err(_) => {
-            return DetectionResult::InstalledUnknownVersion {
-                method: DetectionMethod::PeFile,
-                install_path: Some(path.to_string()),
-            };
-        }
+    let Ok(version_info) = resources.version_info() else {
+        return DetectionResult::InstalledUnknownVersion {
+            method: DetectionMethod::PeFile,
+            install_path: Some(path.to_string()),
+        };
     };
 
     // Prefer VS_FIXEDFILEINFO.dwFileVersion (binary, reliable)

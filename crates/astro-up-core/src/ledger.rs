@@ -4,7 +4,7 @@ use strum::{Display, EnumIter, EnumString};
 
 use crate::types::Version;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, EnumString, EnumIter)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, EnumString, EnumIter)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum LedgerSource {
@@ -17,7 +17,7 @@ pub enum LedgerSource {
 ///
 /// Priority: auto-detection > ledger > unknown.
 /// If auto-detection and ledger disagree, warn the user.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LedgerEntry {
     pub package_id: String,
     pub version: Version,

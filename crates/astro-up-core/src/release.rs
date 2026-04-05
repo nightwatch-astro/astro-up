@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::types::Version;
 
 /// A discovered remote version with download URL and metadata.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Release {
     pub version: Version,
     pub url: String,

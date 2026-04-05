@@ -88,7 +88,7 @@ fn restore_preview_sync(archive_path: &Path) -> Result<FileChangeSummary, CoreEr
                 let relative = entry
                     .path()
                     .strip_prefix(original_path)
-                    .unwrap_or(entry.path());
+                    .unwrap_or_else(|_| entry.path());
                 summary.missing.push(format!(
                     "{}/{}",
                     dir_name,

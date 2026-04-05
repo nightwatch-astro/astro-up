@@ -45,7 +45,7 @@ pub async fn handle_lifecycle_test(
         manifest_path: manifest_path.to_owned(),
         package_id: package_id.to_string(),
         version: version.map(String::from),
-        install_dir: install_dir.map(|p| p.to_owned()),
+        install_dir: install_dir.map(std::borrow::ToOwned::to_owned),
         dry_run,
         ..Default::default()
     };

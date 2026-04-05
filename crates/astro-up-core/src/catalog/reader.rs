@@ -1,5 +1,6 @@
 //! SQLite catalog reader — resolve, search, filter, list, versions.
 
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use chrono::DateTime;
@@ -131,11 +132,11 @@ impl SqliteCatalogReader {
 
         if let Some(ref cat) = filter.category {
             param_values.push(cat.to_string());
-            sql.push_str(&format!(" AND category = ?{}", param_values.len()));
+            let _ = write!(sql, " AND category = ?{}", param_values.len());
         }
         if let Some(ref st) = filter.software_type {
             param_values.push(st.to_string());
-            sql.push_str(&format!(" AND type = ?{}", param_values.len()));
+            let _ = write!(sql, " AND type = ?{}", param_values.len());
         }
         sql.push_str(" ORDER BY name");
 
@@ -441,6 +442,7 @@ fn row_to_package(row: &rusqlite::Row<'_>) -> rusqlite::Result<PackageSummary> {
     row_to_package_at(row, 0)
 }
 
+#[allow(clippy::unwrap_in_result)] // "unknown" is a known-valid PackageId constant
 fn row_to_package_at(row: &rusqlite::Row<'_>, offset: usize) -> rusqlite::Result<PackageSummary> {
     let id_str: String = row.get(offset)?;
     let category_str: String = row.get(offset + 6)?;
@@ -449,10 +451,10 @@ fn row_to_package_at(row: &rusqlite::Row<'_>, offset: usize) -> rusqlite::Result
     let aliases_json: Option<String> = row.get(offset + 11)?;
     let deps_json: Option<String> = row.get(offset + 12)?;
 
+    #[allow(clippy::unwrap_used)] // "unknown" is a valid PackageId constant
+    let fallback_id = PackageId::new("unknown").unwrap();
     Ok(PackageSummary {
-        id: id_str
-            .parse()
-            .unwrap_or_else(|_| PackageId::new("unknown").unwrap()),
+        id: id_str.parse().unwrap_or(fallback_id),
         manifest_version: row.get::<_, u32>(offset + 1)?,
         name: row.get(offset + 2)?,
         description: row.get(offset + 3)?,
@@ -473,15 +475,16 @@ fn row_to_package_at(row: &rusqlite::Row<'_>, offset: usize) -> rusqlite::Result
     })
 }
 
+#[allow(clippy::unwrap_in_result)] // "unknown" is a known-valid PackageId constant
 fn row_to_version(row: &rusqlite::Row<'_>) -> rusqlite::Result<VersionEntry> {
     let pid_str: String = row.get(0)?;
     let discovered_str: String = row.get(4)?;
     let pre: i32 = row.get(6)?;
 
+    #[allow(clippy::unwrap_used)] // "unknown" is a valid PackageId constant
+    let fallback_id = PackageId::new("unknown").unwrap();
     Ok(VersionEntry {
-        package_id: pid_str
-            .parse()
-            .unwrap_or_else(|_| PackageId::new("unknown").unwrap()),
+        package_id: pid_str.parse().unwrap_or(fallback_id),
         version: row.get(1)?,
         url: row.get(2)?,
         sha256: row.get(3)?,

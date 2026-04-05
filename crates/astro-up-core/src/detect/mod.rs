@@ -23,7 +23,7 @@ use crate::types::DetectionMethod;
 use crate::types::Version;
 
 /// Outcome of detecting a single package.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum DetectionResult {
     Installed {
@@ -47,7 +47,7 @@ impl DetectionResult {
     pub fn is_installed(&self) -> bool {
         matches!(
             self,
-            DetectionResult::Installed { .. } | DetectionResult::InstalledUnknownVersion { .. }
+            Self::Installed { .. } | Self::InstalledUnknownVersion { .. }
         )
     }
 }

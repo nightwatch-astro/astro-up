@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, EnumString, EnumIter)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, EnumString, EnumIter)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum DetectionMethod {
@@ -17,7 +17,7 @@ pub enum DetectionMethod {
     Ledger,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DetectionConfig {
     pub method: DetectionMethod,
     #[serde(default)]
@@ -42,5 +42,5 @@ pub struct DetectionConfig {
     #[serde(default)]
     pub inf_name: Option<String>,
     #[serde(default)]
-    pub fallback: Option<Box<DetectionConfig>>,
+    pub fallback: Option<Box<Self>>,
 }

@@ -9,7 +9,7 @@ use crate::events::Event;
 use crate::types::{InstallConfig, InstallMethod, KnownExitCode};
 
 /// Success outcomes from an install operation. Failures are `CoreError`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InstallResult {
     Success { path: Option<PathBuf> },
@@ -18,7 +18,7 @@ pub enum InstallResult {
 }
 
 /// Result of interpreting an installer's exit code.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExitCodeOutcome {
     Success,
     SuccessRebootRequired,

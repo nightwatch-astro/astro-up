@@ -1,3 +1,7 @@
+// Tauri state management uses Mutex::lock().unwrap() pervasively —
+// poisoned mutexes indicate unrecoverable state, so unwrap is intentional.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 mod commands;
 mod log_layer;
 mod state;
@@ -172,9 +176,7 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_dialog::init())
         .manage({
-            let data_dir = directories::ProjectDirs::from("dev", "nightwatch", "astro-up")
-                .map(|d| d.data_dir().to_path_buf())
-                .unwrap_or_else(|| std::env::temp_dir().join("astro-up"));
+            let data_dir = directories::ProjectDirs::from("dev", "nightwatch", "astro-up").map_or_else(|| std::env::temp_dir().join("astro-up"), |d| d.data_dir().to_path_buf());
             std::fs::create_dir_all(&data_dir).expect("Failed to create data directory");
             AppState::new(&data_dir).expect("Failed to initialize app state")
         })

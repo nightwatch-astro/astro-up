@@ -34,7 +34,7 @@ pub enum PackageState {
 // ---------------------------------------------------------------------------
 
 /// Why a package was excluded from the update plan.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum SkipReason {
     /// The installed version is already at or above the catalog target.
@@ -432,6 +432,7 @@ pub fn topological_sort(updates: Vec<PlannedUpdate>) -> Result<Vec<PlannedUpdate
     }
 
     let mut indexed: Vec<Option<PlannedUpdate>> = updates.into_iter().map(Some).collect();
+    #[allow(clippy::expect_used)] // topological sort guarantees each index is used once
     let sorted = order
         .into_iter()
         .map(|i| indexed[i].take().expect("each index used exactly once"))

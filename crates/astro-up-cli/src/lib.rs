@@ -114,7 +114,7 @@ pub enum Commands {
         /// Specific version to test (default: latest)
         #[arg(long)]
         version: Option<String>,
-        /// Install directory for download_only packages
+        /// Install directory for `download_only` packages
         #[arg(long)]
         install_dir: Option<PathBuf>,
         /// Download and probe only, skip install/uninstall

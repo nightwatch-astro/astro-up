@@ -25,14 +25,14 @@ impl OperationId {
 
 /// Managed state shared across all Tauri commands.
 pub struct AppState {
-    /// Active operation cancellation tokens, keyed by OperationId.
+    /// Active operation cancellation tokens, keyed by `OperationId`.
     pub operations: DashMap<String, CancellationToken>,
     /// Application data directory (used by detect/engine when wired).
     #[allow(dead_code)]
     pub data_dir: PathBuf,
     /// Application configuration.
     pub config: Mutex<AppConfig>,
-    /// SQLite database path for config store.
+    /// `SQLite` database path for config store.
     pub db_path: PathBuf,
     /// Catalog manager for fetch/query.
     pub catalog_manager: CatalogManager,

@@ -27,7 +27,7 @@ impl VidPid {
     }
 
     /// Check if this pattern matches a device's VID:PID.
-    pub fn matches(&self, device: &VidPid) -> bool {
+    pub fn matches(&self, device: &Self) -> bool {
         if self.vendor_id != device.vendor_id {
             return false;
         }
