@@ -24,7 +24,9 @@ pub async fn detect(config: &DetectionConfig) -> DetectionResult {
 #[cfg(windows)]
 fn detect_windows(config: &DetectionConfig) -> DetectionResult {
     use winreg::RegKey;
-    use winreg::enums::*;
+    use winreg::enums::{
+        HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY,
+    };
 
     let Some(ref key_path) = config.registry_key else {
         return DetectionResult::NotInstalled;

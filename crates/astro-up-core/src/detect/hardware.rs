@@ -90,9 +90,8 @@ pub async fn discover(
     })
     .await;
 
-    let devices = match result {
-        Ok(Ok(d)) => d,
-        _ => return Vec::new(),
+    let Ok(Ok(devices)) = result else {
+        return Vec::new();
     };
 
     let mut matches = Vec::new();
