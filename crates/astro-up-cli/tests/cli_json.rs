@@ -3,6 +3,7 @@
 //! These tests invoke the binary which requires Windows.
 
 #![cfg(target_os = "windows")]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use assert_cmd::Command;
 
