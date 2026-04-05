@@ -22,6 +22,7 @@ directories = "6.0"
 human-panic = "2"
 indicatif = { version = "0.18", features = ["tokio"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
+self_update = { version = "0.43", default-features = false, features = ["rustls", "archive-zip", "compression-zip-deflate"] }
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
