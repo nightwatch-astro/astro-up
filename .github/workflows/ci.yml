@@ -41,9 +41,8 @@ jobs:
             frontend:
               - 'frontend/**'
 
-  # Fast path: core + cli only (~30s). Runs on every PR.
-  # Covers lifecycle-test subcommand compilation + cross-platform unit tests.
-  # Windows-only integration tests (install, detect, uninstall) run in check-windows.
+  # Fast path: core + cli on Linux (~30s). Catches fmt, clippy, and
+  # cross-platform unit tests without waiting for a Windows runner.
   check-rust:
     name: Rust Checks
     needs: changes
@@ -83,6 +82,8 @@ jobs:
       - run: pnpm --dir frontend test
       - run: pnpm --dir frontend build
 
+  # Full workspace on Windows — catches Windows-specific issues
+  # (registry, PE, WMI, Tauri) across all crates.
   check-windows:
     name: Windows Integration
     needs: changes

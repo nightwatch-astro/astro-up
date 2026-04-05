@@ -1,0 +1,3 @@
+[profile.default]
+# Retry flaky tests (network-dependent catalog download, Windows API timing)
+retries = 2
