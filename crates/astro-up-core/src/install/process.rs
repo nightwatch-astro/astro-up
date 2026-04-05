@@ -71,8 +71,15 @@ pub async fn spawn_with_job_object(
     use std::mem;
 
     use windows::Win32::Foundation::CloseHandle;
-    use windows::Win32::System::JobObjects::*;
-    use windows::Win32::System::Threading::*;
+    use windows::Win32::System::JobObjects::{
+        AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+        SetInformationJobObject,
+    };
+    use windows::Win32::System::Threading::{
+        CreateProcessW, GetExitCodeProcess, ResumeThread, WaitForSingleObject,
+        CREATE_SUSPENDED, PROCESS_INFORMATION, STARTUPINFOW,
+    };
     use windows::core::PWSTR;
 
     use super::wide::to_wide_null;
