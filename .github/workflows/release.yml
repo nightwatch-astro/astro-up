@@ -46,6 +46,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+    environment: crates-io
     outputs:
       releases_created: ${{ steps.release-plz.outputs.releases_created }}
       tag: ${{ steps.release-plz.outputs.tag }}
