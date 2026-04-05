@@ -1,3 +1,5 @@
+//! Shared library for astro-up — types, detection, download, install, and orchestration engine.
+
 pub mod adapters;
 pub mod backup;
 pub mod catalog;

@@ -4,12 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      force_build:
-        description: 'Skip release-plz and trigger builds directly (requires existing GitHub release)'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -22,7 +16,6 @@ concurrency:
 jobs:
   release-pr:
     name: Release PR
-    if: inputs.force_build != true
     runs-on: ubuntu-latest
     env:
       SCCACHE_GHA_ENABLED: "true"
@@ -51,7 +44,6 @@ jobs:
 
   release:
     name: Create Release
-    if: inputs.force_build != true
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release-plz.outputs.releases_created }}
@@ -81,7 +73,7 @@ jobs:
   build-cli:
     name: Build CLI (${{ matrix.target }})
     needs: release
-    if: needs.release.outputs.releases_created == 'true' || inputs.force_build == true
+    if: needs.release.outputs.releases_created == 'true'
     runs-on: ${{ matrix.os }}
     env:
       SCCACHE_GHA_ENABLED: "true"
@@ -118,7 +110,7 @@ jobs:
   build-installer:
     name: Build Windows Installer
     needs: release
-    if: needs.release.outputs.releases_created == 'true' || inputs.force_build == true
+    if: needs.release.outputs.releases_created == 'true'
     runs-on: windows-latest
     env:
       SCCACHE_GHA_ENABLED: "true"
