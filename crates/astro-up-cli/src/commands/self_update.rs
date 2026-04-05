@@ -108,8 +108,7 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
     let download_url = asset.download_url.clone();
     tokio::task::spawn_blocking(move || -> Result<()> {
         let tmp_dir = std::env::temp_dir().join("astro-up-update");
-        std::fs::create_dir_all(&tmp_dir)
-            .map_err(|e| eyre!("failed to create temp dir: {e}"))?;
+        std::fs::create_dir_all(&tmp_dir).map_err(|e| eyre!("failed to create temp dir: {e}"))?;
         let tmp_path = tmp_dir.join(asset_name);
 
         self_update::Download::from_url(&download_url)
