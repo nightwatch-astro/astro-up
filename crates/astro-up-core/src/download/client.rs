@@ -3,13 +3,24 @@ use reqwest::redirect;
 use crate::config::NetworkConfig;
 use crate::error::CoreError;
 
+/// Default user-agent string including the crate version.
+pub fn default_user_agent() -> String {
+    format!("{}/{}", crate::CRATE_NAME, crate::version())
+}
+
 /// Build a configured reqwest client from network settings.
 pub fn build_client(config: &NetworkConfig) -> Result<reqwest::Client, CoreError> {
+    let ua = if config.user_agent.is_empty() {
+        default_user_agent()
+    } else {
+        config.user_agent.clone()
+    };
+
     let mut builder = reqwest::Client::builder()
         .connect_timeout(config.connect_timeout)
         .read_timeout(config.timeout)
         .redirect(redirect::Policy::limited(10))
-        .user_agent(&config.user_agent);
+        .user_agent(&ua);
 
     if let Some(proxy_url) = &config.proxy {
         let proxy =
