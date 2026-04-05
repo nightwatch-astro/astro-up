@@ -38,6 +38,10 @@ pub struct InstallRequest {
     pub installer_path: PathBuf,
     pub install_dir: Option<PathBuf>,
     pub install_config: InstallConfig,
+    /// Detection config for post-install path resolution. When the installer does not
+    /// return an explicit path (exe/msi installs), the service runs the detection chain
+    /// to extract `install_path` for the ledger entry.
+    pub detection_config: Option<crate::types::DetectionConfig>,
     pub timeout: Duration,
     pub quiet: bool,
     pub cancel_token: CancellationToken,

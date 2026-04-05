@@ -50,7 +50,9 @@ fn load_config_with_empty_db_returns_defaults() {
             }
         }
     }
-    insta::assert_json_snapshot!("default_config", value);
+    insta::assert_json_snapshot!("default_config", value, {
+        ".network.user_agent" => "[user_agent]"
+    });
 }
 
 #[test]

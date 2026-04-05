@@ -250,6 +250,12 @@ impl LifecycleRunner {
 
     // -- Phase implementations --
 
+    /// Orchestration stub for the download phase.
+    ///
+    /// Resolves the download URL from the manifest's autoupdate template but does not
+    /// invoke `DownloadManager` directly. The GitHub Actions workflow handles actual
+    /// binary downloads on Windows runners using the resolved URL. This method sets up
+    /// phase tracking and returns the URL as the first log entry for downstream phases.
     async fn run_download(
         software: &Software,
         version: &str,
@@ -283,6 +289,12 @@ impl LifecycleRunner {
         }
     }
 
+    /// Orchestration stub for the install phase.
+    ///
+    /// Does not invoke `InstallerService` directly because the lifecycle test workflow
+    /// runs the actual installer binary on Windows runners via the CLI. This method
+    /// provides phase tracking structure — on non-Windows it returns `Skipped`, on
+    /// Windows it returns `Pass` to allow the subsequent detection/verify phases to run.
     async fn run_install(
         _software: &Software,
         _download_path: Option<&Path>,

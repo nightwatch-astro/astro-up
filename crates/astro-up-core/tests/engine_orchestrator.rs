@@ -274,18 +274,21 @@ fn test_planned_update(id: &str) -> PlannedUpdate {
 
 /// Create a PlannedUpdate whose detection config file_path matches a running process.
 fn test_planned_update_with_running_process(id: &str) -> PlannedUpdate {
-    // Use "cargo" as the blocking process — always running during test execution.
-    // sysinfo reports "cargo" on Unix and "cargo.exe" on Windows, so the file_path
-    // must match the platform's process name for the orchestrator's filename extraction.
-    let process_file = if cfg!(windows) { "cargo.exe" } else { "cargo" };
+    // Use the current executable (test runner) as the blocking process.
+    // This ensures the test finds itself as a running process, which works reliably
+    // in both cargo test and nextest, regardless of the parent process.
+    let process_file = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.file_name().map(|f| f.to_string_lossy().to_string()))
+        .unwrap_or_else(|| "cargo".to_string());
 
     let mut planned = test_planned_update(id);
-    planned.software.name = "cargo".to_string();
+    planned.software.name = process_file.clone();
     planned.software.detection = Some(DetectionConfig {
         method: DetectionMethod::PeFile,
         registry_key: None,
         registry_value: None,
-        file_path: Some(process_file.to_string()),
+        file_path: Some(process_file),
         version_regex: None,
         product_code: None,
         upgrade_code: None,

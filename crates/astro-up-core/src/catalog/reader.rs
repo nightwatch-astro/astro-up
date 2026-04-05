@@ -200,7 +200,108 @@ impl SqliteCatalogReader {
     /// Get detection config for a package from the operational `detection` table.
     ///
     /// Returns `None` if the table doesn't exist (old catalog) or the package has no detection config.
+    /// Handles both old-schema catalogs (with `path`, `fallback_method`, `fallback_path` columns)
+    /// and new-schema catalogs (with `file_path`, `version_regex`, `product_code`, `upgrade_code`,
+    /// `inf_provider`, `device_class`, `inf_name`, `fallback_config` columns) gracefully.
     pub fn detection_config(
+        &self,
+        id: &PackageId,
+    ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
+        // Try new schema first (expanded columns)
+        if let Some(config) = self.detection_config_new_schema(id)? {
+            return Ok(Some(config));
+        }
+        // Fall back to old schema
+        self.detection_config_old_schema(id)
+    }
+
+    /// Read detection config from the new expanded schema.
+    fn detection_config_new_schema(
+        &self,
+        id: &PackageId,
+    ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
+        let result = self
+            .conn
+            .query_row(
+                "SELECT method, file_path, registry_key, registry_value,
+                        version_regex, product_code, upgrade_code,
+                        inf_provider, device_class, inf_name, fallback_config
+                 FROM detection WHERE package_id = ?1",
+                params![id.as_ref()],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                        row.get::<_, Option<String>>(4)?,
+                        row.get::<_, Option<String>>(5)?,
+                        row.get::<_, Option<String>>(6)?,
+                        row.get::<_, Option<String>>(7)?,
+                        row.get::<_, Option<String>>(8)?,
+                        row.get::<_, Option<String>>(9)?,
+                        row.get::<_, Option<String>>(10)?,
+                    ))
+                },
+            )
+            .optional()
+            .unwrap_or(None); // Table or columns may not exist in old catalogs
+
+        let Some((
+            method_str,
+            file_path,
+            registry_key,
+            registry_value,
+            version_regex,
+            product_code,
+            upgrade_code,
+            inf_provider,
+            device_class,
+            inf_name,
+            fallback_config_json,
+        )) = result
+        else {
+            return Ok(None);
+        };
+
+        let method = parse_detection_method(&method_str);
+        let Some(method) = method else {
+            tracing::warn!(package = %id, method = %method_str, "unknown detection method");
+            return Ok(None);
+        };
+
+        // Deserialize fallback_config JSON blob into Box<DetectionConfig>
+        let fallback = fallback_config_json.and_then(|json| {
+            serde_json::from_str::<crate::types::DetectionConfig>(&json)
+                .map(Box::new)
+                .map_err(|e| {
+                    tracing::warn!(
+                        package = %id,
+                        error = %e,
+                        "failed to deserialize fallback_config"
+                    );
+                    e
+                })
+                .ok()
+        });
+
+        Ok(Some(crate::types::DetectionConfig {
+            method,
+            file_path,
+            registry_key,
+            registry_value,
+            version_regex,
+            product_code,
+            upgrade_code,
+            inf_provider,
+            device_class,
+            inf_name,
+            fallback,
+        }))
+    }
+
+    /// Read detection config from the old schema (path, fallback_method, fallback_path columns).
+    fn detection_config_old_schema(
         &self,
         id: &PackageId,
     ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
@@ -212,19 +313,13 @@ impl SqliteCatalogReader {
                  FROM detection WHERE package_id = ?1",
                 params![id.as_ref()],
                 |row| {
-                    let method_str: String = row.get(0)?;
-                    let path: Option<String> = row.get(1)?;
-                    let registry_key: Option<String> = row.get(2)?;
-                    let registry_value: Option<String> = row.get(3)?;
-                    let fallback_method: Option<String> = row.get(4)?;
-                    let fallback_path: Option<String> = row.get(5)?;
                     Ok((
-                        method_str,
-                        path,
-                        registry_key,
-                        registry_value,
-                        fallback_method,
-                        fallback_path,
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                        row.get::<_, Option<String>>(4)?,
+                        row.get::<_, Option<String>>(5)?,
                     ))
                 },
             )
@@ -237,31 +332,16 @@ impl SqliteCatalogReader {
             return Ok(None);
         };
 
-        let method = match method_str.as_str() {
-            "registry" => crate::types::DetectionMethod::Registry,
-            "file" => crate::types::DetectionMethod::PeFile,
-            "wmi" => crate::types::DetectionMethod::Wmi,
-            "driver_store" => crate::types::DetectionMethod::DriverStore,
-            "ascom_profile" => crate::types::DetectionMethod::AscomProfile,
-            "file_exists" => crate::types::DetectionMethod::FileExists,
-            "config_file" => crate::types::DetectionMethod::ConfigFile,
-            "ledger" => crate::types::DetectionMethod::Ledger,
-            _ => {
-                tracing::warn!(package = %id, method = %method_str, "unknown detection method");
-                return Ok(None);
-            }
+        let method = parse_detection_method(&method_str);
+        let Some(method) = method else {
+            tracing::warn!(package = %id, method = %method_str, "unknown detection method");
+            return Ok(None);
         };
 
         let fallback = match (fallback_method, fallback_path) {
-            (Some(fm), fp) => {
-                let fb_method = match fm.as_str() {
-                    "registry" => crate::types::DetectionMethod::Registry,
-                    "file" => crate::types::DetectionMethod::PeFile,
-                    "file_exists" => crate::types::DetectionMethod::FileExists,
-                    _ => return Ok(None),
-                };
-                Some(Box::new(crate::types::DetectionConfig {
-                    method: fb_method,
+            (Some(fm), fp) => parse_detection_method(&fm).map(|m| {
+                Box::new(crate::types::DetectionConfig {
+                    method: m,
                     file_path: fp,
                     registry_key: None,
                     registry_value: None,
@@ -272,8 +352,8 @@ impl SqliteCatalogReader {
                     device_class: None,
                     inf_name: None,
                     fallback: None,
-                }))
-            }
+                })
+            }),
             _ => None,
         };
 
@@ -332,6 +412,24 @@ impl SqliteCatalogReader {
         }
 
         Ok(software)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Detection method parsing
+// ---------------------------------------------------------------------------
+
+fn parse_detection_method(method_str: &str) -> Option<crate::types::DetectionMethod> {
+    match method_str {
+        "registry" => Some(crate::types::DetectionMethod::Registry),
+        "file" | "pe_file" => Some(crate::types::DetectionMethod::PeFile),
+        "wmi" => Some(crate::types::DetectionMethod::Wmi),
+        "driver_store" => Some(crate::types::DetectionMethod::DriverStore),
+        "ascom_profile" => Some(crate::types::DetectionMethod::AscomProfile),
+        "file_exists" => Some(crate::types::DetectionMethod::FileExists),
+        "config_file" => Some(crate::types::DetectionMethod::ConfigFile),
+        "ledger" => Some(crate::types::DetectionMethod::Ledger),
+        _ => None,
     }
 }
 
