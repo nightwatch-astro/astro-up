@@ -72,13 +72,13 @@ pub async fn spawn_with_job_object(
 
     use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::JobObjects::{
-        AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
-        JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+        AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
         SetInformationJobObject,
     };
     use windows::Win32::System::Threading::{
-        CreateProcessW, GetExitCodeProcess, ResumeThread, WaitForSingleObject,
-        CREATE_SUSPENDED, PROCESS_INFORMATION, STARTUPINFOW,
+        CREATE_SUSPENDED, CreateProcessW, GetExitCodeProcess, PROCESS_INFORMATION, ResumeThread,
+        STARTUPINFOW, WaitForSingleObject,
     };
     use windows::core::PWSTR;
 
@@ -102,7 +102,7 @@ pub async fn spawn_with_job_object(
         SetInformationJobObject(
             job,
             JobObjectExtendedLimitInformation,
-            &info as *const _ as *const _,
+            (&raw const info).cast(),
             mem::size_of_val(&info) as u32,
         )
     }
@@ -125,8 +125,8 @@ pub async fn spawn_with_job_object(
             CREATE_SUSPENDED,
             None,
             None,
-            &si,
-            &mut pi,
+            &raw const si,
+            &raw mut pi,
         )
     }
     .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
