@@ -1,3 +1,4 @@
+exclude: '^(\.claude/|\.specify/|specs/)'
 default_install_hook_types: [commit-msg, pre-commit, pre-push]
 fail_fast: true
 
