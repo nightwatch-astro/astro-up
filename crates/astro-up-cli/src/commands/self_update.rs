@@ -107,11 +107,10 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
     // Download the raw binary into a temp file, then self-replace.
     let download_url = asset.download_url.clone();
     tokio::task::spawn_blocking(move || -> Result<()> {
-        let tmp_dir = tempfile::Builder::new()
-            .prefix("astro-up-update")
-            .tempdir()
+        let tmp_dir = std::env::temp_dir().join("astro-up-update");
+        std::fs::create_dir_all(&tmp_dir)
             .map_err(|e| eyre!("failed to create temp dir: {e}"))?;
-        let tmp_path = tmp_dir.path().join(asset_name);
+        let tmp_path = tmp_dir.join(asset_name);
 
         self_update::Download::from_url(&download_url)
             .set_header(
@@ -126,6 +125,10 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
 
         self_update::self_replace::self_replace(&tmp_path)
             .map_err(|e| eyre!("failed to replace binary: {e}"))?;
+
+        // Clean up temp file
+        let _ = std::fs::remove_file(&tmp_path);
+        let _ = std::fs::remove_dir(&tmp_dir);
 
         Ok(())
     })
