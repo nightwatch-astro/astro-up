@@ -1,5 +1,5 @@
 [workspace]
-publish = true
+publish = false
 git_tag_enable = true
 git_release_enable = true
 git_release_draft = false
@@ -12,6 +12,10 @@ pr_labels = ["release"]
 name = "astro-up-core"
 git_release_enable = false
 git_tag_enable = false
+
+[[package]]
+name = "astro-up-cli"
+publish = true
 
 [changelog]
 commit_parsers = [
