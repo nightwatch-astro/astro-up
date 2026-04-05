@@ -41,10 +41,23 @@ fn refreshed_system() -> System {
 }
 
 /// Scan all processes for case-insensitive name matches.
+///
+/// Checks both `p.name()` (kernel comm field) and the exe path filename.
+/// On Linux the comm field is truncated to 15 characters, so long binary
+/// names only match via the exe path fallback.
 fn find_processes(sys: &System, name: &str) -> Vec<ProcessInfo> {
     sys.processes()
         .values()
-        .filter(|p| p.name().to_string_lossy().eq_ignore_ascii_case(name))
+        .filter(|p| {
+            if p.name().to_string_lossy().eq_ignore_ascii_case(name) {
+                return true;
+            }
+            // Fallback: match against the exe path filename (handles Linux
+            // 15-char comm truncation).
+            p.exe()
+                .and_then(|e| e.file_name())
+                .is_some_and(|f| f.to_string_lossy().eq_ignore_ascii_case(name))
+        })
         .map(|p| ProcessInfo {
             name: p.name().to_string_lossy().into_owned(),
             pid: p.pid().as_u32(),
