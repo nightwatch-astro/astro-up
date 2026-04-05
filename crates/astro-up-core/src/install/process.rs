@@ -171,7 +171,7 @@ pub async fn spawn_with_job_object(
             let code = if wait.0 == 0 {
                 let mut exit_code: u32 = 0;
                 unsafe {
-                    GetExitCodeProcess(proc_h, &mut exit_code).ok();
+                    GetExitCodeProcess(proc_h, &raw mut exit_code).ok();
                 }
                 Ok(exit_code as i32)
             } else {
