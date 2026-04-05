@@ -11,11 +11,17 @@ pr_labels = ["release"]
 
 [[package]]
 name = "astro-up-core"
+version_group = "astro-up"
 git_release_enable = false
 git_tag_enable = false
 
 [[package]]
+name = "astro-up-cli"
+version_group = "astro-up"
+
+[[package]]
 name = "astro-up-gui"
+version_group = "astro-up"
 git_release_enable = false
 git_tag_enable = false
 
@@ -29,7 +35,3 @@ commit_parsers = [
     { message = "^test", group = "Testing" },
     { message = "^chore", group = "Miscellaneous" },
 ]
-
-# Keep all crates at the same version
-[[version_group]]
-packages = ["astro-up-core", "astro-up-cli", "astro-up-gui"]
