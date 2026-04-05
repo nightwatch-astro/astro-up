@@ -26,8 +26,7 @@ jobs:
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      core_or_cli: ${{ steps.filter.outputs.core_or_cli }}
-      gui: ${{ steps.filter.outputs.gui }}
+      crates: ${{ steps.filter.outputs.crates }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v6
@@ -35,25 +34,19 @@ jobs:
         id: filter
         with:
           filters: |
-            core_or_cli:
-              - 'crates/astro-up-core/**'
-              - 'crates/astro-up-cli/**'
-              - 'Cargo.toml'
-              - 'Cargo.lock'
-            gui:
-              - 'crates/astro-up-gui/**'
-              - 'crates/astro-up-core/**'
-              - 'frontend/**'
+            crates:
+              - 'crates/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
             frontend:
               - 'frontend/**'
 
-  # Fast path: core + cli only (~30s). Runs on every crate PR.
+  # Fast path: core + cli on Linux (~30s). Catches fmt, clippy, and
+  # cross-platform unit tests without waiting for a Windows runner.
   check-rust:
     name: Rust Checks
     needs: changes
-    if: needs.changes.outputs.core_or_cli == 'true'
+    if: needs.changes.outputs.crates == 'true'
     runs-on: ubuntu-latest
     env:
       SCCACHE_GHA_ENABLED: "true"
@@ -89,11 +82,12 @@ jobs:
       - run: pnpm --dir frontend test
       - run: pnpm --dir frontend build
 
-  # Windows: core + cli only. Skips GUI/Tauri system deps.
-  check-windows-cli:
-    name: Windows CLI
+  # Full workspace on Windows — catches Windows-specific issues
+  # (registry, PE, WMI, Tauri) across all crates.
+  check-windows:
+    name: Windows Integration
     needs: changes
-    if: needs.changes.outputs.core_or_cli == 'true'
+    if: needs.changes.outputs.crates == 'true'
     runs-on: windows-latest
     env:
       SCCACHE_GHA_ENABLED: "true"
@@ -110,44 +104,24 @@ jobs:
         run: |
           choco install sqlite -y --no-progress
           sqlite3 crates/astro-up-cli/tests/fixtures/test-catalog.db < crates/astro-up-cli/tests/fixtures/build_catalog.sql
-      - run: cargo clippy -p astro-up-core -p astro-up-cli --all-targets -- -D warnings
-      - run: cargo nextest run -p astro-up-core -p astro-up-cli
-
-  # Windows: full workspace including GUI. Only on GUI/frontend changes.
-  check-windows-gui:
-    name: Windows GUI
-    needs: changes
-    if: needs.changes.outputs.gui == 'true'
-    runs-on: windows-latest
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: "sccache"
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: mozilla-actions/sccache-action@v0.0.9
-      - uses: taiki-e/install-action@nextest
-      - run: cargo clippy -p astro-up-gui --all-targets -- -D warnings
-      - run: cargo nextest run -p astro-up-gui
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo nextest run --workspace
 
   # Gate job: always runs, reports single required status.
   # Branch protection should require only "CI OK" — skipped jobs pass through.
   ci-ok:
     name: CI OK
     if: always()
-    needs: [check-rust, check-frontend, check-windows-cli, check-windows-gui]
+    needs: [check-rust, check-frontend, check-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate results
         env:
           RUST: ${{ needs.check-rust.result }}
           FRONTEND: ${{ needs.check-frontend.result }}
-          WINDOWS_CLI: ${{ needs.check-windows-cli.result }}
-          WINDOWS_GUI: ${{ needs.check-windows-gui.result }}
+          WINDOWS: ${{ needs.check-windows.result }}
         run: |
-          for result in "$RUST" "$FRONTEND" "$WINDOWS_CLI" "$WINDOWS_GUI"; do
+          for result in "$RUST" "$FRONTEND" "$WINDOWS"; do
             if [ "$result" = "failure" ]; then
               echo "Job failed: $result"
               exit 1
