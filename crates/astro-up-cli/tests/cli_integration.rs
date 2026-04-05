@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Comprehensive CLI integration tests.
 //!
 //! All tests require Windows (the binary exits on non-Windows).

@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! JSON output validation tests.
 //!
 //! These tests invoke the binary which requires Windows.

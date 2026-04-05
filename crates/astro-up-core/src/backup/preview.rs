@@ -130,6 +130,7 @@ fn hash_file(path: &Path) -> Result<String, CoreError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::backup::archive::create_backup;
@@ -158,8 +159,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -189,8 +189,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -221,8 +220,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -252,8 +250,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 

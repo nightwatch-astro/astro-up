@@ -1,3 +1,9 @@
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    clippy::assigning_clones
+)]
 //! Integration tests for the update orchestrator pipeline.
 
 use std::collections::HashMap;

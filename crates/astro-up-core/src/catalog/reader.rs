@@ -288,9 +288,9 @@ impl SqliteCatalogReader {
 
         Ok(Some(crate::types::DetectionConfig {
             method,
-            file_path,
             registry_key,
             registry_value,
+            file_path,
             version_regex,
             product_code,
             upgrade_code,

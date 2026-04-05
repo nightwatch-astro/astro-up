@@ -1,3 +1,9 @@
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::match_wildcard_for_single_variants
+)]
+
 use sha2::{Digest, Sha256};
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;

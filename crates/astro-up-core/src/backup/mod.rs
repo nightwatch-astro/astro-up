@@ -129,6 +129,7 @@ impl BackupManager for BackupService {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::types::Version;
@@ -178,8 +179,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test-pkg"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -215,8 +215,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test-pkg"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 

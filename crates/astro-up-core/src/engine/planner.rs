@@ -442,6 +442,7 @@ pub fn topological_sort(updates: Vec<PlannedUpdate>) -> Result<Vec<PlannedUpdate
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use chrono::Utc;
 

@@ -1,3 +1,9 @@
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::match_wildcard_for_single_variants
+)]
+
 use std::time::Instant;
 
 use tokio::sync::broadcast;

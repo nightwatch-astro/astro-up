@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 use wiremock::matchers::{method, path};

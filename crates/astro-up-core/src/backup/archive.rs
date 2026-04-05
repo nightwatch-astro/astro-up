@@ -361,6 +361,7 @@ fn is_locked_error(e: &io::Error) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::types::Version;
@@ -398,7 +399,7 @@ mod tests {
         // Verify archive exists
         let archives: Vec<_> = fs::read_dir(backup_dir.path().join("nina-app"))
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(Result::ok)
             .collect();
         assert_eq!(archives.len(), 1);
         assert!(archives[0].file_name().to_string_lossy().ends_with(".zip"));
@@ -445,8 +446,7 @@ mod tests {
         // Find archive
         let archive = fs::read_dir(backup_dir.path().join("test-pkg"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -481,8 +481,7 @@ mod tests {
 
         let archive = fs::read_dir(backup_dir.path().join("test-pkg"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -514,8 +513,7 @@ mod tests {
 
         let archive = fs::read_dir(backup_dir.path().join("test-pkg"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 

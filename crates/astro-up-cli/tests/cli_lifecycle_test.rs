@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Snapshot tests for lifecycle-test CLI command output structures.
 //!
 //! These tests verify JSON report structure and TOML detection config output

@@ -67,6 +67,7 @@ fn find_processes(sys: &System, name: &str) -> Vec<ProcessInfo> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

@@ -178,6 +178,7 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::unwrap_in_result)]
 mod tests {
     use super::*;
     use crate::ledger::LedgerSource;

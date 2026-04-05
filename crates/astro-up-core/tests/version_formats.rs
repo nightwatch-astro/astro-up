@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Integration tests for `VersionFormat` comparisons, `Version::is_major_upgrade`,
 //! and `PackageStatus::determine`.
 

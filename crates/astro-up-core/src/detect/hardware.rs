@@ -147,6 +147,7 @@ fn parse_device_id_vidpid(device_id: &str) -> Option<VidPid> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

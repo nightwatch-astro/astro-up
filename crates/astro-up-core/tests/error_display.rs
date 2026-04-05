@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use astro_up_core::error::CoreError;
 use astro_up_core::types::{CheckMethod, KnownExitCode};
 
@@ -63,7 +65,7 @@ fn error_messages_are_readable() {
     insta::assert_snapshot!(
         errors
             .iter()
-            .map(|e| e.to_string())
+            .map(std::string::ToString::to_string)
             .collect::<Vec<_>>()
             .join("\n")
     );

@@ -830,6 +830,12 @@ where
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::todo,
+    clippy::unwrap_in_result
+)]
 mod tests {
     use super::*;
 

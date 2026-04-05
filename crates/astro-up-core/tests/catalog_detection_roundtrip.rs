@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Round-trip integration test: create fixture catalog with full detection configs,
 //! read via SqliteCatalogReader::detection_config(), verify all fields match
 //! including deserialized fallback chain.

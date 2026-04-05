@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Unit tests for policy enforcement logic.
 
 use astro_up_core::engine::planner::SkipReason;
