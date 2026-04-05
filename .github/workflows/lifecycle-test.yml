@@ -7,6 +7,7 @@ on:
         description: 'Package ID (e.g., nina-app). Leave empty for matrix sweep of all missing.'
         required: false
         type: string
+        default: ''
       version:
         description: 'Specific version to test (default: latest)'
         required: false
@@ -78,7 +79,7 @@ jobs:
     strategy:
       matrix:
         package: ${{ fromJson(needs.prepare.outputs.matrix) }}
-      max-parallel: 5
+      max-parallel: 20
       fail-fast: false
 
     env:
