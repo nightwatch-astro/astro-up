@@ -29,7 +29,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6",
     "@vue/test-utils": "^2",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-plugin-vue": "^10",
     "jsdom": "^29",
     "typescript": "^5",
