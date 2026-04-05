@@ -1,4 +1,3 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! JSON output validation tests.
 //!
 //! These tests invoke the binary which requires Windows.
@@ -12,6 +11,7 @@ fn cmd() -> Command {
 }
 
 #[test]
+#[ignore = "requires published catalog release"]
 fn scan_json_is_valid() {
     let output = cmd().args(["--json", "scan"]).output().unwrap();
 
