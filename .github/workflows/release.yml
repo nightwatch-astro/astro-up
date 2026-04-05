@@ -28,11 +28,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
       - uses: mozilla-actions/sccache-action@v0.0.9
 
-      - name: Install release-plz
-        uses: taiki-e/install-action@v2
-        with:
-          tool: release-plz@0.3.157
-
       - name: Generate app token
         id: app-token
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
@@ -40,24 +35,15 @@ jobs:
           app-id: ${{ secrets.NIGHTWATCH_APP_ID }}
           private-key: ${{ secrets.NIGHTWATCH_APP_PRIVATE_KEY }}
 
-      - name: Debug release-plz release-pr
+      - name: Run release-plz release-pr
+        uses: release-plz/action@1528104d2ca23787631a1c1f022abb64b34c1e11 # v0.5
+        with:
+          command: release-pr
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          echo "=== Git tags ==="
-          git tag -l
-          echo "=== Git log (last 15) ==="
-          git log --oneline -15
-          echo "=== release-plz.toml ==="
-          cat release-plz.toml
-          echo "=== Cargo.toml versions ==="
-          grep -r '^version' crates/*/Cargo.toml
-          echo "=== Running release-plz release-pr -v ==="
-          release-plz release-pr -v --git-token "${GITHUB_TOKEN}" 2>&1 || true
-          echo "=== EXIT CODE: $? ==="
 
   release:
-    name: Create Release
+    name: Create Draft Release
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release-plz.outputs.releases_created }}
@@ -81,7 +67,6 @@ jobs:
         uses: release-plz/action@1528104d2ca23787631a1c1f022abb64b34c1e11 # v0.5
         with:
           command: release
-          verbose: "true"
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
@@ -115,7 +100,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         shell: bash
         run: |
-          TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          TAG=$(gh release list --limit 1 --json tagName,isDraft --jq '[.[] | select(.isDraft)] | .[0].tagName')
           ARTIFACT="target/${TARGET}/release/${{ matrix.artifact }}"
           EXT="${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}"
           UPLOAD_NAME="astro-up${EXT}"
@@ -161,7 +146,36 @@ jobs:
           tagName: v__VERSION__
           releaseName: "v__VERSION__"
           releaseBody: "See CHANGELOG.md for details."
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
+
+  publish-release:
+    name: Publish Release
+    needs: [release, build-cli, build-installer]
+    if: always() && needs.release.outputs.releases_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish or cleanup draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLI_RESULT: ${{ needs.build-cli.result }}
+          INSTALLER_RESULT: ${{ needs.build-installer.result }}
+        run: |
+          TAG=$(gh release list --repo "${{ github.repository }}" --limit 5 --json tagName,isDraft --jq '[.[] | select(.isDraft)] | .[0].tagName // empty')
+          if [ -z "${TAG}" ]; then
+            echo "No draft release found"
+            exit 0
+          fi
+
+          if [ "${CLI_RESULT}" = "success" ] && [ "${INSTALLER_RESULT}" = "success" ]; then
+            gh release edit "${TAG}" --repo "${{ github.repository }}" --draft=false
+            echo "Published release ${TAG}"
+          else
+            echo "Build failed (cli=${CLI_RESULT}, installer=${INSTALLER_RESULT}) — deleting draft release ${TAG}"
+            gh release delete "${TAG}" --repo "${{ github.repository }}" --yes
+            gh api --method DELETE "/repos/${{ github.repository }}/git/refs/tags/${TAG}" || true
+            echo "Cleaned up draft release and tag"
+            exit 1
+          fi
