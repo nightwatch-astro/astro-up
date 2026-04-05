@@ -13,10 +13,6 @@ name = "astro-up-core"
 git_release_enable = false
 git_tag_enable = false
 
-[[package]]
-name = "astro-up-cli"
-publish = true
-
 [changelog]
 commit_parsers = [
     { message = "^feat", group = "Features" },

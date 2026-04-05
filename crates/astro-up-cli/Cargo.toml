@@ -2,7 +2,7 @@
 name = "astro-up-cli"
 version = "0.2.0"
 description = "CLI for astro-up — astrophotography software manager"
-publish = true
+publish = false
 readme = "README.md"
 edition.workspace = true
 license.workspace = true
