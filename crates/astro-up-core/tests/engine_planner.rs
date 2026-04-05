@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Integration tests for the update planner — dependency resolution, ordering, and plan building.
 
 use astro_up_core::catalog::{PackageId, VersionEntry};

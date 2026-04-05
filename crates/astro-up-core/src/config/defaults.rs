@@ -2,18 +2,19 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use super::model::{
-    BackupPolicyConfig, CatalogConfig, LogConfig, LogLevel, NetworkConfig, NotificationsConfig,
-    PathsConfig, UiConfig, UpdateConfig,
+    BackupPolicyConfig, BackupSchedule, CatalogConfig, FontSize, InstallMethod, InstallScope,
+    LogConfig, LogLevel, NetworkConfig, NotificationsConfig, PathsConfig, ThemeMode, UiConfig,
+    UpdateConfig,
 };
 
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            theme: Default::default(),
-            font_size: Default::default(),
+            theme: ThemeMode::default(),
+            font_size: FontSize::default(),
             auto_scan_on_launch: false,
-            default_install_scope: Default::default(),
-            default_install_method: Default::default(),
+            default_install_scope: InstallScope::default(),
+            default_install_method: InstallMethod::default(),
             auto_check_updates: true,
             check_interval: Duration::from_secs(86400), // 24h
             auto_notify_updates: true,
@@ -41,7 +42,7 @@ impl Default for BackupPolicyConfig {
     fn default() -> Self {
         Self {
             scheduled_enabled: false,
-            schedule: Default::default(),
+            schedule: BackupSchedule::default(),
             max_per_package: 5,
             max_total_size_mb: 0,
             max_age_days: 0,

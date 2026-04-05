@@ -114,7 +114,7 @@ pub enum Commands {
         /// Specific version to test (default: latest)
         #[arg(long)]
         version: Option<String>,
-        /// Install directory for download_only packages
+        /// Install directory for `download_only` packages
         #[arg(long)]
         install_dir: Option<PathBuf>,
         /// Download and probe only, skip install/uninstall
@@ -234,6 +234,7 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

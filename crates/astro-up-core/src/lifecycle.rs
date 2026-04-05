@@ -222,6 +222,8 @@ impl LifecycleRunner {
 
         // Sort by semver (Version::parse produces comparable versions)
         versions.sort_by(|a, b| a.0.cmp(&b.0));
+        // SAFETY: versions is non-empty (checked at function entry or populated by loop above)
+        #[allow(clippy::unwrap_used)]
         Ok(versions.last().unwrap().0.clone())
     }
 
@@ -550,6 +552,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

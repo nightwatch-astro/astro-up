@@ -148,7 +148,9 @@ impl DiscoveryScanner {
         software: &Software,
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
         use winreg::RegKey;
-        use winreg::enums::*;
+        use winreg::enums::{
+            HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY,
+        };
 
         let mut candidates = Vec::new();
         let mut probed = Vec::new();
@@ -499,7 +501,7 @@ impl DiscoveryScanner {
         software: &Software,
     ) -> (Vec<DiscoveryCandidate>, Vec<ProbedLocation>) {
         use winreg::RegKey;
-        use winreg::enums::*;
+        use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_READ};
 
         let mut candidates = Vec::new();
         let mut probed = Vec::new();
@@ -633,16 +635,13 @@ impl DiscoveryScanner {
             })
             .await;
 
-        let drivers = match wmi_result {
-            Ok(Some(drivers)) => drivers,
-            _ => {
-                probed.push(ProbedLocation {
-                    method: DetectionMethod::Wmi,
-                    location: "Win32_PnPSignedDriver".into(),
-                    result: "error: WMI query failed or timed out".into(),
-                });
-                return (candidates, probed);
-            }
+        let Ok(Some(drivers)) = wmi_result else {
+            probed.push(ProbedLocation {
+                method: DetectionMethod::Wmi,
+                location: "Win32_PnPSignedDriver".into(),
+                result: "error: WMI query failed or timed out".into(),
+            });
+            return (candidates, probed);
         };
 
         for driver in &drivers {
@@ -721,6 +720,7 @@ impl DiscoveryScanner {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

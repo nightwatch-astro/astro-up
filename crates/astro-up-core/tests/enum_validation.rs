@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::str::FromStr;
 
 use astro_up_core::types::{
@@ -96,12 +98,10 @@ fn category_iter_returns_all_10_variants() {
 
 #[test]
 fn software_type_iter_returns_all_6_variants() {
-    let variants: Vec<SoftwareType> = SoftwareType::iter().collect();
-    assert_eq!(variants.len(), 6);
+    assert_eq!(SoftwareType::iter().count(), 6);
 }
 
 #[test]
 fn known_exit_code_iter_returns_all_12_variants() {
-    let variants: Vec<KnownExitCode> = KnownExitCode::iter().collect();
-    assert_eq!(variants.len(), 12);
+    assert_eq!(KnownExitCode::iter().count(), 12);
 }

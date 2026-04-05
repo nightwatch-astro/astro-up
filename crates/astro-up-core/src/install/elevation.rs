@@ -62,7 +62,9 @@ pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
 
         tokio::task::spawn_blocking(move || {
             use super::wide::to_wide_null;
-            use windows::Win32::UI::Shell::*;
+            use windows::Win32::UI::Shell::{
+                SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, ShellExecuteExW,
+            };
             use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
             use windows::core::PCWSTR;
 
@@ -80,7 +82,7 @@ pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
                 ..Default::default()
             };
 
-            let success = unsafe { ShellExecuteExW(&mut sei) };
+            let success = unsafe { ShellExecuteExW(std::ptr::from_mut(&mut sei)) };
             if success.is_ok() {
                 if !sei.hProcess.is_invalid() {
                     unsafe {

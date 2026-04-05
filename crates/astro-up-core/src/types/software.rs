@@ -11,7 +11,7 @@ use super::hardware::HardwareConfig;
 use super::install::InstallConfig;
 use super::versioning::VersioningConfig;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, EnumString, EnumIter)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, EnumString, EnumIter)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum SoftwareType {
@@ -52,7 +52,7 @@ pub enum Category {
 }
 
 /// The central aggregate — a complete software package definition.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Software {
     pub id: PackageId,
     #[serde(default)]

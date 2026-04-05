@@ -27,28 +27,25 @@ pub fn init(verbose: bool, quiet: bool, log_dir: &std::path::Path) -> Result<Wor
         .map(|()| tracing_appender::rolling::daily(log_dir, "astro-up.log"))
         .map(tracing_appender::non_blocking);
 
-    match file_result {
-        Some((non_blocking, guard)) => {
-            let file_layer = fmt::layer()
-                .json()
-                .with_writer(non_blocking)
-                .with_filter(EnvFilter::new("debug"));
+    if let Some((non_blocking, guard)) = file_result {
+        let file_layer = fmt::layer()
+            .json()
+            .with_writer(non_blocking)
+            .with_filter(EnvFilter::new("debug"));
 
-            tracing_subscriber::registry()
-                .with(stderr_layer)
-                .with(file_layer)
-                .init();
+        tracing_subscriber::registry()
+            .with(stderr_layer)
+            .with(file_layer)
+            .init();
 
-            Ok(guard)
-        }
-        None => {
-            // No file logging — create a dummy guard from /dev/null
-            let (non_blocking, guard) = tracing_appender::non_blocking(std::io::sink());
-            drop(non_blocking);
+        Ok(guard)
+    } else {
+        // No file logging — create a dummy guard from /dev/null
+        let (non_blocking, guard) = tracing_appender::non_blocking(std::io::sink());
+        drop(non_blocking);
 
-            tracing_subscriber::registry().with(stderr_layer).init();
+        tracing_subscriber::registry().with(stderr_layer).init();
 
-            Ok(guard)
-        }
+        Ok(guard)
     }
 }

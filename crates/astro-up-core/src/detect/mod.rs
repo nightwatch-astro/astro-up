@@ -23,7 +23,7 @@ use crate::types::DetectionMethod;
 use crate::types::Version;
 
 /// Outcome of detecting a single package.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum DetectionResult {
     Installed {
@@ -47,7 +47,7 @@ impl DetectionResult {
     pub fn is_installed(&self) -> bool {
         matches!(
             self,
-            DetectionResult::Installed { .. } | DetectionResult::InstalledUnknownVersion { .. }
+            Self::Installed { .. } | Self::InstalledUnknownVersion { .. }
         )
     }
 }
@@ -154,6 +154,7 @@ mod humantime_serde_compat {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::types::DetectionMethod;

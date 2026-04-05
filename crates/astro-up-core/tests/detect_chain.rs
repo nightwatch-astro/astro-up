@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use astro_up_core::detect::{self, DetectionResult, PathResolver};
 use astro_up_core::types::{DetectionConfig, DetectionMethod};
 

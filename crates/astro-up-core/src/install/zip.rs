@@ -123,14 +123,14 @@ fn detect_single_root(
     }
 
     if roots.len() == 1 && !has_root_files {
-        let root = roots.into_iter().next().unwrap();
-        Ok(Some(PathBuf::from(root)))
+        Ok(roots.into_iter().next().map(PathBuf::from))
     } else {
         Ok(None)
     }
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::unreadable_literal)]
 mod tests {
     use super::*;
     use std::io::Write;

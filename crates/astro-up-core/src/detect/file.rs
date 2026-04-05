@@ -63,16 +63,13 @@ pub async fn detect_config(config: &DetectionConfig, resolver: &PathResolver) ->
         }
     };
 
-    match re.captures(&content) {
-        Some(caps) if caps.get(1).is_some() => {
-            let version_str = caps.get(1).unwrap().as_str();
-            DetectionResult::Installed {
-                version: Version::parse(version_str),
-                method: DetectionMethod::ConfigFile,
-                install_path: Some(path.clone()),
-            }
-        }
-        _ => DetectionResult::InstalledUnknownVersion {
+    match re.captures(&content).and_then(|caps| caps.get(1)) {
+        Some(m) => DetectionResult::Installed {
+            version: Version::parse(m.as_str()),
+            method: DetectionMethod::ConfigFile,
+            install_path: Some(path),
+        },
+        None => DetectionResult::InstalledUnknownVersion {
             method: DetectionMethod::ConfigFile,
             install_path: Some(path),
         },

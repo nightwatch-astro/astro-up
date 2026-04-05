@@ -19,14 +19,11 @@ impl PidLock {
                 if process_exists(pid) {
                     return Err(CoreError::CatalogLocked { pid });
                 }
-                // Stale lock — process is dead, remove it
                 tracing::warn!(pid, "removing stale lockfile");
-                std::fs::remove_file(path)?;
             } else {
-                // Corrupt lockfile — remove it
                 tracing::warn!("removing corrupt lockfile");
-                std::fs::remove_file(path)?;
             }
+            std::fs::remove_file(path)?;
         }
 
         if let Some(parent) = path.parent() {
@@ -57,6 +54,7 @@ fn process_exists(pid: u32) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Integration tests for the CLI using assert_cmd.
 //!
 //! These tests invoke the binary which requires Windows.

@@ -17,7 +17,10 @@ const HOOK_TIMEOUT: Duration = Duration::from_secs(60);
 pub async fn run_hook(command: &str) -> Result<(), CoreError> {
     use tokio::process::Command;
 
-    let child = if command.ends_with(".ps1") {
+    let child = if std::path::Path::new(command)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("ps1"))
+    {
         Command::new("powershell.exe")
             .args(["-ExecutionPolicy", "Bypass", "-NoProfile", "-File", command])
             .kill_on_drop(true)

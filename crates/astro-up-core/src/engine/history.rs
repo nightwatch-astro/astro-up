@@ -1,5 +1,6 @@
 //! Operation history — record read/write for the operations table.
 
+use std::fmt::Write as _;
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
@@ -10,7 +11,7 @@ use strum::{Display, EnumString};
 use super::orchestrator::HistoryFilter;
 
 /// The kind of operation performed on a package.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum OperationType {
@@ -20,7 +21,7 @@ pub enum OperationType {
 }
 
 /// The outcome of a completed operation.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum OperationStatus {
@@ -122,9 +123,10 @@ pub fn query_history(
     sql.push_str(" ORDER BY created_at DESC");
 
     if let Some(limit) = filter.limit {
-        sql.push_str(&format!(" LIMIT {limit}"));
+        let _ = write!(sql, " LIMIT {limit}");
     }
 
+    #[allow(clippy::redundant_closure_for_method_calls)]
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         param_values.iter().map(|p| p.as_ref()).collect();
     let mut stmt = conn
@@ -147,8 +149,7 @@ pub fn query_history(
                 duration_ms: duration_i64 as u64,
                 error_message: row.get(7)?,
                 created_at: DateTime::parse_from_rfc3339(&created_str)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(|_| Utc::now()),
+                    .map_or_else(|_| Utc::now(), |dt| dt.with_timezone(&Utc)),
             })
         })
         .map_err(|e| crate::error::CoreError::Database(e.to_string()))?;
@@ -161,6 +162,7 @@ pub fn query_history(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::catalog::PackageId;

@@ -38,21 +38,18 @@ pub async fn handle_install(
         .parse()
         .map_err(|_| eyre!("invalid package id: {package}"))?;
 
-    let pkg = match reader.resolve(&id) {
-        Ok(p) => p,
-        Err(_) => {
-            let results = reader.search(package)?;
-            if results.is_empty() {
-                return Err(eyre!("package '{package}' not found in catalog"));
-            }
-            if mode.should_print() {
-                println!("Package '{package}' not found. Did you mean:");
-                for r in results.iter().take(5) {
-                    println!("  {} ({})", r.package.id, r.package.name);
-                }
-            }
-            return Ok(());
+    let Ok(pkg) = reader.resolve(&id) else {
+        let results = reader.search(package)?;
+        if results.is_empty() {
+            return Err(eyre!("package '{package}' not found in catalog"));
         }
+        if mode.should_print() {
+            println!("Package '{package}' not found. Did you mean:");
+            for r in results.iter().take(5) {
+                println!("  {} ({})", r.package.id, r.package.name);
+            }
+        }
+        return Ok(());
     };
 
     let latest = reader
@@ -158,8 +155,7 @@ pub async fn handle_install(
         .as_ref()
         .ok()
         .and_then(|sr| sr.results.iter().find(|r| r.package_id == package))
-        .map(|r| r.result.is_installed())
-        .unwrap_or(false);
+        .is_some_and(|r| r.result.is_installed());
 
     if *mode == OutputMode::Json {
         return print_json(&serde_json::json!({

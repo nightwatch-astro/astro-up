@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Performance benchmarks for catalog operations (SC-001, SC-002 from spec 005).
 
 use std::path::Path;

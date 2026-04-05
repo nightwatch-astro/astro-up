@@ -37,7 +37,7 @@ pub(crate) fn try_parse_lenient(raw: &str) -> Option<semver::Version> {
     // Strip leading 'v' or 'V'
     let s = trimmed
         .strip_prefix('v')
-        .or(trimmed.strip_prefix('V'))
+        .or_else(|| trimmed.strip_prefix('V'))
         .unwrap_or(trimmed);
 
     // Try again after stripping prefix
@@ -157,6 +157,7 @@ impl<'de> Deserialize<'de> for Version {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use rstest::rstest;

@@ -16,7 +16,7 @@ static REGEX_CACHE: LazyLock<Mutex<HashMap<String, Regex>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Status of a package relative to the catalog.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "status")]
 pub enum PackageStatus {
     /// Installed version matches catalog latest.
@@ -122,7 +122,7 @@ impl fmt::Display for PackageStatus {
 }
 
 /// Describes how version strings should be parsed and compared.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum VersionFormat {
     /// Default. Lenient semver parsing (v-prefix, 2-part, 4-part coercion).
@@ -233,9 +233,8 @@ pub fn parse_custom(raw: &str, re: &Regex) -> Option<Vec<u64>> {
 /// is invalid or doesn't match either version.
 fn compare_custom(a: &str, b: &str, pattern: &str) -> Ordering {
     let re = {
-        let mut cache = match REGEX_CACHE.lock() {
-            Ok(guard) => guard,
-            Err(_) => return a.cmp(b),
+        let Ok(mut cache) = REGEX_CACHE.lock() else {
+            return a.cmp(b);
         };
         if let Some(cached) = cache.get(pattern) {
             cached.clone()
@@ -287,14 +286,11 @@ pub fn check_format_compatibility(raw: &str, format: &VersionFormat) -> Option<S
         }
         VersionFormat::Custom { pattern } => {
             let re = {
-                let mut cache = match REGEX_CACHE.lock() {
-                    Ok(guard) => guard,
-                    Err(_) => {
-                        return Some(format!(
-                            "version \"{raw}\" could not be checked against custom pattern \
-                             \"{pattern}\"; regex cache is poisoned"
-                        ));
-                    }
+                let Ok(mut cache) = REGEX_CACHE.lock() else {
+                    return Some(format!(
+                        "version \"{raw}\" could not be checked against custom pattern \
+                         \"{pattern}\"; regex cache is poisoned"
+                    ));
                 };
                 if let Some(cached) = cache.get(pattern.as_str()) {
                     cached.clone()
@@ -329,7 +325,7 @@ impl Version {
     /// Compare this version to another using the given [`VersionFormat`].
     ///
     /// This delegates to [`compare_versions`] using the raw version strings.
-    pub fn compare_with_format(&self, other: &Version, format: &VersionFormat) -> Ordering {
+    pub fn compare_with_format(&self, other: &Self, format: &VersionFormat) -> Ordering {
         compare_versions(&self.raw, &other.raw, format)
     }
 
@@ -337,7 +333,7 @@ impl Version {
     ///
     /// Only meaningful for semver-parseable versions. Returns `false` if either
     /// version cannot be parsed.
-    pub fn is_major_upgrade(from: &Version, to: &Version) -> bool {
+    pub fn is_major_upgrade(from: &Self, to: &Self) -> bool {
         match (&from.parsed, &to.parsed) {
             (Some(a), Some(b)) => a.major != b.major,
             _ => false,
@@ -346,6 +342,7 @@ impl Version {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

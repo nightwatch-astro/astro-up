@@ -88,7 +88,7 @@ fn restore_preview_sync(archive_path: &Path) -> Result<FileChangeSummary, CoreEr
                 let relative = entry
                     .path()
                     .strip_prefix(original_path)
-                    .unwrap_or(entry.path());
+                    .unwrap_or_else(|_| entry.path());
                 summary.missing.push(format!(
                     "{}/{}",
                     dir_name,
@@ -130,6 +130,7 @@ fn hash_file(path: &Path) -> Result<String, CoreError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::backup::archive::create_backup;
@@ -158,8 +159,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -189,8 +189,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -221,8 +220,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -252,8 +250,7 @@ mod tests {
 
         let archive = std::fs::read_dir(backup_dir.path().join("test"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 

@@ -124,9 +124,8 @@ fn create_archive_sync(
             }
 
             let source_path = entry.path();
-            let relative = match source_path.strip_prefix(config_path) {
-                Ok(r) => r,
-                Err(_) => continue,
+            let Ok(relative) = source_path.strip_prefix(config_path) else {
+                continue;
             };
 
             // Build archive path with forward slashes (ZIP spec)
@@ -212,8 +211,7 @@ pub(crate) fn resolve_dir_names(paths: &[PathBuf]) -> Vec<String> {
     for path in paths {
         let base = path
             .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| "backup".to_string());
+            .map_or_else(|| "backup".to_string(), |n| n.to_string_lossy().to_string());
 
         let count = used.entry(base.clone()).or_insert(0);
         *count += 1;
@@ -221,7 +219,7 @@ pub(crate) fn resolve_dir_names(paths: &[PathBuf]) -> Vec<String> {
         if *count == 1 {
             names.push(base);
         } else {
-            names.push(format!("{}_{}", base, count));
+            names.push(format!("{base}_{count}"));
         }
     }
     names
@@ -251,7 +249,7 @@ pub async fn read_metadata(archive_path: &Path) -> Result<BackupMetadata, CoreEr
 /// Extracts a backup archive to the original paths stored in metadata.
 pub async fn restore(archive_path: &Path, path_filter: Option<&str>) -> Result<(), CoreError> {
     let archive_path = archive_path.to_path_buf();
-    let filter = path_filter.map(|s| s.to_string());
+    let filter = path_filter.map(ToString::to_string);
 
     tokio::task::spawn_blocking(move || restore_sync(&archive_path, filter.as_deref()))
         .await
@@ -286,8 +284,7 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
             archive
                 .by_index(i)
                 .ok()
-                .map(|e| e.name().starts_with(filter))
-                .unwrap_or(false)
+                .is_some_and(|e| e.name().starts_with(filter))
         });
         if !has_match {
             let available: Vec<String> = dir_names.clone();
@@ -364,6 +361,7 @@ fn is_locked_error(e: &io::Error) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::types::Version;
@@ -401,7 +399,7 @@ mod tests {
         // Verify archive exists
         let archives: Vec<_> = fs::read_dir(backup_dir.path().join("nina-app"))
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(Result::ok)
             .collect();
         assert_eq!(archives.len(), 1);
         assert!(archives[0].file_name().to_string_lossy().ends_with(".zip"));
@@ -448,8 +446,7 @@ mod tests {
         // Find archive
         let archive = fs::read_dir(backup_dir.path().join("test-pkg"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -484,8 +481,7 @@ mod tests {
 
         let archive = fs::read_dir(backup_dir.path().join("test-pkg"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 
@@ -517,8 +513,7 @@ mod tests {
 
         let archive = fs::read_dir(backup_dir.path().join("test-pkg"))
             .unwrap()
-            .filter_map(|e| e.ok())
-            .next()
+            .find_map(Result::ok)
             .unwrap()
             .path();
 

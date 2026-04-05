@@ -31,7 +31,7 @@ impl OutputMode {
     }
 
     /// Whether user-facing messages should be printed.
-    pub fn should_print(&self) -> bool {
+    pub const fn should_print(&self) -> bool {
         !matches!(self, Self::Quiet)
     }
 }

@@ -92,6 +92,7 @@ pub async fn prune_backups(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::backup::archive::create_backup;

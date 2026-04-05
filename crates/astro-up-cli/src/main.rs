@@ -26,9 +26,10 @@ async fn main() -> ExitCode {
 
     let cli = astro_up_cli::Cli::parse();
 
-    let log_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up")
-        .map(|dirs| dirs.data_dir().join("logs"))
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let log_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up").map_or_else(
+        || std::path::PathBuf::from("."),
+        |dirs| dirs.data_dir().join("logs"),
+    );
 
     let _log_guard = match astro_up_cli::logging::init(cli.verbose, cli.quiet, &log_dir) {
         Ok(guard) => guard,
@@ -43,10 +44,9 @@ async fn main() -> ExitCode {
     let cancel = CancellationToken::new();
     let cancel_clone = cancel.clone();
     tokio::spawn(async move {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("failed to listen for Ctrl+C");
-        cancel_clone.cancel();
+        if tokio::signal::ctrl_c().await.is_ok() {
+            cancel_clone.cancel();
+        }
     });
 
     let result = astro_up_cli::run(cli, cancel.clone()).await;

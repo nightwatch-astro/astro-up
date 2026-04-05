@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use astro_up_core::types::Software;
 
 const NINA_TOML: &str = r#"

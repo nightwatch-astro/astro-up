@@ -116,7 +116,7 @@ impl From<PackageId> for String {
 // ---------------------------------------------------------------------------
 
 /// Query-only view of a package from the catalog.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PackageSummary {
     pub id: PackageId,
     pub name: String,
@@ -140,7 +140,7 @@ pub struct PackageSummary {
 // ---------------------------------------------------------------------------
 
 /// A discovered version for a package.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionEntry {
     pub package_id: PackageId,
     pub version: String,
@@ -156,7 +156,7 @@ pub struct VersionEntry {
 // ---------------------------------------------------------------------------
 
 /// Catalog metadata from the `meta` table.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CatalogMeta {
     pub schema_version: String,
     pub compiled_at: DateTime<Utc>,
@@ -177,7 +177,7 @@ pub struct CatalogFilter {
 }
 
 /// Result of a catalog fetch operation.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FetchResult {
     /// New catalog downloaded and verified.
     Updated,
@@ -192,6 +192,7 @@ pub enum FetchResult {
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

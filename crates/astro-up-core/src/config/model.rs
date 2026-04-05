@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
 /// Theme preference for the UI.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum ThemeMode {
@@ -17,7 +17,7 @@ pub enum ThemeMode {
 }
 
 /// Font size / UI scale preference.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum FontSize {
@@ -28,7 +28,7 @@ pub enum FontSize {
 }
 
 /// Install scope preference.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum InstallScope {
@@ -38,7 +38,7 @@ pub enum InstallScope {
 }
 
 /// Install method preference.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum InstallMethod {
@@ -48,7 +48,7 @@ pub enum InstallMethod {
 }
 
 /// Backup schedule frequency.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum BackupSchedule {
@@ -59,7 +59,7 @@ pub enum BackupSchedule {
 }
 
 /// Log level for the application.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Display, EnumString)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum LogLevel {
@@ -97,7 +97,7 @@ fn validate_min_one_minute(value: &Duration, _ctx: &()) -> garde::Result {
 }
 
 /// General UI settings (theme, font size, install defaults, update checking).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct UiConfig {
     pub theme: ThemeMode,
@@ -114,7 +114,7 @@ pub struct UiConfig {
 }
 
 /// Startup and window behavior.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct StartupConfig {
     pub start_at_login: bool,
@@ -123,7 +123,7 @@ pub struct StartupConfig {
 }
 
 /// Notification preferences.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct NotificationsConfig {
     pub enabled: bool,
@@ -135,7 +135,7 @@ pub struct NotificationsConfig {
 }
 
 /// Backup policy settings (scheduled backup, retention).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct BackupPolicyConfig {
     pub scheduled_enabled: bool,
@@ -145,7 +145,7 @@ pub struct BackupPolicyConfig {
     pub max_age_days: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct CatalogConfig {
     #[garde(url)]
@@ -155,7 +155,7 @@ pub struct CatalogConfig {
     pub cache_ttl: Duration,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct PathsConfig {
     pub download_dir: PathBuf,
@@ -165,7 +165,7 @@ pub struct PathsConfig {
     pub purge_installers_after_days: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct NetworkConfig {
     #[garde(inner(url))]
@@ -181,7 +181,7 @@ pub struct NetworkConfig {
     pub download_speed_limit: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct UpdateConfig {
     pub auto_check: bool,
@@ -190,7 +190,7 @@ pub struct UpdateConfig {
     pub check_interval: Duration,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct LogConfig {
     pub level: LogLevel,
@@ -198,13 +198,13 @@ pub struct LogConfig {
     pub log_file: PathBuf,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[garde(allow_unvalidated)]
 pub struct TelemetryConfig {
     pub enabled: bool,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]
 pub struct AppConfig {
     #[garde(dive)]
     pub ui: UiConfig,
@@ -230,6 +230,7 @@ pub struct AppConfig {
 
 impl AppConfig {
     /// Discover all valid dot-path keys by introspecting the struct via serde.
+    #[allow(clippy::expect_used)]
     pub fn known_keys(&self) -> Vec<String> {
         let value = serde_json::to_value(self).expect("AppConfig is always serializable");
         collect_keys(&value, "")

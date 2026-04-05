@@ -53,6 +53,7 @@ pub fn interpret_exit_code(code: i32, config: &InstallConfig) -> ExitCodeOutcome
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

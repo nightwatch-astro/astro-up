@@ -34,7 +34,7 @@ pub fn confirm(prompt: &str, mode: &OutputMode, yes: bool) -> Result<bool> {
 }
 
 /// Spawn a background task that forwards core events to the progress renderer.
-/// Returns the download progress bar (for Interactive mode) and a JoinHandle.
+/// Returns the download progress bar (for Interactive mode) and a `JoinHandle`.
 pub fn forward_events(
     mut rx: broadcast::Receiver<Event>,
     mode: OutputMode,

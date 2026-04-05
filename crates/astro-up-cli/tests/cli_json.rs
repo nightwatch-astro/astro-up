@@ -3,6 +3,7 @@
 //! These tests invoke the binary which requires Windows.
 
 #![cfg(target_os = "windows")]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use assert_cmd::Command;
 
@@ -14,7 +15,13 @@ fn cmd() -> Command {
 fn scan_json_is_valid() {
     let output = cmd().args(["--json", "scan"]).output().unwrap();
 
-    assert!(output.status.success());
+    assert!(
+        output.status.success(),
+        "scan --json failed with exit code {:?}\nstdout: {}\nstderr: {}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
     let stdout = String::from_utf8_lossy(&output.stdout);
     let parsed: serde_json::Value = serde_json::from_str(&stdout)
         .unwrap_or_else(|e| panic!("invalid JSON from scan --json: {e}\nOutput: {stdout}"));

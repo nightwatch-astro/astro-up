@@ -9,6 +9,7 @@ use super::OutputMode;
 /// Create an indicatif progress bar for download tracking.
 pub fn create_download_bar(total_bytes: u64) -> ProgressBar {
     let pb = ProgressBar::new(total_bytes);
+    #[allow(clippy::unwrap_used)] // template is a compile-time constant
     pb.set_style(
         ProgressStyle::with_template(
             "  {spinner:.green} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})",

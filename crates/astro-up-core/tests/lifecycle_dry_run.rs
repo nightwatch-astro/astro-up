@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Integration tests for lifecycle dry-run mode.
 //!
 //! Verifies that dry-run:

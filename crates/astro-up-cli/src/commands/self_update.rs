@@ -20,7 +20,7 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
             .repo_owner("nightwatch-astro")
             .repo_name("astro-up")
             .build()
-            .and_then(|list| list.fetch())
+            .and_then(self_update::backends::github::ReleaseList::fetch)
     })
     .await
     .map_err(|e| eyre!("task join error: {e}"))?;
@@ -61,7 +61,7 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
     if *mode == OutputMode::Json {
         return print_json(&serde_json::json!({
             "current_version": current_str,
-            "latest_version": latest_version.as_ref().map(|v| v.to_string()),
+            "latest_version": latest_version.as_ref().map(std::string::ToString::to_string),
             "status": status,
             "dry_run": dry_run,
         }));
@@ -92,7 +92,10 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
 
     // Find the CLI binary asset. Our release publishes `astro-up.exe`.
     let asset_name = "astro-up.exe";
-    let release = latest_release.unwrap(); // safe — latest_version is Some
+    // SAFETY: `latest_release` is guaranteed Some because `latest_version` is Some
+    // and it was derived from `latest_release` via `.and_then()`.
+    #[allow(clippy::unwrap_used)]
+    let release = latest_release.unwrap();
     let asset = release.assets.iter().find(|a| a.name == asset_name);
 
     let Some(asset) = asset else {
@@ -114,6 +117,7 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
         self_update::Download::from_url(&download_url)
             .set_header(
                 reqwest::header::ACCEPT,
+                #[allow(clippy::unwrap_used)]
                 "application/octet-stream".parse().unwrap(),
             )
             .download_to(
@@ -139,7 +143,7 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
 }
 
 /// Clean up leftover `.old` binary from a previous self-update.
-/// Call this early in main() startup.
+/// Call this early in `main()` startup.
 pub fn cleanup_old_binary() {
     if let Ok(exe) = std::env::current_exe() {
         let old = exe.with_extension("old");

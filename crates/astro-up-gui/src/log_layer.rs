@@ -35,7 +35,7 @@ struct MessageVisitor {
 }
 
 impl MessageVisitor {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             message: String::new(),
             fields: Vec::new(),

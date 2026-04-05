@@ -237,7 +237,7 @@ pub fn handle_show_detail(
         license: pkg.license.clone(),
         tags: pkg.tags.clone(),
         aliases: pkg.aliases.clone(),
-        dependencies: pkg.dependencies.clone(),
+        dependencies: pkg.dependencies,
         latest_version: latest.map(|v| v.version),
     };
 

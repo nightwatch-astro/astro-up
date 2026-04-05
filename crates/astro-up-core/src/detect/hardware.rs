@@ -27,7 +27,7 @@ impl VidPid {
     }
 
     /// Check if this pattern matches a device's VID:PID.
-    pub fn matches(&self, device: &VidPid) -> bool {
+    pub fn matches(&self, device: &Self) -> bool {
         if self.vendor_id != device.vendor_id {
             return false;
         }
@@ -90,9 +90,8 @@ pub async fn discover(
     })
     .await;
 
-    let devices = match result {
-        Ok(Ok(d)) => d,
-        _ => return Vec::new(),
+    let Ok(Ok(devices)) = result else {
+        return Vec::new();
     };
 
     let mut matches = Vec::new();
@@ -147,6 +146,7 @@ fn parse_device_id_vidpid(device_id: &str) -> Option<VidPid> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

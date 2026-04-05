@@ -95,7 +95,7 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
                 continue;
             }
 
-            let ledger_path = ledger_paths.get(&id).map(|s| s.as_str());
+            let ledger_path = ledger_paths.get(&id).map(String::as_str);
             let result = run_chain(detection_config, &self.resolver, ledger_path).await;
 
             // Report per-package errors for Unavailable results
@@ -178,6 +178,7 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::unwrap_in_result)]
 mod tests {
     use super::*;
     use crate::ledger::LedgerSource;

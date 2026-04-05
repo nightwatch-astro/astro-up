@@ -1,10 +1,11 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Helper to create test fixture catalog.db.
 //! Run with: cargo test -p astro-up-core --test create_fixture_catalog -- --ignored
 
 use rusqlite::{Connection, params};
 
 #[test]
-#[ignore] // Run manually to regenerate fixture
+#[ignore = "run manually to regenerate fixture"]
 fn create_fixture_catalog() {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -229,7 +230,7 @@ fn create_fixture_catalog() {
         conn.execute(
             "INSERT INTO versions (package_id, version, url, sha256, discovered_at, release_notes_url, pre_release)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![pid, ver, url, sha, disc, rn, *pre as i32],
+            params![pid, ver, url, sha, disc, rn, i32::from(*pre)],
         )
         .unwrap();
     }
