@@ -9,7 +9,7 @@ use crate::error::CoreError;
 #[cfg(windows)]
 pub fn find_uninstall_command(package_id: &str) -> Option<String> {
     use winreg::RegKey;
-    use winreg::enums::*;
+    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
 
     let search_paths = [
         (
@@ -168,7 +168,6 @@ pub(crate) fn shell_words_split(input: &str) -> Vec<String> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
