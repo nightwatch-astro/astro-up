@@ -1,5 +1,4 @@
 [workspace]
-publish = false
 git_tag_enable = true
 git_release_enable = true
 git_release_draft = false
@@ -10,6 +9,13 @@ pr_labels = ["release"]
 
 [[package]]
 name = "astro-up-core"
+git_release_enable = false
+git_tag_enable = false
+publish = false
+
+[[package]]
+name = "astro-up-gui"
+publish = false
 git_release_enable = false
 git_tag_enable = false
 
