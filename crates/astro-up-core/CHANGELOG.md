@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/nightwatch-astro/astro-up/compare/astro-up-core-v0.1.1...astro-up-core-v0.2.0) - 2026-04-05
+
+### Bug Fixes
+
+- *(ci)* slim CI jobs, fix version-dependent snapshot ([#758](https://github.com/nightwatch-astro/astro-up/pull/758))
+- delete etag sidecars during purge, use config download_dir ([#753](https://github.com/nightwatch-astro/astro-up/pull/753))
+
+### Features
+
+- *(ci)* add CLI integration tests on Windows ([#759](https://github.com/nightwatch-astro/astro-up/pull/759))
+- *(023)* complete lifecycle testing — tests, ledger, catalog schema, docs ([#738](https://github.com/nightwatch-astro/astro-up/pull/738))
+
 ## [0.1.1](https://github.com/nightwatch-astro/astro-up/compare/astro-up-core-v0.1.0...astro-up-core-v0.1.1) - 2026-04-04
 
 ### Documentation

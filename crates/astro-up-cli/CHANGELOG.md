@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/nightwatch-astro/astro-up/compare/astro-up-cli-v0.1.1...astro-up-cli-v0.2.0) - 2026-04-05
+
+### Bug Fixes
+
+- delete etag sidecars during purge, use config download_dir ([#753](https://github.com/nightwatch-astro/astro-up/pull/753))
+
+### Features
+
+- *(023)* complete lifecycle testing — tests, ledger, catalog schema, docs ([#738](https://github.com/nightwatch-astro/astro-up/pull/738))
+
 ## [0.1.1](https://github.com/nightwatch-astro/astro-up/compare/astro-up-cli-v0.1.0...astro-up-cli-v0.1.1) - 2026-04-04
 
 ### Documentation
