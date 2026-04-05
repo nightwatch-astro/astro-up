@@ -20,6 +20,9 @@ pub mod types;
 // Re-export rusqlite for consumers that need direct Connection access (orchestrator).
 pub use rusqlite;
 
+/// Crate name for runtime identification (user-agent strings, log prefixes).
+pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
+
 /// Returns the version of astro-up-core.
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
