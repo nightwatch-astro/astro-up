@@ -38,6 +38,11 @@ async fn main() -> ExitCode {
         }
     };
 
+    tracing::info!(
+        version = astro_up_core::version(),
+        "starting astro-up"
+    );
+
     let cancel = CancellationToken::new();
     let cancel_clone = cancel.clone();
     tokio::spawn(async move {
