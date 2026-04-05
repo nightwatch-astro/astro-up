@@ -1,3 +1,13 @@
 [profile.default]
 # Retry flaky tests (network-dependent catalog download, Windows API timing)
 retries = 2
+
+# Tests that invoke the astro-up binary share a data directory and file lock.
+# Run them serially to avoid "another instance is running" lock contention.
+[[profile.default.overrides]]
+filter = "binary(cli_json) | binary(cli_integration)"
+threads-required = 1
+test-group = "serial-cli"
+
+[test-groups.serial-cli]
+max-threads = 1
