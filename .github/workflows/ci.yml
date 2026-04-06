@@ -101,7 +101,7 @@ jobs:
       - uses: taiki-e/install-action@nextest
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Run unit tests
-        run: cargo nextest run --workspace --lib --bins --doc
+        run: cargo nextest run --workspace --lib --bins
 
   # Windows integration tests — spawns the binary, needs catalog fixture.
   # Runs in parallel with unit tests on a separate runner.
