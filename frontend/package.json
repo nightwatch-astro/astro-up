@@ -24,7 +24,7 @@
     "primevue": "^4",
     "valibot": "^1",
     "vue": "^3",
-    "vue-router": "^4"
+    "vue-router": "^5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6",
