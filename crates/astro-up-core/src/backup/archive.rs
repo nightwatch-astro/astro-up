@@ -150,7 +150,7 @@ fn create_archive_sync(
             let mut contents = Vec::new();
             source_file.read_to_end(&mut contents)?;
 
-            let hash = format!("{:x}", Sha256::digest(&contents));
+            let hash = Sha256::digest(&contents).iter().map(|b| format!("{b:02x}")).collect::<String>();
             file_hashes.insert(archive_entry_path.clone(), hash);
 
             zip.start_file(&archive_entry_path, options)
