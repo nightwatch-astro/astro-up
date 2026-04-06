@@ -1,5 +1,5 @@
 {
   "crates/astro-up-core": "0.1.0",
-  "crates/astro-up-cli": "0.1.2",
-  "crates/astro-up-gui": "0.1.2"
+  "crates/astro-up-cli": "0.1.3",
+  "crates/astro-up-gui": "0.1.3"
 }
