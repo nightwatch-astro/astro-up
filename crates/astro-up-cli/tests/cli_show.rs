@@ -79,7 +79,9 @@ fn config_requires_subcommand() {
 
 #[test]
 fn global_json_flag_accepted() {
-    cmd().args(["--json", "scan"]).assert().success();
+    // Use "show --help" instead of "scan" to avoid catalog lock contention
+    // when multiple tests run in parallel on Windows CI.
+    cmd().args(["--json", "show", "--help"]).assert().success();
 }
 
 /// Normalize binary name across platforms (astro-up.exe → astro-up).
