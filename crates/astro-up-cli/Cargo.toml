@@ -1,6 +1,6 @@
 [package]
 name = "astro-up-cli"
-version = "0.1.8"
+version = "0.1.9"
 description = "CLI for astro-up — astrophotography software manager"
 publish = false
 readme = "README.md"
