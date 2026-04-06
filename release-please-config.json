@@ -19,13 +19,7 @@
   },
   "plugins": [
     {
-      "type": "cargo-workspace",
-      "merge": false
-    },
-    {
-      "type": "linked-versions",
-      "groupName": "astro-up",
-      "components": ["astro-up-core", "astro-up-cli", "astro-up-gui"]
+      "type": "cargo-workspace"
     }
   ],
   "changelog-sections": [
