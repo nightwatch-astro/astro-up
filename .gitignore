@@ -11,6 +11,9 @@ frontend/dist/
 # Tauri build artifacts
 crates/astro-up-gui/gen/
 
+# Sidecar binaries (populated at build time)
+crates/astro-up-gui/binaries/
+
 # Speckit
 .specify/extensions/.cache/
 .specify/extensions/*/.vscode/

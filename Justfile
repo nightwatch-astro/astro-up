@@ -39,6 +39,18 @@ fmt:
 fmt-check:
     cargo fmt --all -- --check
 
+# Build CLI and place as sidecar binary for Tauri
+build-sidecar:
+    cargo build --release -p astro-up-cli
+    mkdir -p crates/astro-up-gui/binaries
+    @TARGET=$(rustc -vV | sed -n 's/host: //p') && \
+      EXT="" && \
+      case "$TARGET" in *windows*) EXT=".exe" ;; esac && \
+      SRC="target/release/astro-up${EXT}" && \
+      DEST="crates/astro-up-gui/binaries/astro-up-cli-${TARGET}${EXT}" && \
+      cp "${SRC}" "${DEST}" && \
+      echo "Sidecar binary: ${DEST}"
+
 # Run linters (Rust clippy + Vue ESLint)
 lint:
     cargo clippy --workspace -- -D warnings

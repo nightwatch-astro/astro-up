@@ -26,45 +26,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-cli:
-    name: Build CLI (${{ matrix.target }})
-    needs: release-please
-    if: needs.release-please.outputs.releases_created == 'true'
-    runs-on: ${{ matrix.os }}
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: "sccache"
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            artifact: astro-up.exe
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-        with:
-          targets: ${{ matrix.target }}
-      - uses: mozilla-actions/sccache-action@v0.0.9
-
-      - name: Build
-        run: cargo build --release --target ${{ matrix.target }} -p astro-up-cli
-
-      - name: Upload to release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
-          TARGET: ${{ matrix.target }}
-        shell: bash
-        run: |
-          ARTIFACT="target/${TARGET}/release/${{ matrix.artifact }}"
-          EXT="${{ matrix.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}"
-          UPLOAD_NAME="astro-up${EXT}"
-          cp "${ARTIFACT}" "${UPLOAD_NAME}"
-          gh release upload "${TAG}" "${UPLOAD_NAME}" --clobber
-
-  build-installer:
-    name: Build Windows Installer
+  build:
+    name: Build Windows (CLI + Installer)
     needs: release-please
     if: needs.release-please.outputs.releases_created == 'true'
     runs-on: windows-latest
@@ -73,8 +36,9 @@ jobs:
       RUSTC_WRAPPER: "sccache"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: x86_64-pc-windows-msvc
       - uses: mozilla-actions/sccache-action@v0.0.9
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -89,6 +53,25 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
         working-directory: frontend
+
+      - name: Build CLI
+        run: cargo build --release --target x86_64-pc-windows-msvc -p astro-up-cli
+
+      - name: Upload standalone CLI to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        shell: bash
+        run: |
+          cp "target/x86_64-pc-windows-msvc/release/astro-up.exe" "astro-up.exe"
+          gh release upload "${TAG}" "astro-up.exe" --clobber
+
+      - name: Place CLI as sidecar for Tauri bundling
+        shell: bash
+        run: |
+          mkdir -p crates/astro-up-gui/binaries
+          cp target/x86_64-pc-windows-msvc/release/astro-up.exe \
+             crates/astro-up-gui/binaries/astro-up-cli-x86_64-pc-windows-msvc.exe
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
@@ -109,7 +92,7 @@ jobs:
 
   publish-release:
     name: Publish Release
-    needs: [release-please, build-cli, build-installer]
+    needs: [release-please, build]
     if: always() && needs.release-please.outputs.releases_created == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -117,14 +100,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.release-please.outputs.tag_name }}
-          CLI_RESULT: ${{ needs.build-cli.result }}
-          INSTALLER_RESULT: ${{ needs.build-installer.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
         run: |
-          if [ "${CLI_RESULT}" = "success" ] && [ "${INSTALLER_RESULT}" = "success" ]; then
+          if [ "${BUILD_RESULT}" = "success" ]; then
             gh release edit "${TAG}" --repo "${{ github.repository }}" --draft=false
             echo "Published release ${TAG}"
           else
-            echo "Build failed (cli=${CLI_RESULT}, installer=${INSTALLER_RESULT}) — deleting draft release ${TAG}"
+            echo "Build failed (${BUILD_RESULT}) — deleting draft release ${TAG}"
             gh release delete "${TAG}" --repo "${{ github.repository }}" --yes
             gh api --method DELETE "/repos/${{ github.repository }}/git/refs/tags/${TAG}" || true
             echo "Cleaned up draft release and tag"
