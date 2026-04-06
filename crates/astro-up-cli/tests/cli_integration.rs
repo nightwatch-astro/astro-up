@@ -42,7 +42,7 @@ fn version_includes_semver() {
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::is_match(r"astro-up \d+\.\d+\.\d+").unwrap());
+        .stdout(predicate::str::is_match(r"astro-up-cli \d+\.\d+\.\d+").unwrap());
 }
 
 // =========================================================================
