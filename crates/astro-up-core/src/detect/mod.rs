@@ -7,6 +7,7 @@ mod path;
 pub mod pe;
 mod registry;
 pub mod scanner;
+pub mod wmi_apps;
 mod wmi_driver;
 
 pub use cache::DetectionCache;

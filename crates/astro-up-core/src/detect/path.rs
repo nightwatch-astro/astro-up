@@ -35,7 +35,8 @@ impl PathResolver {
     #[cfg(windows)]
     fn add_platform_tokens(tokens: &mut HashMap<&'static str, String>) {
         if let Ok(val) = std::env::var("ProgramFiles") {
-            tokens.insert("program_files", val);
+            tokens.insert("program_files", val.clone());
+            tokens.insert("program_dir", val); // alias used in manifests
         }
         if let Ok(val) = std::env::var("ProgramFiles(x86)") {
             tokens.insert("program_files_x86", val);
@@ -44,7 +45,8 @@ impl PathResolver {
             tokens.insert("app_data", val);
         }
         if let Ok(val) = std::env::var("LOCALAPPDATA") {
-            tokens.insert("local_app_data", val);
+            tokens.insert("local_app_data", val.clone());
+            tokens.insert("config_dir", val); // alias used in manifests
         }
         if let Ok(val) = std::env::var("ProgramData") {
             tokens.insert("common_app_data", val);
