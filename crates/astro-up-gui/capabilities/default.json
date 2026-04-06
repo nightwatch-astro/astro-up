@@ -11,6 +11,17 @@
     "updater:default",
     "autostart:default",
     "window-state:default",
-    "shell:allow-open"
+    "shell:allow-open",
+    "shell:allow-execute",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "binaries/astro-up-cli",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    }
   ]
 }

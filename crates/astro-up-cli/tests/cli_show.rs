@@ -9,7 +9,7 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 
 fn cmd() -> Command {
-    Command::cargo_bin("astro-up").unwrap()
+    Command::cargo_bin("astro-up-cli").unwrap()
 }
 
 #[test]
@@ -84,9 +84,9 @@ fn global_json_flag_accepted() {
     cmd().args(["--json", "show"]).assert().success();
 }
 
-/// Normalize binary name across platforms (astro-up.exe → astro-up).
+/// Normalize binary name across platforms (astro-up-cli.exe → astro-up-cli).
 fn normalize_binary_name(s: &str) -> String {
-    s.replace("astro-up.exe", "astro-up")
+    s.replace("astro-up-cli.exe", "astro-up-cli")
 }
 
 #[test]

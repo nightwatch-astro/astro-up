@@ -99,6 +99,11 @@ jobs:
           components: clippy
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: taiki-e/install-action@nextest
+      - name: Create dummy sidecar for Tauri build.rs validation
+        shell: bash
+        run: |
+          mkdir -p crates/astro-up-gui/binaries
+          touch crates/astro-up-gui/binaries/astro-up-cli-x86_64-pc-windows-msvc.exe
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Run unit tests
         run: cargo nextest run --workspace --lib --bins
@@ -118,6 +123,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: taiki-e/install-action@nextest
+      - name: Create dummy sidecar for Tauri build.rs validation
+        shell: bash
+        run: |
+          mkdir -p crates/astro-up-gui/binaries
+          touch crates/astro-up-gui/binaries/astro-up-cli-x86_64-pc-windows-msvc.exe
       - name: Build test fixture catalog
         shell: bash
         run: |

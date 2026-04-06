@@ -41,13 +41,13 @@ repos:
         name: cargo clippy
         entry: cargo clippy --all-targets -- -D warnings
         language: system
-        stages: [pre-push]
+        stages: [pre-commit]
         types: [rust]
         pass_filenames: false
       - id: cargo-test
         name: cargo test
         entry: cargo test
         language: system
-        stages: [pre-push]
+        stages: [pre-commit]
         types: [rust]
         pass_filenames: false
