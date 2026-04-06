@@ -6,7 +6,6 @@ git_release_draft = true
 semver_check = false
 features_always_increment_minor = true
 dependencies_update = true
-publish = false
 pr_labels = ["release"]
 
 [[package]]
