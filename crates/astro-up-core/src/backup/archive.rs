@@ -151,7 +151,7 @@ fn create_archive_sync(
             source_file.read_to_end(&mut contents)?;
 
             let digest = Sha256::digest(&contents);
-            let hash: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+            let hash: String = crate::hex_encode(&digest);
             file_hashes.insert(archive_entry_path.clone(), hash);
 
             zip.start_file(&archive_entry_path, options)

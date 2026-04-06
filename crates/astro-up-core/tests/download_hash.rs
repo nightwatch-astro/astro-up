@@ -25,7 +25,7 @@ async fn download_with_correct_hash() {
     let server = MockServer::start().await;
     let body = b"verified content here";
     let digest = Sha256::digest(body);
-    let expected_hash: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    let expected_hash: String = astro_up_core::hex_encode(&digest);
 
     Mock::given(method("GET"))
         .and(path("/verified.exe"))
