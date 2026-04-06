@@ -19,7 +19,14 @@ pub async fn spawn_simple(
 ) -> Result<i32, CoreError> {
     use tokio::process::Command;
 
-    let mut child = Command::new(exe).args(args).kill_on_drop(true).spawn()?;
+    let mut child = match Command::new(exe).args(args).kill_on_drop(true).spawn() {
+        Ok(child) => child,
+        Err(e) if is_elevation_required(&e) => {
+            tracing::info!(exe, "spawn failed with ERROR_ELEVATION_REQUIRED (740)");
+            return Ok(740);
+        }
+        Err(e) => return Err(CoreError::from(e)),
+    };
 
     tokio::select! {
         result = child.wait() => {
@@ -115,7 +122,7 @@ pub async fn spawn_with_job_object(
     };
     let mut pi = PROCESS_INFORMATION::default();
 
-    unsafe {
+    let create_result = unsafe {
         CreateProcessW(
             None,
             Some(PWSTR(cmd_wide.as_mut_ptr())),
@@ -128,8 +135,21 @@ pub async fn spawn_with_job_object(
             &raw const si,
             &raw mut pi,
         )
+    };
+    if let Err(e) = create_result {
+        // ERROR_ELEVATION_REQUIRED (740): the EXE manifest requires admin
+        if e.code().0 as u32 == 740 {
+            tracing::info!(
+                exe,
+                "CreateProcessW failed with ERROR_ELEVATION_REQUIRED (740)"
+            );
+            unsafe {
+                CloseHandle(job).ok();
+            }
+            return Ok(740);
+        }
+        return Err(CoreError::Io(std::io::Error::other(e)));
     }
-    .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
 
     let process_handle = pi.hProcess;
     let thread_handle = pi.hThread;
@@ -208,4 +228,10 @@ pub async fn spawn_with_job_object(
         std::io::ErrorKind::Unsupported,
         "job object execution is only supported on Windows",
     )))
+}
+
+/// Check if an IO error is Windows ERROR_ELEVATION_REQUIRED (740).
+#[cfg(windows)]
+fn is_elevation_required(e: &std::io::Error) -> bool {
+    e.raw_os_error() == Some(740)
 }
