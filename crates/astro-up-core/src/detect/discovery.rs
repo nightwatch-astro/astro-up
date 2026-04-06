@@ -606,8 +606,7 @@ impl DiscoveryScanner {
         let wmi_result: Result<Option<Vec<WmiDriver>>, _> =
             tokio::time::timeout(std::time::Duration::from_secs(10), async {
                 tokio::task::spawn_blocking(move || {
-                    let com = wmi::COMLibrary::new().ok()?;
-                    let wmi_con = wmi::WMIConnection::new(com).ok()?;
+                    let wmi_con = wmi::WMIConnection::new().ok()?;
                     let rows: Vec<std::collections::HashMap<String, wmi::Variant>> = wmi_con
                         .raw_query("SELECT DriverProviderName, DriverVersion, DeviceClass, InfName FROM Win32_PnPSignedDriver")
                         .ok()?;
