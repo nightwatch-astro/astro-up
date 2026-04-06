@@ -208,19 +208,6 @@ impl SqliteCatalogReader {
         &self,
         id: &PackageId,
     ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
-        // Try new schema first (expanded columns)
-        if let Some(config) = self.detection_config_new_schema(id)? {
-            return Ok(Some(config));
-        }
-        // Fall back to old schema
-        self.detection_config_old_schema(id)
-    }
-
-    /// Read detection config from the new expanded schema.
-    fn detection_config_new_schema(
-        &self,
-        id: &PackageId,
-    ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
         let result = self
             .conn
             .query_row(
@@ -246,7 +233,7 @@ impl SqliteCatalogReader {
                 },
             )
             .optional()
-            .unwrap_or(None); // Table or columns may not exist in old catalogs
+            .map_err(|e| CoreError::Database(format!("detection query: {e}")))?;
 
         let Some((
             method_str,
@@ -271,7 +258,6 @@ impl SqliteCatalogReader {
             return Ok(None);
         };
 
-        // Deserialize fallback_config JSON blob into Box<DetectionConfig>
         let fallback = fallback_config_json.and_then(|json| {
             serde_json::from_str::<crate::types::DetectionConfig>(&json)
                 .map(Box::new)
@@ -301,23 +287,22 @@ impl SqliteCatalogReader {
         }))
     }
 
-    /// Read detection config from the old schema (path, fallback_method, fallback_path columns).
-    fn detection_config_old_schema(
+    /// Read install config from the catalog's `install` table.
+    pub fn install_config(
         &self,
         id: &PackageId,
-    ) -> Result<Option<crate::types::DetectionConfig>, CoreError> {
+    ) -> Result<Option<crate::types::InstallConfig>, CoreError> {
         let result = self
             .conn
             .query_row(
-                "SELECT method, path, registry_key, registry_value,
-                        fallback_method, fallback_path
-                 FROM detection WHERE package_id = ?1",
+                "SELECT method, scope, elevation, switches, exit_codes, success_codes
+                 FROM install WHERE package_id = ?1",
                 params![id.as_ref()],
                 |row| {
                     Ok((
                         row.get::<_, String>(0)?,
                         row.get::<_, Option<String>>(1)?,
-                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, i32>(2)?,
                         row.get::<_, Option<String>>(3)?,
                         row.get::<_, Option<String>>(4)?,
                         row.get::<_, Option<String>>(5)?,
@@ -325,51 +310,82 @@ impl SqliteCatalogReader {
                 },
             )
             .optional()
-            .unwrap_or(None); // Table may not exist in old catalogs
+            .map_err(|e| CoreError::Database(format!("install query: {e}")))?;
 
-        let Some((method_str, path, registry_key, registry_value, fallback_method, fallback_path)) =
-            result
+        let Some((
+            method_str,
+            scope_str,
+            elevation_int,
+            switches_json,
+            exit_codes_json,
+            success_codes_json,
+        )) = result
         else {
             return Ok(None);
         };
 
-        let method = parse_detection_method(&method_str);
-        let Some(method) = method else {
-            tracing::warn!(package = %id, method = %method_str, "unknown detection method");
-            return Ok(None);
+        let method = parse_install_method(&method_str);
+        let scope = scope_str.and_then(|s| s.parse().ok());
+        let elevation = if elevation_int != 0 {
+            Some(crate::types::Elevation::Required)
+        } else {
+            None
         };
 
-        let fallback = match (fallback_method, fallback_path) {
-            (Some(fm), fp) => parse_detection_method(&fm).map(|m| {
-                Box::new(crate::types::DetectionConfig {
-                    method: m,
-                    file_path: fp,
-                    registry_key: None,
-                    registry_value: None,
-                    version_regex: None,
-                    product_code: None,
-                    upgrade_code: None,
-                    inf_provider: None,
-                    device_class: None,
-                    inf_name: None,
-                    fallback: None,
-                })
-            }),
-            _ => None,
-        };
+        let switches = switches_json
+            .and_then(|json| {
+                serde_json::from_str::<std::collections::HashMap<String, String>>(&json).ok()
+            })
+            .and_then(|map| {
+                let silent: Vec<String> = map
+                    .get("silent")
+                    .map(|s| s.split_whitespace().map(String::from).collect())
+                    .unwrap_or_default();
+                let interactive: Vec<String> = map
+                    .get("interactive")
+                    .map(|s| s.split_whitespace().map(String::from).collect())
+                    .unwrap_or_default();
+                let log = map.get("log").cloned();
+                let install_location = map.get("install_dir").cloned();
+                if !silent.is_empty()
+                    || !interactive.is_empty()
+                    || log.is_some()
+                    || install_location.is_some()
+                {
+                    Some(crate::types::InstallerSwitches {
+                        silent,
+                        interactive,
+                        upgrade: Vec::new(),
+                        install_location,
+                        log,
+                        custom: Vec::new(),
+                    })
+                } else {
+                    None
+                }
+            });
 
-        Ok(Some(crate::types::DetectionConfig {
+        let success_codes: Vec<i32> = success_codes_json
+            .and_then(|json| serde_json::from_str(&json).ok())
+            .unwrap_or_default();
+
+        let known_exit_codes: std::collections::HashMap<String, crate::types::KnownExitCode> =
+            exit_codes_json
+                .and_then(|json| serde_json::from_str(&json).ok())
+                .unwrap_or_default();
+
+        Ok(Some(crate::types::InstallConfig {
             method,
-            file_path: path,
-            registry_key,
-            registry_value,
-            version_regex: None,
-            product_code: None,
-            upgrade_code: None,
-            inf_provider: None,
-            device_class: None,
-            inf_name: None,
-            fallback,
+            scope,
+            elevation,
+            upgrade_behavior: None,
+            install_modes: Vec::new(),
+            success_codes,
+            pre_install: Vec::new(),
+            post_install: Vec::new(),
+            switches,
+            known_exit_codes,
+            timeout: None,
         }))
     }
 
@@ -382,6 +398,7 @@ impl SqliteCatalogReader {
 
         for summary in summaries {
             let detection = self.detection_config(&summary.id)?;
+            let install = self.install_config(&summary.id)?;
             software.push(crate::types::Software {
                 id: summary.id,
                 slug: summary.slug,
@@ -403,7 +420,7 @@ impl SqliteCatalogReader {
                 min_os_version: None,
                 manifest_version: Some(summary.manifest_version),
                 detection,
-                install: None,
+                install,
                 checkver: None,
                 dependencies: None,
                 hardware: None,
@@ -431,6 +448,22 @@ fn parse_detection_method(method_str: &str) -> Option<crate::types::DetectionMet
         "config_file" => Some(crate::types::DetectionMethod::ConfigFile),
         "ledger" => Some(crate::types::DetectionMethod::Ledger),
         _ => None,
+    }
+}
+
+fn parse_install_method(method_str: &str) -> crate::types::InstallMethod {
+    match method_str {
+        "exe" => crate::types::InstallMethod::Exe,
+        "msi" => crate::types::InstallMethod::Msi,
+        "inno_setup" => crate::types::InstallMethod::InnoSetup,
+        "nullsoft" | "nsis" => crate::types::InstallMethod::Nullsoft,
+        "wix" => crate::types::InstallMethod::Wix,
+        "burn" => crate::types::InstallMethod::Burn,
+        "zip" => crate::types::InstallMethod::Zip,
+        "zip_wrap" => crate::types::InstallMethod::ZipWrap,
+        "portable" => crate::types::InstallMethod::Portable,
+        "download_only" => crate::types::InstallMethod::DownloadOnly,
+        _ => crate::types::InstallMethod::Exe, // default fallback
     }
 }
 
