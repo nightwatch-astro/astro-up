@@ -2,7 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
   "productName": "Astro-Up",
   "identifier": "dev.nightwatch.astro-up",
-  "version": "0.1.0",
   "build": {
     "beforeDevCommand": "pnpm --dir ../frontend dev",
     "beforeBuildCommand": "pnpm --dir ../frontend build",
