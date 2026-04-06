@@ -5,7 +5,7 @@ on:
     inputs:
       package_id:
         description: 'Package ID (e.g., nina-app)'
-        required: true
+        required: false
         type: string
         default: ''
       version:
