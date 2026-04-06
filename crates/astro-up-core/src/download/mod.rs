@@ -123,7 +123,9 @@ impl DownloadManager {
 
         // Verify hash if expected
         let hash_verified = if let Some(expected) = &request.expected_hash {
-            let actual = result.hasher.finalize().iter().map(|b| format!("{b:02x}")).collect::<String>();
+            let digest = result.hasher.finalize();
+            let actual: String =
+                digest.iter().map(|b| format!("{b:02x}")).collect();
             if actual != *expected {
                 // Clean up .part file on mismatch
                 let _ = tokio::fs::remove_file(&request.part_path()).await;
@@ -143,7 +145,9 @@ impl DownloadManager {
                     )
                     .await?;
 
-                    let retry_actual = retry.hasher.finalize().iter().map(|b| format!("{b:02x}")).collect::<String>();
+                    let digest = retry.hasher.finalize();
+                    let retry_actual: String =
+                        digest.iter().map(|b| format!("{b:02x}")).collect();
                     if retry_actual != *expected {
                         let _ = tokio::fs::remove_file(&request.part_path()).await;
                         return Err(CoreError::ChecksumMismatch {
