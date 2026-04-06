@@ -220,6 +220,7 @@ fn update_without_args_shows_help() {
 }
 
 #[test]
+#[ignore = "downloads and installs real software — run manually"]
 fn json_update_valid() {
     let output = cmd().args(["--json", "update", "--all"]).output().unwrap();
     if output.status.success() {
