@@ -4,8 +4,9 @@
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
   "draft": true,
-  "include-component-in-tag": true,
-  "tag-separator": "-",
+  "include-component-in-tag": false,
+  "group-pull-request-title-pattern": "chore: release ${version}",
+  "linked-versions": true,
   "packages": {
     "crates/astro-up-core": {
       "component": "astro-up-core"
