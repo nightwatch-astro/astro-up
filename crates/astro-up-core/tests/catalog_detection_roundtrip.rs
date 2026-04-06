@@ -56,6 +56,15 @@ fn create_test_catalog(dir: &std::path::Path) -> std::path::PathBuf {
             inf_name TEXT,
             fallback_config TEXT
         );
+        CREATE TABLE install (
+            package_id TEXT PRIMARY KEY REFERENCES packages(id),
+            method TEXT NOT NULL,
+            scope TEXT,
+            elevation INTEGER NOT NULL DEFAULT 0,
+            switches TEXT,
+            exit_codes TEXT,
+            success_codes TEXT
+        );
         CREATE TABLE meta (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
@@ -137,6 +146,19 @@ fn create_test_catalog(dir: &std::path::Path) -> std::path::PathBuf {
             Option::<String>::None,
             Option::<String>::None,
             fallback_json.to_string()
+        ],
+    )
+    .unwrap();
+
+    // Insert install config
+    conn.execute(
+        "INSERT INTO install (package_id, method, elevation, switches)
+         VALUES (?1, ?2, ?3, ?4)",
+        params![
+            "nina",
+            "inno_setup",
+            0,
+            r#"{"silent":"/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"}"#,
         ],
     )
     .unwrap();
@@ -228,6 +250,11 @@ fn detection_config_no_fallback() {
             product_code TEXT, upgrade_code TEXT, inf_provider TEXT,
             device_class TEXT, inf_name TEXT, fallback_config TEXT
         );
+        CREATE TABLE install (
+            package_id TEXT PRIMARY KEY, method TEXT NOT NULL,
+            scope TEXT, elevation INTEGER NOT NULL DEFAULT 0,
+            switches TEXT, exit_codes TEXT, success_codes TEXT
+        );
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE VIRTUAL TABLE packages_fts USING fts5(
             name, description, tags, aliases, publisher,
@@ -285,4 +312,14 @@ fn list_all_with_detection_populates_config() {
     let det = nina.detection.as_ref().unwrap();
     assert_eq!(det.method, DetectionMethod::Registry);
     assert!(det.fallback.is_some());
+
+    // Verify install config is also populated
+    let install = nina.install.as_ref().expect("install config should exist");
+    assert_eq!(
+        install.method,
+        astro_up_core::types::InstallMethod::InnoSetup
+    );
+    assert!(install.elevation.is_none()); // elevation = 0 → None
+    let switches = install.switches.as_ref().expect("switches should exist");
+    assert!(!switches.silent.is_empty());
 }
