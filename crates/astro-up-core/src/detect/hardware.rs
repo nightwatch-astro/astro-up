@@ -76,8 +76,7 @@ pub async fn discover(
 
     let result = tokio::time::timeout(Duration::from_secs(10), async {
         tokio::task::spawn_blocking(|| {
-            let com = wmi::COMLibrary::new().map_err(|e| format!("{e}"))?;
-            let con = wmi::WMIConnection::new(com).map_err(|e| format!("{e}"))?;
+            let con = wmi::WMIConnection::new().map_err(|e| format!("{e}"))?;
             let devices: Vec<PnPEntity> = con
                 .raw_query(
                     "SELECT DeviceID, Name FROM Win32_PnPEntity WHERE DeviceID LIKE 'USB\\\\VID_%'",
