@@ -14,10 +14,10 @@
 #[cfg(windows)]
 pub fn find_file(filename: &str) -> Result<Option<String>, String> {
     use windows::Win32::System::Com::{
-        CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx,
+        CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx, IDispatch,
     };
-    use windows::Win32::System::Ole::IDispatch;
-    use windows::core::{BSTR, Interface, VARIANT};
+    use windows::Win32::System::Variant::VARIANT;
+    use windows::core::{BSTR, Interface};
 
     // COM must be initialized on this thread
     let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
@@ -137,9 +137,11 @@ pub fn find_file(_filename: &str) -> Result<Option<String>, String> {
 // --- OLE Automation helpers ---
 
 #[cfg(windows)]
-use windows::Win32::System::Ole::IDispatch;
+use windows::Win32::System::Com::IDispatch;
 #[cfg(windows)]
-use windows::core::{BSTR, VARIANT};
+use windows::Win32::System::Variant::VARIANT;
+#[cfg(windows)]
+use windows::core::BSTR;
 
 /// Get a DISPID for a method/property name.
 #[cfg(windows)]
@@ -167,7 +169,7 @@ fn oleaut_id(obj: &IDispatch, name: &str) -> Result<i32, String> {
 /// Invoke a method with the given arguments (args in REVERSE order for IDispatch).
 #[cfg(windows)]
 unsafe fn invoke_method(obj: &IDispatch, dispid: i32, args: &[VARIANT]) -> Result<VARIANT, String> {
-    use windows::Win32::System::Ole::{DISPATCH_METHOD, DISPPARAMS};
+    use windows::Win32::System::Com::{DISPATCH_METHOD, DISPPARAMS};
 
     // IDispatch expects args in reverse order
     let mut reversed: Vec<VARIANT> = args.iter().rev().cloned().collect();
@@ -205,7 +207,7 @@ unsafe fn invoke_method(obj: &IDispatch, dispid: i32, args: &[VARIANT]) -> Resul
 /// Get a property value.
 #[cfg(windows)]
 unsafe fn get_property(obj: &IDispatch, dispid: i32) -> Result<VARIANT, String> {
-    use windows::Win32::System::Ole::{DISPATCH_PROPERTYGET, DISPPARAMS};
+    use windows::Win32::System::Com::{DISPATCH_PROPERTYGET, DISPPARAMS};
 
     let mut params = DISPPARAMS::default();
     let mut result = VARIANT::default();

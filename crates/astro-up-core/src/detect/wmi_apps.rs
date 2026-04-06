@@ -35,9 +35,7 @@ pub fn enumerate_installed() -> Result<WmiScanResult, String> {
 
     let start = Instant::now();
 
-    let wmi_con = wmi::COMLibrary::new()
-        .and_then(|lib| wmi::WMIConnection::new(lib))
-        .map_err(|e| format!("WMI connection failed: {e}"))?;
+    let wmi_con = wmi::WMIConnection::new().map_err(|e| format!("WMI connection failed: {e}"))?;
 
     #[derive(Deserialize, Debug)]
     #[serde(rename = "Win32_InstalledWin32Program")]
