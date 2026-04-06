@@ -32,6 +32,35 @@ impl PathResolver {
         Some(result)
     }
 
+    /// Expand a template returning all possible paths.
+    ///
+    /// For `{program_dir}`, returns candidates for both Program Files and
+    /// Program Files (x86). For other tokens, returns a single expansion.
+    pub fn expand_all(&self, template: &str) -> Vec<String> {
+        let mut candidates = Vec::new();
+
+        // Primary expansion
+        if let Some(primary) = self.expand(template) {
+            candidates.push(primary);
+        }
+
+        // If template uses program_dir or program_files, also try x86 variant
+        if (template.contains("{program_dir}") || template.contains("{program_files}"))
+            && self.tokens.contains_key("program_files_x86")
+        {
+            let alt = template
+                .replace("{program_dir}", "{program_files_x86}")
+                .replace("{program_files}", "{program_files_x86}");
+            if let Some(expanded) = self.expand(&alt) {
+                if !candidates.contains(&expanded) {
+                    candidates.push(expanded);
+                }
+            }
+        }
+
+        candidates
+    }
+
     #[cfg(windows)]
     fn add_platform_tokens(tokens: &mut HashMap<&'static str, String>) {
         if let Ok(val) = std::env::var("ProgramFiles") {

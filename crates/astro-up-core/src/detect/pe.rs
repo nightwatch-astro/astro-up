@@ -4,34 +4,88 @@ use crate::types::{DetectionConfig, DetectionMethod, Version};
 /// Detect version from PE file headers (VS_FIXEDFILEINFO).
 ///
 /// Cross-platform — pelite works on Linux/macOS too.
-/// Resolves file path via PathResolver, then falls back to `ledger_path`
-/// (the install ledger's recorded executable path) if template resolution fails.
+///
+/// Resolution order:
+/// 1. Windows Search index (instant, covers any install location)
+/// 2. Path template expansion (both Program Files dirs)
+/// 3. Ledger path fallback (install ledger's recorded executable path)
 pub async fn detect(
     config: &DetectionConfig,
     resolver: &PathResolver,
     ledger_path: Option<&str>,
 ) -> DetectionResult {
-    let path = match &config.file_path {
-        Some(template) => match resolver.expand(template) {
-            Some(resolved) => resolved,
-            None => match ledger_path {
-                Some(lp) => lp.to_string(),
-                None => {
-                    return DetectionResult::Unavailable {
-                        reason: format!("cannot resolve path template: {template}"),
-                    };
-                }
-            },
-        },
-        None => match ledger_path {
-            Some(lp) => lp.to_string(),
-            None => return DetectionResult::NotInstalled,
-        },
-    };
+    // Build list of candidate paths to try
+    let mut candidates: Vec<String> = Vec::new();
 
-    // PE parsing is blocking I/O — run on blocking thread
-    match tokio::task::spawn_blocking(move || read_pe_version(&path)).await {
-        Ok(result) => result,
+    if let Some(template) = &config.file_path {
+        // 1. Try Windows Search index first (extract filename from template)
+        #[cfg(windows)]
+        if let Some(fname) = std::path::Path::new(template)
+            .file_name()
+            .and_then(|f| f.to_str())
+        {
+            match super::search::find_file(fname) {
+                Ok(Some(found_path)) => {
+                    tracing::debug!(
+                        filename = %fname,
+                        found = %found_path,
+                        "file found via Windows Search"
+                    );
+                    candidates.push(found_path);
+                }
+                Ok(None) => {
+                    tracing::debug!(filename = %fname, "not found in Windows Search index");
+                }
+                Err(e) => {
+                    tracing::debug!(
+                        filename = %fname,
+                        error = %e,
+                        "Windows Search unavailable, falling back to path expansion"
+                    );
+                }
+            }
+        }
+
+        // 2. Template expansion (both Program Files dirs)
+        candidates.extend(resolver.expand_all(template));
+    }
+
+    // 3. Ledger path fallback
+    if let Some(lp) = ledger_path {
+        if !candidates.iter().any(|c| c == lp) {
+            candidates.push(lp.to_string());
+        }
+    }
+
+    if candidates.is_empty() {
+        return if config.file_path.is_some() {
+            DetectionResult::Unavailable {
+                reason: format!(
+                    "cannot resolve path template: {}",
+                    config.file_path.as_deref().unwrap_or("?")
+                ),
+            }
+        } else {
+            DetectionResult::NotInstalled
+        };
+    }
+
+    // Try each candidate path
+    let result = tokio::task::spawn_blocking(move || {
+        for path in &candidates {
+            let result = read_pe_version(path);
+            match &result {
+                DetectionResult::Installed { .. }
+                | DetectionResult::InstalledUnknownVersion { .. } => return result,
+                DetectionResult::NotInstalled | DetectionResult::Unavailable { .. } => {}
+            }
+        }
+        DetectionResult::NotInstalled
+    })
+    .await;
+
+    match result {
+        Ok(r) => r,
         Err(e) => DetectionResult::Unavailable {
             reason: format!("PE detection task failed: {e}"),
         },
