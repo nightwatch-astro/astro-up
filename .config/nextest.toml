@@ -1,13 +1,22 @@
 [profile.default]
 # Retry flaky tests (network-dependent catalog download, Windows API timing)
 retries = 2
+# Kill tests that hang (catalog download, installer execution)
+slow-timeout = { period = "30s", terminate-after = 3 }
 
 # Tests that invoke the astro-up binary share a data directory and file lock.
 # Run them serially to avoid "another instance is running" lock contention.
+# Also give them a longer timeout since they spawn processes and hit the network.
 [[profile.default.overrides]]
-filter = "binary(cli_json) | binary(cli_integration)"
+filter = "binary(cli_json) | binary(cli_integration) | binary(cli_lifecycle_test) | binary(cli_show)"
 threads-required = 1
 test-group = "serial-cli"
+slow-timeout = { period = "60s", terminate-after = 2 }
+
+# Unit tests in core run fast — maximize parallelism
+[[profile.default.overrides]]
+filter = "package(astro-up-core) & kind(lib)"
+threads-required = 1
 
 [test-groups.serial-cli]
 max-threads = 1
