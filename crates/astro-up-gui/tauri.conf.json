@@ -3,8 +3,14 @@
   "productName": "Astro-Up",
   "identifier": "dev.nightwatch.astro-up",
   "build": {
-    "beforeDevCommand": "pnpm --dir ../frontend dev",
-    "beforeBuildCommand": "pnpm --dir ../frontend build",
+    "beforeDevCommand": {
+      "script": "pnpm dev",
+      "cwd": "../../frontend"
+    },
+    "beforeBuildCommand": {
+      "script": "pnpm build",
+      "cwd": "../../frontend"
+    },
     "devUrl": "http://localhost:5173",
     "frontendDist": "../../frontend/dist"
   },
