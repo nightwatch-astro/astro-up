@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "rust",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "draft": true,
+  "include-component-in-tag": true,
+  "tag-separator": "-",
+  "packages": {
+    "crates/astro-up-core": {
+      "component": "astro-up-core"
+    },
+    "crates/astro-up-cli": {
+      "component": "astro-up-cli"
+    },
+    "crates/astro-up-gui": {
+      "component": "astro-up-gui"
+    }
+  },
+  "plugins": [
+    {
+      "type": "cargo-workspace",
+      "merge": false
+    },
+    {
+      "type": "linked-versions",
+      "groupName": "astro-up",
+      "components": ["astro-up-core", "astro-up-cli", "astro-up-gui"]
+    }
+  ],
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Refactoring" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "test", "section": "Testing" },
+    { "type": "chore", "section": "Miscellaneous", "hidden": true }
+  ]
+}
