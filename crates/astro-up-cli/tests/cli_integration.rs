@@ -9,7 +9,7 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 
 fn cmd() -> Command {
-    Command::cargo_bin("astro-up").unwrap()
+    Command::cargo_bin("astro-up-cli").unwrap()
 }
 
 // =========================================================================
@@ -275,7 +275,7 @@ fn ctrl_c_returns_exit_code_2() {
     use std::process::Command as StdCommand;
 
     // Start a long-running command (self-update with network)
-    let mut child = StdCommand::new(assert_cmd::cargo::cargo_bin("astro-up"))
+    let mut child = StdCommand::new(assert_cmd::cargo::cargo_bin("astro-up-cli"))
         .args(["self-update"])
         .spawn()
         .expect("failed to spawn process");
@@ -297,8 +297,8 @@ fn ctrl_c_returns_exit_code_2() {
 // =========================================================================
 
 #[test]
-fn binary_is_named_astro_up() {
-    let bin_path = assert_cmd::cargo::cargo_bin("astro-up");
+fn binary_is_named_astro_up_cli() {
+    let bin_path = assert_cmd::cargo::cargo_bin("astro-up-cli");
     let file_name = bin_path.file_stem().unwrap().to_str().unwrap();
-    assert_eq!(file_name, "astro-up");
+    assert_eq!(file_name, "astro-up-cli");
 }

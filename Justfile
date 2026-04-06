@@ -46,7 +46,7 @@ build-sidecar:
     @TARGET=$(rustc -vV | sed -n 's/host: //p') && \
       EXT="" && \
       case "$TARGET" in *windows*) EXT=".exe" ;; esac && \
-      SRC="target/release/astro-up${EXT}" && \
+      SRC="target/release/astro-up-cli${EXT}" && \
       DEST="crates/astro-up-gui/binaries/astro-up-cli-${TARGET}${EXT}" && \
       cp "${SRC}" "${DEST}" && \
       echo "Sidecar binary: ${DEST}"

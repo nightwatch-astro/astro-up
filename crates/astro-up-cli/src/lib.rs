@@ -14,7 +14,7 @@ use crate::state::CliState;
 
 #[derive(Parser)]
 #[command(
-    name = "astro-up",
+    name = "astro-up-cli",
     version,
     about = "Astrophotography software manager for Windows",
     long_about = "Astrophotography software manager for Windows.\n\nInstall, detect, and update imaging software from one place.\n\nDocumentation: https://nightwatch-astro.github.io/astro-up/"
@@ -98,7 +98,7 @@ pub enum Commands {
         action: ConfigAction,
     },
 
-    /// Update astro-up itself
+    /// Update astro-up-cli itself
     SelfUpdate {
         #[arg(long)]
         dry_run: bool,
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn cli_parses_show_command() {
-        let cli = Cli::parse_from(["astro-up", "show"]);
+        let cli = Cli::parse_from(["astro-up-cli", "show"]);
         assert!(matches!(
             cli.command,
             Commands::Show {
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn cli_parses_show_package_detail() {
-        let cli = Cli::parse_from(["astro-up", "show", "nina"]);
+        let cli = Cli::parse_from(["astro-up-cli", "show", "nina"]);
         assert!(
             matches!(cli.command, Commands::Show { package: Some(ref p), filter: None } if p == "nina")
         );
@@ -260,19 +260,19 @@ mod tests {
 
     #[test]
     fn cli_parses_install_command() {
-        let cli = Cli::parse_from(["astro-up", "install", "nina"]);
+        let cli = Cli::parse_from(["astro-up-cli", "install", "nina"]);
         assert!(matches!(cli.command, Commands::Install { ref package, .. } if package == "nina"));
     }
 
     #[test]
     fn cli_parses_global_json_flag() {
-        let cli = Cli::parse_from(["astro-up", "--json", "scan"]);
+        let cli = Cli::parse_from(["astro-up-cli", "--json", "scan"]);
         assert!(cli.json);
     }
 
     #[test]
     fn cli_parses_config_subcommands() {
-        let cli = Cli::parse_from(["astro-up", "config", "init"]);
+        let cli = Cli::parse_from(["astro-up-cli", "config", "init"]);
         assert!(matches!(
             cli.command,
             Commands::Config {

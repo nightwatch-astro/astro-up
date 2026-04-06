@@ -63,14 +63,14 @@ jobs:
           TAG: ${{ needs.release-please.outputs.tag_name }}
         shell: bash
         run: |
-          cp "target/x86_64-pc-windows-msvc/release/astro-up.exe" "astro-up.exe"
-          gh release upload "${TAG}" "astro-up.exe" --clobber
+          cp "target/x86_64-pc-windows-msvc/release/astro-up-cli.exe" "astro-up-cli.exe"
+          gh release upload "${TAG}" "astro-up-cli.exe" --clobber
 
       - name: Place CLI as sidecar for Tauri bundling
         shell: bash
         run: |
           mkdir -p crates/astro-up-gui/binaries
-          cp target/x86_64-pc-windows-msvc/release/astro-up.exe \
+          cp target/x86_64-pc-windows-msvc/release/astro-up-cli.exe \
              crates/astro-up-gui/binaries/astro-up-cli-x86_64-pc-windows-msvc.exe
 
       - name: Build Tauri app

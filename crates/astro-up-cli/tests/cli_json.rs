@@ -8,7 +8,7 @@
 use assert_cmd::Command;
 
 fn cmd() -> Command {
-    Command::cargo_bin("astro-up").unwrap()
+    Command::cargo_bin("astro-up-cli").unwrap()
 }
 
 #[test]
