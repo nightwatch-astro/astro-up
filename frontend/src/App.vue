@@ -127,7 +127,7 @@ async function setupUpdateListener() {
       toast.add({
         severity: "info",
         summary: `Update available: v${event.payload.version}`,
-        detail: event.payload.body ?? "A new version is available.",
+        detail: "Go to Settings → About to view release notes and install.",
         life: 0,
         closable: true,
         group: "update",
