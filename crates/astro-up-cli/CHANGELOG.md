@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1](https://github.com/nightwatch-astro/astro-up/compare/astro-up-cli-v0.1.0...astro-up-cli-v0.1.1) (2026-04-06)
+
+
+### Features
+
+* **release:** bundle CLI as sidecar in Tauri NSIS installer ([#802](https://github.com/nightwatch-astro/astro-up/issues/802)) ([5891aa8](https://github.com/nightwatch-astro/astro-up/commit/5891aa88baf86bb6d3240f869ee61b7b6b37eece))
+
+
+### Bug Fixes
+
+* avoid catalog lock contention in global_json_flag_accepted test ([#801](https://github.com/nightwatch-astro/astro-up/issues/801)) ([21a146d](https://github.com/nightwatch-astro/astro-up/commit/21a146d4f26635341060c15b2385a6b4ffff9579))
+* **cli:** rewrite self-update to use self_update crate ([#769](https://github.com/nightwatch-astro/astro-up/issues/769)) ([7250835](https://github.com/nightwatch-astro/astro-up/commit/72508357c5ab01a1289b30181f1d48978c2a9edc))
+* ignore json_update_valid test (hangs on CI) ([#799](https://github.com/nightwatch-astro/astro-up/issues/799)) ([c02aa8e](https://github.com/nightwatch-astro/astro-up/commit/c02aa8e10ccdbcc8308f57ffbac17df412b3ec37))
+
 ## [Unreleased]
 
 ## [0.1.0](https://github.com/nightwatch-astro/astro-up/releases/tag/astro-up-cli-v0.1.0) - 2026-04-05
