@@ -29,7 +29,7 @@ jobs:
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -41,7 +41,7 @@ jobs:
       - name: Build docs
         run: pnpm --dir docs build
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v4
         with:
