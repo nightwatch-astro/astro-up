@@ -24,7 +24,7 @@ fn test_config() -> NetworkConfig {
 async fn download_with_correct_hash() {
     let server = MockServer::start().await;
     let body = b"verified content here";
-    let expected_hash = format!("{:x}", Sha256::digest(body));
+    let expected_hash = Sha256::digest(body).iter().map(|b| format!("{b:02x}")).collect::<String>();
 
     Mock::given(method("GET"))
         .and(path("/verified.exe"))
