@@ -233,7 +233,7 @@ impl SqliteCatalogReader {
                 },
             )
             .optional()
-            .map_err(|e| CoreError::Database(format!("detection query: {e}")))?;
+            .unwrap_or(None); // Table or columns may not exist in old catalogs
 
         let Some((
             method_str,
@@ -310,7 +310,7 @@ impl SqliteCatalogReader {
                 },
             )
             .optional()
-            .map_err(|e| CoreError::Database(format!("install query: {e}")))?;
+            .unwrap_or(None); // Table may not exist in old catalogs
 
         let Some((
             method_str,
