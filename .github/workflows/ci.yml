@@ -82,10 +82,10 @@ jobs:
       - run: pnpm --dir frontend test
       - run: pnpm --dir frontend build
 
-  # Full workspace on Windows — catches Windows-specific issues
-  # (registry, PE, WMI, Tauri) across all crates.
-  check-windows:
-    name: Windows Integration
+  # Windows unit tests — clippy + fast tests, no fixtures needed.
+  # Runs in parallel with integration tests.
+  check-windows-unit:
+    name: Windows Unit Tests
     needs: changes
     if: needs.changes.outputs.crates == 'true'
     runs-on: windows-latest
@@ -99,29 +99,49 @@ jobs:
           components: clippy
       - uses: mozilla-actions/sccache-action@v0.0.9
       - uses: taiki-e/install-action@nextest
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Run unit tests
+        run: cargo nextest run --workspace --lib --bins --doc
+
+  # Windows integration tests — spawns the binary, needs catalog fixture.
+  # Runs in parallel with unit tests on a separate runner.
+  check-windows-integration:
+    name: Windows Integration Tests
+    needs: changes
+    if: needs.changes.outputs.crates == 'true'
+    runs-on: windows-latest
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: taiki-e/install-action@nextest
       - name: Build test fixture catalog
         shell: bash
         run: |
           choco install sqlite -y --no-progress
           sqlite3 crates/astro-up-cli/tests/fixtures/test-catalog.db < crates/astro-up-cli/tests/fixtures/build_catalog.sql
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo nextest run --workspace
+      - name: Run integration tests
+        run: cargo nextest run --workspace --test '*'
 
   # Gate job: always runs, reports single required status.
   # Branch protection should require only "CI OK" — skipped jobs pass through.
   ci-ok:
     name: CI OK
     if: always()
-    needs: [check-rust, check-frontend, check-windows]
+    needs: [check-rust, check-frontend, check-windows-unit, check-windows-integration]
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate results
         env:
           RUST: ${{ needs.check-rust.result }}
           FRONTEND: ${{ needs.check-frontend.result }}
-          WINDOWS: ${{ needs.check-windows.result }}
+          WIN_UNIT: ${{ needs.check-windows-unit.result }}
+          WIN_INTEGRATION: ${{ needs.check-windows-integration.result }}
         run: |
-          for result in "$RUST" "$FRONTEND" "$WINDOWS"; do
+          for result in "$RUST" "$FRONTEND" "$WIN_UNIT" "$WIN_INTEGRATION"; do
             if [ "$result" = "failure" ]; then
               echo "Job failed: $result"
               exit 1
