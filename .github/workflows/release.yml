@@ -20,6 +20,7 @@ jobs:
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       tag_name: ${{ steps.release.outputs['crates/astro-up-cli--tag_name'] }}
+      release_notes: ${{ steps.release.outputs['crates/astro-up-cli--body'] }}
     steps:
       - name: Generate app token
         id: app-token
@@ -88,10 +89,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: crates/astro-up-gui
-          tauriScript: pnpm tauri
+          tauriScript: pnpm --dir frontend tauri
           tagName: ${{ needs.release-please.outputs.tag_name }}
           releaseName: ${{ needs.release-please.outputs.tag_name }}
-          releaseBody: "See CHANGELOG.md for details."
+          releaseBody: ${{ needs.release-please.outputs.release_notes }}
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true

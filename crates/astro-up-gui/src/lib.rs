@@ -175,6 +175,7 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
         .manage({
             let data_dir = directories::ProjectDirs::from("dev", "nightwatch", "astro-up").map_or_else(|| std::env::temp_dir().join("astro-up"), |d| d.data_dir().to_path_buf());
             std::fs::create_dir_all(&data_dir).expect("Failed to create data directory");

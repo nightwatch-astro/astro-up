@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import Button from "primevue/button";
+import Dialog from "primevue/dialog";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 
 const version = __APP_VERSION__;
 const checking = ref(false);
+const updateAvailable = ref(false);
+const updateVersion = ref("");
+const updateNotes = ref("");
+const showNotes = ref(false);
 
 async function checkForUpdates() {
   checking.value = true;
@@ -12,14 +17,36 @@ async function checkForUpdates() {
     const { check } = await import("@tauri-apps/plugin-updater");
     const update = await check();
     if (update) {
-      alert(`Update available: v${update.version}`);
+      updateAvailable.value = true;
+      updateVersion.value = update.version;
+      updateNotes.value = update.body ?? "";
+      showNotes.value = true;
     } else {
+      updateAvailable.value = false;
+      updateVersion.value = "";
+      updateNotes.value = "";
+      showNotes.value = false;
       alert("You are on the latest version.");
     }
   } catch {
     alert("Failed to check for updates.");
   } finally {
     checking.value = false;
+  }
+}
+
+async function installUpdate() {
+  try {
+    const { check } = await import("@tauri-apps/plugin-updater");
+    const update = await check();
+    if (update) {
+      showNotes.value = false;
+      await update.downloadAndInstall();
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    }
+  } catch {
+    alert("Update failed.");
   }
 }
 </script>
@@ -50,6 +77,35 @@ async function checkForUpdates() {
         <i class="pi pi-github" /> GitHub
       </button>
     </div>
+
+    <Dialog
+      v-model:visible="showNotes"
+      :header="`Update available: v${updateVersion}`"
+      modal
+      :style="{ width: '500px', maxHeight: '80vh' }"
+    >
+      <pre
+        v-if="updateNotes"
+        class="release-notes"
+      >{{ updateNotes }}</pre>
+      <p v-else>
+        A new version is available.
+      </p>
+
+      <template #footer>
+        <Button
+          label="Later"
+          severity="secondary"
+          text
+          @click="showNotes = false"
+        />
+        <Button
+          label="Install & Restart"
+          icon="pi pi-download"
+          @click="installUpdate"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -72,4 +128,15 @@ async function checkForUpdates() {
   padding: 0;
 }
 .about-link:hover { text-decoration: underline; }
+.release-notes {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--p-surface-200);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
 </style>
