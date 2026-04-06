@@ -126,7 +126,8 @@ fn hash_file(path: &Path) -> Result<String, CoreError> {
         }
         hasher.update(&buf[..n]);
     }
-    Ok(format!("{:x}", hasher.finalize()))
+    let digest = hasher.finalize();
+    Ok(crate::hex_encode(&digest))
 }
 
 #[cfg(test)]
