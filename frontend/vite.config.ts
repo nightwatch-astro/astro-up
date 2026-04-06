@@ -24,8 +24,4 @@ export default defineConfig({
       ignored: ["**/crates/**"],
     },
   },
-  test: {
-    environment: "jsdom",
-    globals: true,
-  },
 });
