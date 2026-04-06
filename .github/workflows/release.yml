@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
-      tag_name: ${{ steps.release.outputs['crates/astro-up-cli--tag_name'] }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
       release_notes: ${{ steps.notes.outputs.combined }}
     steps:
       - name: Generate app token
@@ -34,28 +34,16 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
 
-      - name: Combine release notes
+      - name: Extract release notes
         id: notes
         if: steps.release.outputs.releases_created == 'true'
         env:
-          CLI_NOTES: ${{ steps.release.outputs['crates/astro-up-cli--body'] }}
-          CORE_NOTES: ${{ steps.release.outputs['crates/astro-up-core--body'] }}
-          GUI_NOTES: ${{ steps.release.outputs['crates/astro-up-gui--body'] }}
+          BODY: ${{ steps.release.outputs.body }}
         shell: bash
         run: |
-          COMBINED=""
-          if [ -n "${CORE_NOTES}" ]; then
-            COMBINED="${COMBINED}## Core\n${CORE_NOTES}\n\n"
-          fi
-          if [ -n "${CLI_NOTES}" ]; then
-            COMBINED="${COMBINED}## CLI\n${CLI_NOTES}\n\n"
-          fi
-          if [ -n "${GUI_NOTES}" ]; then
-            COMBINED="${COMBINED}## GUI\n${GUI_NOTES}"
-          fi
           {
             echo "combined<<NOTES_EOF"
-            echo -e "${COMBINED}"
+            echo "${BODY}"
             echo "NOTES_EOF"
           } >> "$GITHUB_OUTPUT"
 
