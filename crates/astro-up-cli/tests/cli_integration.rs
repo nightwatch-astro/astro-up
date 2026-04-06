@@ -221,7 +221,10 @@ fn update_without_args_shows_help() {
 
 #[test]
 fn json_update_valid() {
-    let output = cmd().args(["--json", "update", "--all"]).output().unwrap();
+    let output = cmd()
+        .args(["--json", "update", "--all", "--dry-run"])
+        .output()
+        .unwrap();
     if output.status.success() {
         let _parsed: serde_json::Value =
             serde_json::from_slice(&output.stdout).expect("valid JSON");
