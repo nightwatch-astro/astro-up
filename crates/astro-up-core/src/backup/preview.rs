@@ -126,7 +126,8 @@ fn hash_file(path: &Path) -> Result<String, CoreError> {
         }
         hasher.update(&buf[..n]);
     }
-    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect::<String>())
+    let digest = hasher.finalize();
+    Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
 }
 
 #[cfg(test)]
