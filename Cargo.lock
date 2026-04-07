@@ -152,6 +152,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "astro-up"
+version = "0.1.10"
+
+[[package]]
 name = "astro-up-cli"
 version = "0.1.10"
 dependencies = [
@@ -181,7 +185,7 @@ dependencies = [
 
 [[package]]
 name = "astro-up-core"
-version = "0.1.0"
+version = "0.1.10"
 dependencies = [
  "chrono",
  "directories",
