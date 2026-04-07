@@ -206,7 +206,11 @@ pub async fn get_versions(
         .parse()
         .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))?;
     let versions = reader.versions(&pkg_id)?;
-    tracing::debug!(command = "get_versions", count = versions.len(), "Command completed");
+    tracing::debug!(
+        command = "get_versions",
+        count = versions.len(),
+        "Command completed"
+    );
     serde_json::to_value(&versions).map_err(|e| CoreError::from(e.to_string()))
 }
 
@@ -825,7 +829,11 @@ pub async fn list_backups(
 ) -> Result<serde_json::Value, CoreError> {
     tracing::debug!(command = "list_backups", package_id, "Command invoked");
     let entries = state.backup_service.list(&package_id).await?;
-    tracing::debug!(command = "list_backups", count = entries.len(), "Command completed");
+    tracing::debug!(
+        command = "list_backups",
+        count = entries.len(),
+        "Command completed"
+    );
     let value = serde_json::to_value(&entries).map_err(|e| CoreError::from(e.to_string()))?;
     Ok(value)
 }

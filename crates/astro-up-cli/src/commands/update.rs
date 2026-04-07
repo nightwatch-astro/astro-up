@@ -31,7 +31,13 @@ pub async fn handle_update(
     mode: &OutputMode,
     cancel: CancellationToken,
 ) -> Result<()> {
-    tracing::debug!(?package, all, dry_run, allow_major, "entering handle_update");
+    tracing::debug!(
+        ?package,
+        all,
+        dry_run,
+        allow_major,
+        "entering handle_update"
+    );
     // Determine which packages to update
     let pkg_ids: Vec<PackageId> = if let Some(pkg) = package {
         vec![

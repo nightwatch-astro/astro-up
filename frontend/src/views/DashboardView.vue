@@ -6,6 +6,7 @@ import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
 import { useSoftwareList, useUpdateCheck, useScanInstalled, useUpdateAll } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
+import { logger } from "../utils/logger";
 import type { PackageWithStatus } from "../types/package";
 
 const router = useRouter();
@@ -35,10 +36,12 @@ const updatablePackages = computed<PackageWithStatus[]>(() => {
 });
 
 function confirmScan() {
+  logger.debug("DashboardView", "scan installed clicked");
   scanMutation.mutate();
 }
 
 function confirmUpdateAll() {
+  logger.debug("DashboardView", "update all clicked");
   updateAllMutation.mutate();
 }
 

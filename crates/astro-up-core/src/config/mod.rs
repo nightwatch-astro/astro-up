@@ -80,7 +80,9 @@ fn recover_corrupt(
         corrupt_path = %corrupt_path.display(),
         "config database corrupt, renaming and starting fresh"
     );
-    let _ = std::fs::rename(db_path, &corrupt_path);
+    if let Err(e) = std::fs::rename(db_path, &corrupt_path) {
+        warn!(path = %db_path.display(), error = %e, "failed to rename corrupt config database");
+    }
     let conn = rusqlite::Connection::open(db_path)?;
     Ok(ConfigStore::new(conn)?)
 }

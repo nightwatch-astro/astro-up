@@ -105,7 +105,9 @@ impl BackupService {
 
     #[instrument(skip_all, fields(package = %package_id))]
     pub async fn list(&self, package_id: &str) -> Result<Vec<BackupListEntry>, CoreError> {
-        prune::list_backups(&self.backup_dir, package_id).await
+        let entries = prune::list_backups(&self.backup_dir, package_id).await?;
+        debug!(count = entries.len(), "backups found");
+        Ok(entries)
     }
 
     #[instrument(skip_all, fields(package = %package_id, keep))]

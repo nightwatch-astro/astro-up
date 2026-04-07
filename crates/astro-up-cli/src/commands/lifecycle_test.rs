@@ -19,7 +19,12 @@ pub async fn handle_lifecycle_test(
     report_file: Option<&Path>,
     mode: &OutputMode,
 ) -> Result<()> {
-    tracing::debug!(package_id, ?version, dry_run, "entering handle_lifecycle_test");
+    tracing::debug!(
+        package_id,
+        ?version,
+        dry_run,
+        "entering handle_lifecycle_test"
+    );
     if !manifest_path.join("manifests").is_dir() {
         return Err(eyre!(
             "manifest path '{}' does not contain a 'manifests/' directory",

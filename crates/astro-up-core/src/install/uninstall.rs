@@ -8,6 +8,7 @@ use crate::error::CoreError;
 /// `QuietUninstallString` over `UninstallString`.
 #[cfg(windows)]
 pub fn find_uninstall_command(package_id: &str) -> Option<String> {
+    tracing::debug!(package_id, "searching registry for uninstall command");
     use winreg::RegKey;
     use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
 
@@ -53,6 +54,7 @@ pub fn find_uninstall_command(package_id: &str) -> Option<String> {
             }
         }
     }
+    tracing::debug!(package_id, "no uninstall command found in registry");
     None
 }
 

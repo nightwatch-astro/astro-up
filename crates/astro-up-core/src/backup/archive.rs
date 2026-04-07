@@ -76,6 +76,7 @@ fn count_files(paths: &[PathBuf]) -> u32 {
             }
         }
     }
+    trace!(count, paths = paths.len(), "counted files for backup");
     count
 }
 
@@ -170,6 +171,7 @@ fn create_archive_sync(
 
             // Emit progress every 10 files or on last file
             if files_processed % 10 == 0 || files_processed == total_files {
+                // Intentionally silent: progress event in file-processing loop
                 let _ = event_tx.send(Event::BackupProgress {
                     id: package_id.to_string(),
                     files_processed,
