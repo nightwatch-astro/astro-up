@@ -116,8 +116,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p astro-up/target/release
-          if gh release download --repo nightwatch-astro/astro-up --pattern 'astro-up-cli-x86_64-pc-windows-msvc.exe' --dir astro-up/target/release --clobber 2>/dev/null; then
-            mv astro-up/target/release/astro-up-cli-x86_64-pc-windows-msvc.exe astro-up/target/release/astro-up-cli.exe
+          if gh release download --repo nightwatch-astro/astro-up --pattern 'astro-up-cli.exe' --dir astro-up/target/release --clobber 2>/dev/null; then
             echo "source=release" >> "$GITHUB_OUTPUT"
           else
             echo "source=build" >> "$GITHUB_OUTPUT"
@@ -138,17 +137,33 @@ jobs:
           rustup default stable
           cargo build --release -p astro-up-cli
 
+      - name: Download catalog
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release download catalog/latest \
+            --repo nightwatch-astro/astro-up-manifests \
+            --pattern 'catalog.db' \
+            --dir astro-up/ \
+            --clobber
+
       - name: Run lifecycle test
         id: lifecycle
         working-directory: astro-up
         shell: pwsh
+        env:
+          CATALOG_DB: ${{ github.workspace }}/astro-up/catalog.db
+          MANIFESTS_DIR: ${{ github.workspace }}/manifests
+          REPORT_FILE: ${{ github.workspace }}/report.json
         run: |
           $args = @(
             "lifecycle-test",
             $env:PACKAGE_ID,
-            "--manifest-path", "${{ github.workspace }}/manifests",
+            "--manifest-path", $env:MANIFESTS_DIR,
+            "--catalog-path", $env:CATALOG_DB,
             "--json",
-            "--report-file", "${{ github.workspace }}/report.json"
+            "--report-file", $env:REPORT_FILE
           )
           if ($env:INPUT_VERSION -ne "") {
             $args += "--version"
@@ -158,9 +173,9 @@ jobs:
             $args += "--dry-run"
           }
           & ./target/release/astro-up-cli.exe @args
-          echo "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          # Don't fail the step — exit codes handled in PR step
-          exit 0
+          $exitCode = $LASTEXITCODE
+          echo "exit_code=$exitCode" >> $env:GITHUB_OUTPUT
+          exit $exitCode
 
       - name: Upload report
         if: always()

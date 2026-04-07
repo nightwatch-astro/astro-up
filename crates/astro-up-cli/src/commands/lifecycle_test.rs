@@ -15,6 +15,7 @@ pub async fn handle_lifecycle_test(
     manifest_path: &Path,
     version: Option<&str>,
     install_dir: Option<&Path>,
+    catalog_path: Option<&Path>,
     dry_run: bool,
     report_file: Option<&Path>,
     mode: &OutputMode,
@@ -52,6 +53,7 @@ pub async fn handle_lifecycle_test(
         package_id: package_id.to_string(),
         version: version.map(String::from),
         install_dir: install_dir.map(std::borrow::ToOwned::to_owned),
+        catalog_path: catalog_path.map(std::borrow::ToOwned::to_owned),
         dry_run,
         ..Default::default()
     };

@@ -117,6 +117,9 @@ pub enum Commands {
         /// Install directory for `download_only` packages
         #[arg(long)]
         install_dir: Option<PathBuf>,
+        /// Path to compiled catalog.db for version resolution
+        #[arg(long)]
+        catalog_path: Option<PathBuf>,
         /// Download and probe only, skip install/uninstall
         #[arg(long)]
         dry_run: bool,
@@ -217,6 +220,7 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
             ref manifest_path,
             ref version,
             ref install_dir,
+            ref catalog_path,
             dry_run,
             ref report_file,
         } => {
@@ -225,6 +229,7 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
                 manifest_path,
                 version.as_deref(),
                 install_dir.as_deref(),
+                catalog_path.as_deref(),
                 dry_run,
                 report_file.as_deref(),
                 &mode,
