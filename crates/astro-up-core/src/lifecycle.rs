@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::catalog::manifest::ManifestReader;
 use crate::detect::PathResolver;
 use crate::detect::discovery::DiscoveryScanner;
+use crate::detect::wmi_apps;
 use crate::error::CoreError;
 use crate::types::{DetectionConfig, Software, Version};
 
@@ -43,6 +44,21 @@ pub enum LifecycleStatus {
     Fail,
 }
 
+/// WMI snapshot captured after install — used to enrich manifest detection config.
+#[derive(Debug, Clone, Serialize)]
+pub struct WmiSnapshot {
+    /// Exact name as it appears in `Win32_InstalledWin32Program`.
+    pub name: String,
+    /// Version string from WMI.
+    pub version: String,
+    /// Vendor/publisher.
+    pub vendor: String,
+    /// ProgramId (maps to Uninstall registry key name).
+    pub program_id: String,
+    /// How the match was made.
+    pub match_strategy: String,
+}
+
 /// Full lifecycle test report for one package.
 #[derive(Debug, Clone, Serialize)]
 pub struct LifecycleReport {
@@ -51,6 +67,8 @@ pub struct LifecycleReport {
     pub phases: Vec<PhaseResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub discovered_config: Option<DetectionConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wmi_snapshot: Option<WmiSnapshot>,
     pub overall_status: LifecycleStatus,
 }
 
@@ -110,6 +128,7 @@ impl LifecycleRunner {
                 &version_str,
                 phases,
                 None,
+                None,
             ));
         }
 
@@ -139,7 +158,16 @@ impl LifecycleRunner {
             phases.push(install_result);
 
             if install_ok {
-                // Phase 3: Detect
+                // Phase 3: WMI snapshot — capture how the OS sees this package
+                let (wmi_phase, wmi_snap) =
+                    Self::run_wmi_snapshot(&software.name, &software.aliases).await;
+                phases.push(wmi_phase);
+
+                // Phase 4: File search — verify Windows Search finds the EXE
+                let search_phase = Self::run_file_search(&software.detection).await;
+                phases.push(search_phase);
+
+                // Phase 5: Detect
                 let detect_result = Self::run_discovery(&software, &None).await;
                 if let Some(ref config) = detect_result
                     .logs
@@ -150,18 +178,26 @@ impl LifecycleRunner {
                 }
                 phases.push(detect_result);
 
-                // Phase 4: Verify install
+                // Phase 6: Verify install
                 let verify_result =
                     Self::run_verify_install(&discovered_config, &version_str).await;
                 phases.push(verify_result);
 
-                // Phase 5: Uninstall
+                // Phase 7: Uninstall
                 let uninstall_result = Self::run_uninstall(&options.package_id).await;
                 phases.push(uninstall_result);
 
-                // Phase 6: Verify removal
+                // Phase 8: Verify removal
                 let removal_result = Self::run_verify_removal(&software).await;
                 phases.push(removal_result);
+
+                return Ok(Self::build_report(
+                    &options.package_id,
+                    &version_str,
+                    phases,
+                    discovered_config,
+                    wmi_snap,
+                ));
             } else {
                 // Install failed — attempt cleanup
                 let cleanup = Self::run_uninstall(&options.package_id).await;
@@ -187,6 +223,7 @@ impl LifecycleRunner {
             &version_str,
             phases,
             discovered_config,
+            None,
         ))
     }
 
@@ -328,6 +365,147 @@ impl LifecycleRunner {
                 logs: vec![],
                 warnings: vec![],
             }
+        }
+    }
+
+    /// Capture WMI snapshot after install — records how the OS sees this package.
+    ///
+    /// This data is used to enrich the manifest with exact `program_id` and
+    /// `match_name` values for reliable detection without fuzzy matching.
+    async fn run_wmi_snapshot(
+        package_name: &str,
+        aliases: &[String],
+    ) -> (PhaseResult, Option<WmiSnapshot>) {
+        let start = Instant::now();
+
+        let wmi_result = wmi_apps::enumerate_installed();
+        let programs = match wmi_result {
+            Ok(scan) => scan.programs,
+            Err(e) => {
+                return (
+                    PhaseResult {
+                        phase: "wmi-snapshot".into(),
+                        status: PhaseStatus::Skipped,
+                        duration: start.elapsed(),
+                        exit_code: None,
+                        logs: vec![],
+                        warnings: vec![format!("WMI unavailable: {e}")],
+                    },
+                    None,
+                );
+            }
+        };
+
+        let matched = wmi_apps::match_package(package_name, aliases, None, &programs);
+
+        match matched {
+            Some(m) => {
+                let snapshot = WmiSnapshot {
+                    name: m.program.name.clone(),
+                    version: m.program.version.clone(),
+                    vendor: m.program.vendor.clone(),
+                    program_id: m.program.program_id.clone(),
+                    match_strategy: format!("{:?}", m.strategy),
+                };
+                let log_json =
+                    serde_json::to_string(&snapshot).unwrap_or_else(|_| "{}".to_string());
+                (
+                    PhaseResult {
+                        phase: "wmi-snapshot".into(),
+                        status: PhaseStatus::Pass,
+                        duration: start.elapsed(),
+                        exit_code: None,
+                        logs: vec![log_json],
+                        warnings: vec![],
+                    },
+                    Some(snapshot),
+                )
+            }
+            None => (
+                PhaseResult {
+                    phase: "wmi-snapshot".into(),
+                    status: PhaseStatus::Fail,
+                    duration: start.elapsed(),
+                    exit_code: None,
+                    logs: vec![],
+                    warnings: vec![format!(
+                        "package '{package_name}' not found in WMI after install"
+                    )],
+                },
+                None,
+            ),
+        }
+    }
+
+    /// Verify that Windows Search can find the package's EXE/DLL.
+    ///
+    /// Extracts the filename from the detection config's `file_path` template
+    /// and queries the Windows Search index. This validates the search-based
+    /// file discovery path used by PE detection.
+    async fn run_file_search(detection: &Option<DetectionConfig>) -> PhaseResult {
+        let start = Instant::now();
+
+        let Some(config) = detection else {
+            return PhaseResult {
+                phase: "file-search".into(),
+                status: PhaseStatus::Skipped,
+                duration: start.elapsed(),
+                exit_code: None,
+                logs: vec![],
+                warnings: vec!["no detection config — nothing to search for".into()],
+            };
+        };
+
+        let Some(ref template) = config.file_path else {
+            return PhaseResult {
+                phase: "file-search".into(),
+                status: PhaseStatus::Skipped,
+                duration: start.elapsed(),
+                exit_code: None,
+                logs: vec![],
+                warnings: vec!["detection has no file_path — search not applicable".into()],
+            };
+        };
+
+        let Some(filename) = std::path::Path::new(template)
+            .file_name()
+            .and_then(|f| f.to_str())
+        else {
+            return PhaseResult {
+                phase: "file-search".into(),
+                status: PhaseStatus::Fail,
+                duration: start.elapsed(),
+                exit_code: None,
+                logs: vec![],
+                warnings: vec![format!("cannot extract filename from template: {template}")],
+            };
+        };
+
+        match crate::detect::search::find_file(filename) {
+            Ok(Some(found_path)) => PhaseResult {
+                phase: "file-search".into(),
+                status: PhaseStatus::Pass,
+                duration: start.elapsed(),
+                exit_code: None,
+                logs: vec![format!("found: {found_path}")],
+                warnings: vec![],
+            },
+            Ok(None) => PhaseResult {
+                phase: "file-search".into(),
+                status: PhaseStatus::Fail,
+                duration: start.elapsed(),
+                exit_code: None,
+                logs: vec![],
+                warnings: vec![format!("'{filename}' not found in Windows Search index")],
+            },
+            Err(e) => PhaseResult {
+                phase: "file-search".into(),
+                status: PhaseStatus::Skipped,
+                duration: start.elapsed(),
+                exit_code: None,
+                logs: vec![],
+                warnings: vec![format!("Windows Search unavailable: {e}")],
+            },
         }
     }
 
@@ -519,6 +697,7 @@ impl LifecycleRunner {
         version: &str,
         phases: Vec<PhaseResult>,
         discovered_config: Option<DetectionConfig>,
+        wmi_snapshot: Option<WmiSnapshot>,
     ) -> LifecycleReport {
         let has_fail = phases.iter().any(|p| matches!(p.status, PhaseStatus::Fail));
         let has_pass = phases.iter().any(|p| matches!(p.status, PhaseStatus::Pass));
@@ -539,6 +718,7 @@ impl LifecycleRunner {
             version: version.to_string(),
             phases,
             discovered_config,
+            wmi_snapshot,
             overall_status,
         }
     }

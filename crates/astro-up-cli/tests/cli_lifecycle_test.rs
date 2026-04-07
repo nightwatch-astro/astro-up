@@ -49,6 +49,7 @@ fn sample_report() -> LifecycleReport {
             inf_name: None,
             fallback: None,
         }),
+        wmi_snapshot: None,
         overall_status: LifecycleStatus::Pass,
     }
 }
@@ -116,6 +117,7 @@ fn snapshot_lifecycle_fail_report_json() {
             },
         ],
         discovered_config: None,
+        wmi_snapshot: None,
         overall_status: LifecycleStatus::Fail,
     };
 

@@ -5,10 +5,10 @@ use tracing::debug;
 
 use crate::detect::{
     DetectionCache, DetectionError, DetectionResult, PackageDetection, PathResolver, ScanResult,
-    run_chain,
+    run_chain, wmi_apps,
 };
 use crate::ledger::LedgerEntry;
-use crate::types::{Software, Version};
+use crate::types::{DetectionMethod, Software, Version};
 
 /// Minimal interface for getting the list of packages to scan.
 ///
@@ -58,9 +58,43 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
     }
 
     /// Run a full scan across all catalog packages.
+    ///
+    /// Detection strategy:
+    /// 1. WMI enumeration — query `Win32_InstalledWin32Program` once, match all packages
+    /// 2. Legacy detection chain — PE file / registry fallback for unmatched packages
     pub async fn scan(&self) -> Result<ScanResult, DetectionError> {
         let start = Instant::now();
         let packages = self.packages.list_all()?;
+
+        // Step 1: WMI enumeration (single system call, with timeout)
+        //
+        // Use std::thread::spawn + oneshot instead of spawn_blocking so the
+        // thread is fully detached. spawn_blocking tasks block tokio runtime
+        // shutdown — if WMI hangs (e.g., no WMI service on CI), the runtime
+        // can never shut down, causing test timeouts.
+        let (wmi_tx, wmi_rx) = tokio::sync::oneshot::channel();
+        std::thread::spawn(move || {
+            let _ = wmi_tx.send(wmi_apps::enumerate_installed());
+        });
+        let wmi_programs =
+            match tokio::time::timeout(std::time::Duration::from_secs(5), wmi_rx).await {
+                Ok(Ok(Ok(scan))) => {
+                    debug!(
+                        wmi_count = scan.programs.len(),
+                        wmi_ms = scan.duration.as_millis() as u64,
+                        "WMI enumeration complete"
+                    );
+                    scan.programs
+                }
+                Ok(Ok(Err(e))) => {
+                    debug!(error = %e, "WMI enumeration failed, using legacy detection only");
+                    Vec::new()
+                }
+                _ => {
+                    debug!("WMI enumeration timed out or panicked, using legacy detection only");
+                    Vec::new()
+                }
+            };
 
         // Build ledger path index for PE detection fallback (#215)
         let ledger_paths: std::collections::HashMap<String, String> = self
@@ -78,12 +112,6 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         let mut errors = Vec::new();
 
         for pkg in &packages {
-            let Some(ref detection_config) = pkg.detection else {
-                debug!(package = %pkg.id, "no detection config, skipping");
-                continue;
-            };
-
-            // Check cache first
             let id = pkg.id.to_string();
 
             // Check cache first
@@ -95,17 +123,58 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
                 continue;
             }
 
-            let ledger_path = ledger_paths.get(&id).map(String::as_str);
-            let result = run_chain(detection_config, &self.resolver, ledger_path).await;
+            // Step 2: Try WMI matching (primary detection for all packages)
+            let wmi_result = wmi_apps::match_package(
+                &pkg.name,
+                &pkg.aliases,
+                None, // program_id — will come from manifest later
+                &wmi_programs,
+            );
 
-            // Report per-package errors for Unavailable results
-            if let DetectionResult::Unavailable { ref reason } = result {
-                errors.push(crate::detect::ScanError {
-                    package_id: id.clone(),
-                    method: detection_config.method.clone(),
-                    error: reason.clone(),
-                });
-            }
+            let result = if let Some(matched) = wmi_result {
+                // WMI matched — use its version
+                if let Some(version) = matched.version() {
+                    debug!(
+                        package = %id,
+                        wmi_name = matched.program.name,
+                        version = %version,
+                        strategy = ?matched.strategy,
+                        "detected via WMI"
+                    );
+                    DetectionResult::Installed {
+                        version,
+                        method: DetectionMethod::Registry, // WMI reads from registry
+                        install_path: None,
+                    }
+                } else {
+                    debug!(
+                        package = %id,
+                        wmi_name = matched.program.name,
+                        "WMI matched but no version"
+                    );
+                    DetectionResult::InstalledUnknownVersion {
+                        method: DetectionMethod::Registry,
+                        install_path: None,
+                    }
+                }
+            } else if let Some(ref detection_config) = pkg.detection {
+                // Step 3: Legacy detection chain fallback
+                let ledger_path = ledger_paths.get(&id).map(String::as_str);
+                let legacy_result = run_chain(detection_config, &self.resolver, ledger_path).await;
+
+                if let DetectionResult::Unavailable { ref reason } = legacy_result {
+                    errors.push(crate::detect::ScanError {
+                        package_id: id.clone(),
+                        method: detection_config.method.clone(),
+                        error: reason.clone(),
+                    });
+                }
+
+                legacy_result
+            } else {
+                debug!(package = %id, "no WMI match and no detection config");
+                continue;
+            };
 
             // Cache the result
             self.cache.insert(id.clone(), result.clone());
