@@ -10,6 +10,7 @@
 /// Returns `Ok(Some(path))` if found, `Ok(None)` if not in the index,
 /// or `Err` if the search service is unavailable.
 #[cfg(windows)]
+#[allow(clippy::ref_as_ptr, clippy::borrow_as_ptr)] // IDispatch::Invoke signature requires raw ptrs
 pub fn find_file(filename: &str) -> Result<Option<String>, String> {
     use windows::Win32::System::Com::{
         CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx,
@@ -133,9 +134,7 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
     let is_eof = bool::try_from(&eof_val).unwrap_or(true);
 
     if is_eof {
-        let _ = get_id(&conn, "Close")
-            .ok()
-            .map(|id| invoke(&conn, id, &[]));
+        let _ = get_id(&conn, "Close").ok().map(|id| invoke(&conn, id, &[]));
         return Ok(None);
     }
 
@@ -154,9 +153,7 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
     let path_val = get_prop(&field, value_id)?;
     let path = BSTR::try_from(&path_val).map_err(|e| format!("Value to BSTR: {e}"))?;
 
-    let _ = get_id(&conn, "Close")
-        .ok()
-        .map(|id| invoke(&conn, id, &[]));
+    let _ = get_id(&conn, "Close").ok().map(|id| invoke(&conn, id, &[]));
 
     let result = path.to_string();
     if result.is_empty() {
