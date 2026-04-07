@@ -5,7 +5,6 @@
   "bump-patch-for-minor-pre-major": true,
   "draft": true,
   "include-component-in-tag": false,
-  "group-pull-request-title-pattern": "chore: release astro-up ${version}",
   "packages": {
     ".": {
       "component": "astro-up",
