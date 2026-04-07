@@ -66,9 +66,14 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         let start = Instant::now();
         let packages = self.packages.list_all()?;
 
-        // Step 1: WMI enumeration (single system call)
-        let wmi_programs = match wmi_apps::enumerate_installed() {
-            Ok(scan) => {
+        // Step 1: WMI enumeration (single system call, with timeout)
+        let wmi_programs = match tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            tokio::task::spawn_blocking(wmi_apps::enumerate_installed),
+        )
+        .await
+        {
+            Ok(Ok(Ok(scan))) => {
                 debug!(
                     wmi_count = scan.programs.len(),
                     wmi_ms = scan.duration.as_millis() as u64,
@@ -76,8 +81,12 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
                 );
                 scan.programs
             }
-            Err(e) => {
+            Ok(Ok(Err(e))) => {
                 debug!(error = %e, "WMI enumeration failed, using legacy detection only");
+                Vec::new()
+            }
+            _ => {
+                debug!("WMI enumeration timed out or panicked, using legacy detection only");
                 Vec::new()
             }
         };
