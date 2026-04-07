@@ -15,8 +15,8 @@
 
 **Purpose**: Establish logging standards that all subsequent tasks follow
 
-- [ ] T001 [P] Add Constitution Principle VII (Observability) to `.specify/memory/constitution.md` — define log level semantics, instrument requirements, error suppression rules, sensitive data exclusion. Bump version to 1.1.0.
-- [ ] T002 [P] Add Logging & Error Handling section to `CLAUDE.md` under `## Coding Standards` — instrument conventions, structured fields, unwrap rules, frontend error handling rules.
+- [x] T001 [P] Add Constitution Principle VII (Observability) to `.specify/memory/constitution.md` — define log level semantics, instrument requirements, error suppression rules, sensitive data exclusion. Bump version to 1.1.0.
+- [x] T002 [P] Add Logging & Error Handling section to `CLAUDE.md` under `## Coding Standards` — instrument conventions, structured fields, unwrap rules, frontend error handling rules.
 
 **Checkpoint**: Governance in place — all subsequent tasks follow these standards.
 
