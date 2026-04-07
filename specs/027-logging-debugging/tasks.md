@@ -63,10 +63,10 @@
 
 ### Implementation
 
-- [ ] T012 [P] [US2] Add global Vue error boundary: add `onErrorCaptured` handler in `frontend/src/App.vue` that logs to errorLog store and shows toast. Add `app.config.errorHandler` in `frontend/src/main.ts` for uncaught errors. Include rate limiting: max 3 toasts per 5 seconds (FR-015).
-- [ ] T013 [P] [US2] Add `onError` callbacks to all 8 VueQuery mutations missing them in `frontend/src/composables/useInvoke.ts`: `useSyncCatalog`, `useSaveConfig`, `useInstallSoftware`, `useUpdateSoftware`, `useUpdateAll`, `useScanInstalled`, `useCreateBackup`, `useRestoreBackup`, `useCancelOperation`. Each gets `toast.add({ severity: "error", ... })` + `errorLog.addEntry()`. Add global `QueryClient` `onError` default as safety net in main.ts or query client setup (FR-016).
-- [ ] T014 [P] [US2] Replace 3 `alert()` calls with PrimeVue toast in `frontend/src/components/settings/AboutSection.vue`: "You are on the latest version" → toast info (line ~29), "Failed to check for updates" → toast error (line ~32), "Update failed" → toast error (line ~49). Inject `useToast()` (FR-017).
-- [ ] T015 [P] [US2] Fix CatalogSection error handling: replace `console.error("Catalog re-download failed:", e)` with `toast.add({ severity: "error", ... })` + `errorLog.addEntry()` in `frontend/src/components/settings/CatalogSection.vue` (line ~25). Inject `useToast()` and `useErrorLog()` (FR-018).
+- [x] T012 [P] [US2] Add global Vue error boundary: add `onErrorCaptured` handler in `frontend/src/App.vue` that logs to errorLog store and shows toast. Add `app.config.errorHandler` in `frontend/src/main.ts` for uncaught errors. Include rate limiting: max 3 toasts per 5 seconds (FR-015).
+- [x] T013 [P] [US2] Add `onError` callbacks to all 8 VueQuery mutations missing them in `frontend/src/composables/useInvoke.ts`: `useSyncCatalog`, `useSaveConfig`, `useInstallSoftware`, `useUpdateSoftware`, `useUpdateAll`, `useScanInstalled`, `useCreateBackup`, `useRestoreBackup`, `useCancelOperation`. Each gets `toast.add({ severity: "error", ... })` + `errorLog.addEntry()`. Add global `QueryClient` `onError` default as safety net in main.ts or query client setup (FR-016).
+- [x] T014 [P] [US2] Replace 3 `alert()` calls with PrimeVue toast in `frontend/src/components/settings/AboutSection.vue`: "You are on the latest version" → toast info (line ~29), "Failed to check for updates" → toast error (line ~32), "Update failed" → toast error (line ~49). Inject `useToast()` (FR-017).
+- [x] T015 [P] [US2] Fix CatalogSection error handling: replace `console.error("Catalog re-download failed:", e)` with `toast.add({ severity: "error", ... })` + `errorLog.addEntry()` in `frontend/src/components/settings/CatalogSection.vue` (line ~25). Inject `useToast()` and `useErrorLog()` (FR-018).
 
 **Checkpoint**: US2 complete — every GUI operation failure shows toast + error log entry. Zero alert() calls remain.
 

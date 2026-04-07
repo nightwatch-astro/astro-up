@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { onErrorCaptured, onMounted, onUnmounted, ref } from "vue";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -15,6 +15,34 @@ import type { CoreEvent } from "./types/commands";
 
 const toast = useToast();
 const { addEntry } = useErrorLog();
+
+// Global error boundary — rate-limited toasts (max 3 per 5 seconds)
+let errorToastCount = 0;
+let errorToastResetTimer: ReturnType<typeof setTimeout> | null = null;
+
+onErrorCaptured((err, instance, info) => {
+  const message = err instanceof Error ? err.message : String(err);
+  const component = instance?.$options?.name ?? "unknown";
+  addEntry("error", `Component error in ${component}`, `${message} (${info})`);
+
+  errorToastCount++;
+  if (errorToastCount <= 3) {
+    toast.add({
+      severity: "error",
+      summary: "Unexpected error",
+      detail: message,
+      life: 5000,
+    });
+  }
+  if (!errorToastResetTimer) {
+    errorToastResetTimer = setTimeout(() => {
+      errorToastCount = 0;
+      errorToastResetTimer = null;
+    }, 5000);
+  }
+
+  return false; // prevent propagation
+});
 const { updateProgress, completeOperation, failOperation, addStep, startOperation, isRunning } = useOperations();
 const logVisible = ref(false);
 const logPanel = ref<InstanceType<typeof LogPanel> | null>(null);

@@ -2,7 +2,10 @@
 import { ref } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
+import { useToast } from "primevue/usetoast";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
+
+const toast = useToast();
 
 const version = __APP_VERSION__;
 const checking = ref(false);
@@ -26,10 +29,10 @@ async function checkForUpdates() {
       updateVersion.value = "";
       updateNotes.value = "";
       showNotes.value = false;
-      alert("You are on the latest version.");
+      toast.add({ severity: "info", summary: "Up to date", detail: "You are on the latest version.", life: 3000 });
     }
   } catch {
-    alert("Failed to check for updates.");
+    toast.add({ severity: "error", summary: "Update check failed", detail: "Failed to check for updates.", life: 5000 });
   } finally {
     checking.value = false;
   }
@@ -46,7 +49,7 @@ async function installUpdate() {
       await relaunch();
     }
   } catch {
-    alert("Update failed.");
+    toast.add({ severity: "error", summary: "Update failed", detail: "Failed to install update.", life: 5000 });
   }
 }
 </script>
