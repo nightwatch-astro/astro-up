@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use tracing::{debug, trace};
+
 use crate::detect::{DetectionResult, PathResolver};
 use crate::types::{DetectionConfig, DetectionMethod, Version};
 
@@ -15,6 +17,7 @@ pub async fn detect_exists(config: &DetectionConfig, resolver: &PathResolver) ->
         };
     };
 
+    trace!(method = "file_exists", %path, "checking file existence");
     if Path::new(&path).exists() {
         DetectionResult::InstalledUnknownVersion {
             method: DetectionMethod::FileExists,
@@ -42,6 +45,7 @@ pub async fn detect_config(config: &DetectionConfig, resolver: &PathResolver) ->
         };
     };
 
+    trace!(method = "config_file", %path, pattern = %pattern, "reading config file for version");
     let content = match std::fs::read_to_string(&path) {
         Ok(c) => c,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -57,6 +61,7 @@ pub async fn detect_config(config: &DetectionConfig, resolver: &PathResolver) ->
     let re = match regex::Regex::new(pattern) {
         Ok(r) => r,
         Err(e) => {
+            debug!(method = "config_file", %pattern, error = %e, "invalid version_regex");
             return DetectionResult::Unavailable {
                 reason: format!("invalid version_regex: {e}"),
             };
