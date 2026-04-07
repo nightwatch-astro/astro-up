@@ -48,7 +48,7 @@
 ### Implementation
 
 - [x] T009 [US1] Add unique `operation_id` generation and propagation to all top-level operations in `crates/astro-up-core/src/engine/orchestrator.rs` — `plan()` and `execute()` must generate UUID and pass to child spans via tracing fields. Implements FR-008a.
-- [ ] T010 [P] [US1] Add `debug!` entry/exit logging to all CLI command handlers in `crates/astro-up-cli/src/commands/*.rs` with subcommand name and parsed args. Add `info!` on command dispatch in `main.rs`. Add `debug!` on state init in `state.rs`. MUST NOT duplicate core logging — boundary only (FR-013).
+- [x] T010 [P] [US1] Add `debug!` entry/exit logging to all CLI command handlers in `crates/astro-up-cli/src/commands/*.rs` with subcommand name and parsed args. Add `info!` on command dispatch in `main.rs`. Add `debug!` on state init in `state.rs`. MUST NOT duplicate core logging — boundary only (FR-013).
 - [x] T011 [P] [US1] Fill logging gaps in 5 GUI Tauri commands in `crates/astro-up-gui/src/commands.rs`: add `debug!` entry/exit to `get_versions` (line ~166), `list_backups` (line ~724) with count, `backup_preview` (line ~735); add `info!` exit to `delete_backup` (line ~749). Add `debug!` to `get_version` in `lib.rs`. Boundary logging only (FR-014).
 
 **Checkpoint**: US1 complete — developer can trace any operation through structured logs with operation_id correlation.
@@ -122,10 +122,10 @@
 
 **Purpose**: Verification and cleanup
 
-- [ ] T024 Run `cargo clippy -- -D warnings` across all crates — fix any warnings from new tracing imports or changed signatures.
-- [ ] T025 Run `cargo test` across all crates — fix any test failures from unwrap removals or signature changes.
-- [ ] T026 Run `pnpm lint && pnpm vue-tsc --noEmit` in frontend — fix any TypeScript or ESLint errors.
-- [ ] T027 Run grep audits to verify success criteria: `rg "unwrap()" --type rust -c` on in-scope files (SC-003), `rg "let _ =" --type rust` remaining instances (SC-004), `rg "alert(" frontend/` zero results (SC-006).
+- [x] T024 Run `cargo clippy -- -D warnings` across all crates — fix any warnings from new tracing imports or changed signatures.
+- [x] T025 Run `cargo test` across all crates — fix any test failures from unwrap removals or signature changes.
+- [x] T026 Run `pnpm lint && pnpm vue-tsc --noEmit` in frontend — fix any TypeScript or ESLint errors.
+- [x] T027 Run grep audits to verify success criteria: `rg "unwrap()" --type rust -c` on in-scope files (SC-003), `rg "let _ =" --type rust` remaining instances (SC-004), `rg "alert(" frontend/` zero results (SC-006).
 
 **Checkpoint**: All quality checks pass. Feature complete.
 
