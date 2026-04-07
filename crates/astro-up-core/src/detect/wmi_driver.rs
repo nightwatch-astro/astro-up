@@ -1,4 +1,4 @@
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::detect::DetectionResult;
 use crate::types::DetectionConfig;
@@ -35,6 +35,7 @@ async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
     use std::time::Duration;
 
     use serde::Deserialize;
+    use tracing::warn;
 
     #[derive(Deserialize, Debug)]
     #[allow(non_snake_case, dead_code)]
