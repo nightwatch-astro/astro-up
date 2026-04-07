@@ -95,6 +95,12 @@ pub struct HistoryFilter {
 /// Callback for streaming engine events to the UI layer.
 pub type EventCallback = Box<dyn Fn(Event) + Send + Sync>;
 
+/// Callback for selecting an asset when a release has multiple download options.
+/// Receives the package name and list of assets. Returns the index of the chosen
+/// asset, or `None` to cancel the install.
+pub type AssetSelector =
+    Box<dyn Fn(&str, &[crate::catalog::types::ReleaseAsset]) -> Option<usize> + Send + Sync>;
+
 // ---------------------------------------------------------------------------
 // Orchestrator trait
 // ---------------------------------------------------------------------------
@@ -107,10 +113,13 @@ pub trait Orchestrator: Send {
     async fn plan(&self, request: UpdateRequest) -> Result<UpdatePlan, CoreError>;
 
     /// Execute a previously built plan, streaming events via the callback.
+    /// `asset_selector` is called when a package has multiple download assets
+    /// (e.g., Stellarium qt5 vs qt6). Pass `None` to auto-pick the first asset.
     async fn execute(
         &self,
         plan: UpdatePlan,
         on_event: EventCallback,
+        asset_selector: Option<AssetSelector>,
         cancel: CancellationToken,
     ) -> Result<OrchestrationResult, CoreError>;
 
@@ -230,6 +239,7 @@ where
         &self,
         planned: &crate::engine::planner::PlannedUpdate,
         on_event: &EventCallback,
+        asset_selector: &Option<AssetSelector>,
         cancel: &CancellationToken,
     ) -> PackageResult {
         use std::time::Instant;
@@ -328,8 +338,44 @@ where
 
         check_cancel!();
 
-        // 4. Download — validate URL first
-        if planned.version_entry.url.is_empty() {
+        // 4. Resolve download URL from assets or fallback to version_entry.url
+        let download_url = match planned.version_entry.assets.len() {
+            0 => planned.version_entry.url.clone(),
+            1 => planned.version_entry.assets[0].url.clone(),
+            _ => {
+                // Multiple assets — ask user to pick
+                if let Some(selector) = asset_selector {
+                    match selector(&planned.software.name, &planned.version_entry.assets) {
+                        Some(idx) if idx < planned.version_entry.assets.len() => {
+                            planned.version_entry.assets[idx].url.clone()
+                        }
+                        _ => {
+                            let err_msg =
+                                format!("asset selection cancelled for {}", planned.software.name);
+                            on_event(Event::PackageComplete {
+                                package_id: pkg_id.clone(),
+                                status: "failed".into(),
+                                error: Some(err_msg.clone()),
+                            });
+                            return PackageResult {
+                                package_id: pkg_id.clone(),
+                                from_version: planned.current_version.clone(),
+                                to_version: planned.target_version.clone(),
+                                status: super::history::OperationStatus::Failed,
+                                duration: start.elapsed(),
+                                error: Some(err_msg),
+                                backup_path: None,
+                            };
+                        }
+                    }
+                } else {
+                    // No selector — auto-pick first asset
+                    planned.version_entry.assets[0].url.clone()
+                }
+            }
+        };
+
+        if download_url.is_empty() {
             let err_msg = format!(
                 "no download URL in catalog for {} {}",
                 pkg_id, planned.version_entry.version
@@ -351,7 +397,7 @@ where
         }
 
         let download_request = crate::download::DownloadRequest {
-            url: planned.version_entry.url.clone(),
+            url: download_url,
             expected_hash: planned.version_entry.sha256.clone(),
             dest_dir: self.download_dir.clone(),
             filename: Self::installer_filename(planned),
@@ -726,11 +772,12 @@ where
         }
     }
 
-    #[tracing::instrument(skip(self, plan, on_event, cancel), fields(plan_items = plan.items.len()))]
+    #[tracing::instrument(skip(self, plan, on_event, asset_selector, cancel), fields(plan_items = plan.items.len()))]
     async fn execute(
         &self,
         plan: UpdatePlan,
         on_event: EventCallback,
+        asset_selector: Option<AssetSelector>,
         cancel: CancellationToken,
     ) -> Result<OrchestrationResult, CoreError> {
         use std::collections::HashSet;
@@ -778,7 +825,9 @@ where
                 continue;
             }
 
-            let result = self.execute_single(planned, &on_event, &cancel).await;
+            let result = self
+                .execute_single(planned, &on_event, &asset_selector, &cancel)
+                .await;
 
             match &result.status {
                 super::history::OperationStatus::Success
@@ -1114,6 +1163,7 @@ mod tests {
                 discovered_at: chrono::Utc::now(),
                 release_notes_url: None,
                 pre_release: false,
+                assets: Vec::new(),
             },
             version_format: crate::engine::version_cmp::VersionFormat::Semver,
             has_backup_config: false,
@@ -1220,7 +1270,9 @@ mod tests {
         });
 
         let planned = test_planned_update("nina-app");
-        let result = orch.execute_single(&planned, &on_event, &cancel).await;
+        let result = orch
+            .execute_single(&planned, &on_event, &None, &cancel)
+            .await;
 
         assert_eq!(
             result.status,
@@ -1254,7 +1306,9 @@ mod tests {
         });
 
         let planned = test_planned_update("nina-app");
-        let result = orch.execute_single(&planned, &on_event, &cancel).await;
+        let result = orch
+            .execute_single(&planned, &on_event, &None, &cancel)
+            .await;
 
         assert_eq!(
             result.status,
@@ -1305,7 +1359,7 @@ mod tests {
             warnings: vec![],
         };
 
-        let result = orch.execute(plan, on_event, cancel).await.unwrap();
+        let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
 
         // First package should succeed, second should be cancelled (or not started),
         // third should not be processed
@@ -1348,7 +1402,7 @@ mod tests {
             warnings: vec![],
         };
 
-        let result = orch.execute(plan, on_event, cancel).await.unwrap();
+        let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
 
         assert!(result.succeeded.is_empty());
         assert!(result.failed.is_empty());
@@ -1389,7 +1443,7 @@ mod tests {
             warnings: vec![],
         };
 
-        let result = orch.execute(plan, on_event, cancel).await.unwrap();
+        let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
 
         assert!(
             result.succeeded.is_empty(),

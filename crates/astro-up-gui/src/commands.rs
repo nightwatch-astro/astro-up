@@ -469,7 +469,9 @@ async fn run_orchestrated_operation(
                     emit_event(&app_for_events, &event);
                 });
 
-            let result = orchestrator.execute(plan, on_event, cancel_token).await?;
+            let result = orchestrator
+                .execute(plan, on_event, None, cancel_token)
+                .await?;
             serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
         })
     })

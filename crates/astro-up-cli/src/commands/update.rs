@@ -125,7 +125,7 @@ pub async fn handle_update(
     let on_event: EventCallback = Box::new(|_event| {});
 
     let result = orchestrator
-        .execute(plan, on_event, cancel)
+        .execute(plan, on_event, None, cancel)
         .await
         .map_err(|e| eyre!("update failed: {e}"))?;
 

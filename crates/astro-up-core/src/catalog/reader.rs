@@ -162,10 +162,8 @@ impl SqliteCatalogReader {
     pub fn versions(&self, id: &PackageId) -> Result<Vec<VersionEntry>, CoreError> {
         let mut stmt = self.conn.prepare(
             "SELECT package_id, version, url, sha256, discovered_at,
-                    release_notes_url, pre_release
-             FROM versions
-             WHERE package_id = ?1
-             ORDER BY discovered_at DESC",
+                    release_notes_url, pre_release, assets
+             FROM versions WHERE package_id = ?1 ORDER BY discovered_at DESC",
         )?;
 
         let results = stmt
@@ -179,11 +177,9 @@ impl SqliteCatalogReader {
     pub fn latest_version(&self, id: &PackageId) -> Result<Option<VersionEntry>, CoreError> {
         let mut stmt = self.conn.prepare(
             "SELECT package_id, version, url, sha256, discovered_at,
-                    release_notes_url, pre_release
-             FROM versions
-             WHERE package_id = ?1 AND pre_release = 0
-             ORDER BY discovered_at DESC
-             LIMIT 1",
+                    release_notes_url, pre_release, assets
+             FROM versions WHERE package_id = ?1 AND pre_release = 0
+             ORDER BY discovered_at DESC LIMIT 1",
         )?;
 
         let result = stmt
@@ -480,6 +476,11 @@ fn row_to_version(row: &rusqlite::Row<'_>) -> rusqlite::Result<VersionEntry> {
     let pid_str: String = row.get(0)?;
     let discovered_str: String = row.get(4)?;
     let pre: i32 = row.get(6)?;
+    let assets_json: Option<String> = row.get(7).unwrap_or(None);
+
+    let assets: Vec<crate::catalog::types::ReleaseAsset> = assets_json
+        .and_then(|json| serde_json::from_str(&json).ok())
+        .unwrap_or_default();
 
     #[allow(clippy::unwrap_used)] // "unknown" is a valid PackageId constant
     let fallback_id = PackageId::new("unknown").unwrap();
@@ -493,6 +494,7 @@ fn row_to_version(row: &rusqlite::Row<'_>) -> rusqlite::Result<VersionEntry> {
             .unwrap_or_default(),
         release_notes_url: row.get(5)?,
         pre_release: pre != 0,
+        assets,
     })
 }
 

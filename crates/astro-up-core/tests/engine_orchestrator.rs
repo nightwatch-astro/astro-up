@@ -271,6 +271,7 @@ fn test_planned_update(id: &str) -> PlannedUpdate {
             discovered_at: chrono::Utc::now(),
             release_notes_url: None,
             pre_release: false,
+            assets: Vec::new(),
         },
         version_format: VersionFormat::Semver,
         has_backup_config: false,
@@ -336,7 +337,7 @@ async fn single_package_happy_path_events_in_order() {
         warnings: vec![],
     };
 
-    let result = orch.execute(plan, on_event, cancel).await.unwrap();
+    let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
 
     assert_eq!(result.succeeded.len(), 1);
     assert!(result.failed.is_empty());
@@ -427,7 +428,7 @@ async fn process_blocking_emits_event_and_fails() {
         warnings: vec![],
     };
 
-    let result = orch.execute(plan, on_event, cancel).await.unwrap();
+    let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
 
     assert!(
         result.succeeded.is_empty(),
@@ -493,7 +494,7 @@ async fn cancellation_mid_pipeline() {
         warnings: vec![],
     };
 
-    let result = orch.execute(plan, on_event, cancel).await.unwrap();
+    let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
 
     // The first package should be cancelled (token fires after PackageStarted
     // but before the process check completes its next check_cancel!())
@@ -546,7 +547,7 @@ async fn failure_after_backup_includes_backup_path() {
         warnings: vec![],
     };
 
-    let result = orch.execute(plan, on_event, cancel).await.unwrap();
+    let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
 
     assert!(result.succeeded.is_empty(), "install should have failed");
     assert_eq!(result.failed.len(), 1);
