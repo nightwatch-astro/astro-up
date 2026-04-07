@@ -47,9 +47,9 @@
 
 ### Implementation
 
-- [ ] T009 [US1] Add unique `operation_id` generation and propagation to all top-level operations in `crates/astro-up-core/src/engine/orchestrator.rs` — `plan()` and `execute()` must generate UUID and pass to child spans via tracing fields. Implements FR-008a.
+- [x] T009 [US1] Add unique `operation_id` generation and propagation to all top-level operations in `crates/astro-up-core/src/engine/orchestrator.rs` — `plan()` and `execute()` must generate UUID and pass to child spans via tracing fields. Implements FR-008a.
 - [ ] T010 [P] [US1] Add `debug!` entry/exit logging to all CLI command handlers in `crates/astro-up-cli/src/commands/*.rs` with subcommand name and parsed args. Add `info!` on command dispatch in `main.rs`. Add `debug!` on state init in `state.rs`. MUST NOT duplicate core logging — boundary only (FR-013).
-- [ ] T011 [P] [US1] Fill logging gaps in 5 GUI Tauri commands in `crates/astro-up-gui/src/commands.rs`: add `debug!` entry/exit to `get_versions` (line ~166), `list_backups` (line ~724) with count, `backup_preview` (line ~735); add `info!` exit to `delete_backup` (line ~749). Add `debug!` to `get_version` in `lib.rs`. Boundary logging only (FR-014).
+- [x] T011 [P] [US1] Fill logging gaps in 5 GUI Tauri commands in `crates/astro-up-gui/src/commands.rs`: add `debug!` entry/exit to `get_versions` (line ~166), `list_backups` (line ~724) with count, `backup_preview` (line ~735); add `info!` exit to `delete_backup` (line ~749). Add `debug!` to `get_version` in `lib.rs`. Boundary logging only (FR-014).
 
 **Checkpoint**: US1 complete — developer can trace any operation through structured logs with operation_id correlation.
 
@@ -92,11 +92,11 @@
 
 ### Implementation
 
-- [ ] T016 [P] [US4] Triage and fix dangerous `unwrap()` in `crates/astro-up-core/src/install/process.rs` — replace unwraps in Windows process spawning, FFI calls, and Job Object operations with `?` + `.map_err()` using appropriate `CoreError` variants. Log at `error!` on failure (FR-009).
-- [ ] T017 [P] [US4] Triage and fix dangerous `unwrap()` in `crates/astro-up-core/src/detect/discovery.rs` — replace unwraps in PE file parsing, registry access, and WMI queries with `?` or `.ok()` + `trace!` logging. Focus on runtime-fallible `unwrap()` paths only; `.ok()` detection-chain logging was already added by T004 (FR-009).
-- [ ] T018 [P] [US4] Triage and fix dangerous `unwrap()` in `crates/astro-up-core/src/backup/archive.rs` — replace unwraps in ZIP operations and file I/O with `?` + descriptive error context. Also audit remaining high-risk files: `engine/lock.rs`, `catalog/fetch.rs`, `download/mod.rs` (FR-009).
-- [ ] T019 [P] [US4] Fix silent `let _ =` patterns: add `debug!` on send failure for UI event emissions in `crates/astro-up-gui/src/commands.rs` (~15 instances). Add `warn!` for file deletion and DB writes in `crates/astro-up-core/src/download/mod.rs` and `backup/mod.rs` (FR-011).
-- [ ] T020 [P] [US4] Fix silent `.ok()` patterns in non-detection files: add `debug!` to PID parsing in `crates/astro-up-core/src/engine/lock.rs`, add `debug!` to version comparison in `engine/version_cmp.rs`, add `trace!` to Windows handle cleanup in `install/process.rs`. Detection-chain `.ok()` patterns in `discovery.rs` were already addressed by T004 (FR-012).
+- [x] T016 [P] [US4] Triage and fix dangerous `unwrap()` in `crates/astro-up-core/src/install/process.rs` — replace unwraps in Windows process spawning, FFI calls, and Job Object operations with `?` + `.map_err()` using appropriate `CoreError` variants. Log at `error!` on failure (FR-009).
+- [x] T017 [P] [US4] Triage and fix dangerous `unwrap()` in `crates/astro-up-core/src/detect/discovery.rs` — replace unwraps in PE file parsing, registry access, and WMI queries with `?` or `.ok()` + `trace!` logging. Focus on runtime-fallible `unwrap()` paths only; `.ok()` detection-chain logging was already added by T004 (FR-009).
+- [x] T018 [P] [US4] Triage and fix dangerous `unwrap()` in `crates/astro-up-core/src/backup/archive.rs` — replace unwraps in ZIP operations and file I/O with `?` + descriptive error context. Also audit remaining high-risk files: `engine/lock.rs`, `catalog/fetch.rs`, `download/mod.rs` (FR-009).
+- [x] T019 [P] [US4] Fix silent `let _ =` patterns: add `debug!` on send failure for UI event emissions in `crates/astro-up-gui/src/commands.rs` (~15 instances). Add `warn!` for file deletion and DB writes in `crates/astro-up-core/src/download/mod.rs` and `backup/mod.rs` (FR-011).
+- [x] T020 [P] [US4] Fix silent `.ok()` patterns in non-detection files: add `debug!` to PID parsing in `crates/astro-up-core/src/engine/lock.rs`, add `debug!` to version comparison in `engine/version_cmp.rs`, add `trace!` to Windows handle cleanup in `install/process.rs`. Detection-chain `.ok()` patterns in `discovery.rs` were already addressed by T004 (FR-012).
 
 **Checkpoint**: US4 complete — dangerous error suppression eliminated. Remaining patterns have adjacent log statements.
 
