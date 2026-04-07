@@ -158,15 +158,33 @@ pub fn parse_date(raw: &str) -> Option<NaiveDate> {
     for sep in ['.', '-'] {
         let parts: Vec<&str> = raw.splitn(4, sep).collect();
         if parts.len() >= 3 {
-            let year: i32 = parts[0].parse().ok()?;
-            let month: u32 = parts[1].parse().ok()?;
+            let year: i32 = match parts[0].parse() {
+                Ok(v) => v,
+                Err(_) => {
+                    tracing::debug!(raw, component = parts[0], "failed to parse year in date version");
+                    return None;
+                }
+            };
+            let month: u32 = match parts[1].parse() {
+                Ok(v) => v,
+                Err(_) => {
+                    tracing::debug!(raw, component = parts[1], "failed to parse month in date version");
+                    return None;
+                }
+            };
             // The day part may have trailing text (e.g. "15-beta" or "15.1").
             // Take only leading digits.
             let day_str = parts[2]
                 .split(|c: char| !c.is_ascii_digit())
                 .next()
                 .unwrap_or("");
-            let day: u32 = day_str.parse().ok()?;
+            let day: u32 = match day_str.parse() {
+                Ok(v) => v,
+                Err(_) => {
+                    tracing::debug!(raw, component = day_str, "failed to parse day in date version");
+                    return None;
+                }
+            };
             return NaiveDate::from_ymd_opt(year, month, day);
         }
     }
@@ -221,7 +239,18 @@ pub fn parse_custom(raw: &str, re: &Regex) -> Option<Vec<u64>> {
     let mut components = Vec::new();
     for i in 1..caps.len() {
         let s = caps.get(i)?.as_str();
-        components.push(s.parse::<u64>().ok()?);
+        match s.parse::<u64>() {
+            Ok(v) => components.push(v),
+            Err(_) => {
+                tracing::debug!(
+                    raw,
+                    group = i,
+                    value = s,
+                    "non-numeric capture group in custom version pattern"
+                );
+                return None;
+            }
+        }
     }
     if components.is_empty() {
         return None;
@@ -237,6 +266,7 @@ fn compare_custom(a: &str, b: &str, pattern: &str) -> Ordering {
     tracing::trace!(a, b, pattern, format = "custom", "comparing versions");
     let re = {
         let Ok(mut cache) = REGEX_CACHE.lock() else {
+            tracing::debug!(pattern, "regex cache poisoned, falling back to string comparison");
             return a.cmp(b);
         };
         if let Some(cached) = cache.get(pattern) {
@@ -247,7 +277,10 @@ fn compare_custom(a: &str, b: &str, pattern: &str) -> Ordering {
                     cache.insert(pattern.to_string(), re.clone());
                     re
                 }
-                Err(_) => return a.cmp(b),
+                Err(e) => {
+                    tracing::debug!(pattern, error = %e, "invalid custom version regex, falling back to string comparison");
+                    return a.cmp(b);
+                }
             }
         }
     };

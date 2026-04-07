@@ -48,12 +48,16 @@ pub async fn spawn_simple(
             Ok(code)
         }
         () = cancel_token.cancelled() => {
-            child.kill().await.ok();
+            if let Err(e) = child.kill().await {
+                tracing::trace!(error = %e, "failed to kill child process during cancellation");
+            }
             warn!(duration_ms = start.elapsed().as_millis() as u64, "installer process cancelled");
             Err(CoreError::Cancelled)
         }
         () = tokio::time::sleep(timeout) => {
-            child.kill().await.ok();
+            if let Err(e) = child.kill().await {
+                tracing::trace!(error = %e, "failed to kill child process during timeout");
+            }
             warn!(timeout_secs = timeout.as_secs(), duration_ms = start.elapsed().as_millis() as u64, "installer process timed out");
             Err(CoreError::InstallerTimeout { timeout_secs: timeout.as_secs() })
         }
@@ -188,10 +192,18 @@ pub async fn spawn_with_job_object(
         error!("failed to assign process to Job Object");
         // Cleanup on failure
         unsafe {
-            windows::Win32::System::Threading::TerminateProcess(process_handle, 1).ok();
-            CloseHandle(thread_handle).ok();
-            CloseHandle(process_handle).ok();
-            CloseHandle(job).ok();
+            if let Err(e) = windows::Win32::System::Threading::TerminateProcess(process_handle, 1) {
+                tracing::trace!(error = %e, "failed to terminate process during job assignment cleanup");
+            }
+            if let Err(e) = CloseHandle(thread_handle) {
+                tracing::trace!(error = %e, "failed to close thread handle during job assignment cleanup");
+            }
+            if let Err(e) = CloseHandle(process_handle) {
+                tracing::trace!(error = %e, "failed to close process handle during job assignment cleanup");
+            }
+            if let Err(e) = CloseHandle(job) {
+                tracing::trace!(error = %e, "failed to close job handle during job assignment cleanup");
+            }
         }
         return Err(CoreError::Io(std::io::Error::other(
             "failed to assign process to job object",
@@ -200,7 +212,9 @@ pub async fn spawn_with_job_object(
 
     unsafe {
         ResumeThread(thread_handle);
-        CloseHandle(thread_handle).ok();
+        if let Err(e) = CloseHandle(thread_handle) {
+            tracing::trace!(error = %e, "failed to close thread handle after resume");
+        }
     }
     debug!("process resumed within Job Object");
 
@@ -221,15 +235,21 @@ pub async fn spawn_with_job_object(
             let code = if wait.0 == 0 {
                 let mut exit_code: u32 = 0;
                 unsafe {
-                    GetExitCodeProcess(proc_h, &raw mut exit_code).ok();
+                    if let Err(e) = GetExitCodeProcess(proc_h, &raw mut exit_code) {
+                        tracing::trace!(error = %e, "failed to get exit code from process");
+                    }
                 }
                 Ok(exit_code as i32)
             } else {
                 Err(timeout_secs)
             };
             unsafe {
-                CloseHandle(proc_h).ok();
-                CloseHandle(job_h).ok();
+                if let Err(e) = CloseHandle(proc_h) {
+                    tracing::trace!(error = %e, "failed to close process handle after wait");
+                }
+                if let Err(e) = CloseHandle(job_h) {
+                    tracing::trace!(error = %e, "failed to close job handle after wait");
+                }
             }
             code
         }) => {
