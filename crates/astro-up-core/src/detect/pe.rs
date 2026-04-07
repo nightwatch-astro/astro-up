@@ -1,3 +1,5 @@
+use tracing::{debug, trace};
+
 use crate::detect::{DetectionResult, PathResolver};
 use crate::types::{DetectionConfig, DetectionMethod, Version};
 
@@ -11,6 +13,7 @@ pub async fn detect(
     resolver: &PathResolver,
     ledger_path: Option<&str>,
 ) -> DetectionResult {
+    debug!(method = "pe", file_path = ?config.file_path, "detect_pe path resolution");
     let path = match &config.file_path {
         Some(template) => match resolver.expand(template) {
             Some(resolved) => resolved,
@@ -39,6 +42,7 @@ pub async fn detect(
 }
 
 fn read_pe_version(path: &str) -> DetectionResult {
+    trace!(method = "pe", %path, "reading PE file");
     let data = match std::fs::read(path) {
         Ok(d) => d,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return DetectionResult::NotInstalled,
@@ -49,6 +53,7 @@ fn read_pe_version(path: &str) -> DetectionResult {
         }
     };
 
+    trace!(method = "pe", %path, bytes = data.len(), "parsing PE headers");
     let pe = match pelite::PeFile::from_bytes(&data) {
         Ok(pe) => pe,
         Err(e) => {

@@ -42,6 +42,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(data_dir: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+        tracing::debug!(data_dir = %data_dir.display(), "initializing app state");
         let db_path = data_dir.join("astro-up.db");
         let paths = PathsConfig {
             download_dir: data_dir.join("downloads"),
