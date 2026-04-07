@@ -190,11 +190,13 @@ pub async fn get_versions(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "get_versions", id, "Command invoked");
     let reader = state.open_catalog_reader()?;
     let pkg_id: astro_up_core::catalog::PackageId = id
         .parse()
         .map_err(|e: astro_up_core::error::CoreError| CoreError::from(e))?;
     let versions = reader.versions(&pkg_id)?;
+    tracing::debug!(command = "get_versions", count = versions.len(), "Command completed");
     serde_json::to_value(&versions).map_err(|e| CoreError::from(e.to_string()))
 }
 
@@ -813,6 +815,7 @@ pub async fn list_backups(
 ) -> Result<serde_json::Value, CoreError> {
     tracing::debug!(command = "list_backups", package_id, "Command invoked");
     let entries = state.backup_service.list(&package_id).await?;
+    tracing::debug!(command = "list_backups", count = entries.len(), "Command completed");
     let value = serde_json::to_value(&entries).map_err(|e| CoreError::from(e.to_string()))?;
     Ok(value)
 }
@@ -828,6 +831,7 @@ pub async fn backup_preview(
         .restore_preview(std::path::Path::new(&archive))
         .await?;
     let value = serde_json::to_value(&preview).map_err(|e| CoreError::from(e.to_string()))?;
+    tracing::debug!(command = "backup_preview", "Command completed");
     Ok(value)
 }
 
@@ -840,6 +844,7 @@ pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
             message: format!("Failed to delete backup: {e}"),
             code: "io_error".into(),
         })?;
+    tracing::info!(command = "delete_backup", archive, "Backup deleted");
     Ok(())
 }
 

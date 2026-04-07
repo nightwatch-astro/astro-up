@@ -19,7 +19,9 @@ use tracing_subscriber::{EnvFilter, Layer};
 
 #[tauri::command]
 fn get_version() -> String {
-    astro_up_core::version().to_string()
+    let version = astro_up_core::version().to_string();
+    tracing::debug!(command = "get_version", version, "Command completed");
+    version
 }
 
 /// Check for app self-update and emit event if available.
