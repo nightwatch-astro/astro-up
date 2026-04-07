@@ -3,8 +3,13 @@ import { ref } from "vue";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import Button from "primevue/button";
+import { useToast } from "primevue/usetoast";
 import { invoke } from "@tauri-apps/api/core";
+import { useErrorLog } from "../../stores/errorLog";
 import type { CatalogConfig } from "../../types/config";
+
+const toast = useToast();
+const { addEntry } = useErrorLog();
 
 const config = defineModel<CatalogConfig>({ required: true });
 const resyncing = ref(false);
@@ -22,7 +27,9 @@ async function redownloadCatalog() {
   try {
     await invoke("sync_catalog", { force: true });
   } catch (e) {
-    console.error("Catalog re-download failed:", e);
+    const message = e instanceof Error ? e.message : String(e);
+    addEntry("error", "Catalog re-download failed", message);
+    toast.add({ severity: "error", summary: "Catalog sync failed", detail: message, life: 5000 });
   } finally {
     resyncing.value = false;
   }

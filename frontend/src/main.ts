@@ -76,4 +76,11 @@ app.use(PrimeVue, {
 app.use(ToastService);
 app.use(VueQueryPlugin);
 
+// Global uncaught error handler (safety net for errors not caught by onErrorCaptured)
+app.config.errorHandler = (err, instance, info) => {
+  const message = err instanceof Error ? err.message : String(err);
+  const component = instance?.$options?.name ?? "unknown";
+  console.error(`[global error handler] ${component}: ${message} (${info})`);
+};
+
 app.mount("#app");
