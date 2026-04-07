@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.14](https://github.com/nightwatch-astro/astro-up/compare/v0.1.13...v0.1.14) (2026-04-07)
+
+
+### Bug Fixes
+
+* **release:** remove merge:true from cargo-workspace — fixes title pattern for tagging ([#877](https://github.com/nightwatch-astro/astro-up/issues/877)) ([5e592f3](https://github.com/nightwatch-astro/astro-up/commit/5e592f36fe43fda2cb126735b4edc0d421d71c2f))
+
 ## [0.1.13](https://github.com/nightwatch-astro/astro-up/compare/v0.1.12...v0.1.13) (2026-04-07)
 
 
