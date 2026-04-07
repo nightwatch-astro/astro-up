@@ -1,6 +1,7 @@
 //! Update orchestrator — main pipeline coordinator.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,26 @@ use crate::types::Version;
 
 use super::history::{OperationRecord, OperationStatus, OperationType};
 use super::planner::{SkippedPackage, UpdatePlan};
+
+// ---------------------------------------------------------------------------
+// Operation ID generation
+// ---------------------------------------------------------------------------
+
+/// Monotonic counter to disambiguate operation IDs generated within the same
+/// millisecond.
+static OP_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+/// Generate a unique operation identifier from the current timestamp and an
+/// atomic counter. Format: `<millis_hex>-<counter_hex>` (e.g. `18f3a1b2c4d-0a`).
+/// No external crate required.
+fn generate_operation_id() -> String {
+    let millis = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    let seq = OP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("{millis:x}-{seq:02x}")
+}
 
 // ---------------------------------------------------------------------------
 // UpdateRequest
@@ -700,7 +721,7 @@ where
     I: crate::traits::Installer + Send + Sync,
     B: crate::traits::BackupManager + Send + Sync,
 {
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self), fields(operation_id = %generate_operation_id()))]
     async fn plan(&self, request: UpdateRequest) -> Result<UpdatePlan, CoreError> {
         use super::planner::{CatalogEntry, UpdatePlanner};
         use super::version_cmp::VersionFormat;
@@ -781,7 +802,7 @@ where
         }
     }
 
-    #[tracing::instrument(skip(self, plan, on_event, asset_selector, cancel), fields(plan_items = plan.items.len()))]
+    #[tracing::instrument(skip(self, plan, on_event, asset_selector, cancel), fields(operation_id = %generate_operation_id(), plan_items = plan.items.len()))]
     async fn execute(
         &self,
         plan: UpdatePlan,
