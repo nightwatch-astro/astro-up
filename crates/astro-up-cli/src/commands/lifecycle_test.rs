@@ -19,6 +19,7 @@ pub async fn handle_lifecycle_test(
     report_file: Option<&Path>,
     mode: &OutputMode,
 ) -> Result<()> {
+    tracing::debug!(package_id, ?version, dry_run, "entering handle_lifecycle_test");
     if !manifest_path.join("manifests").is_dir() {
         return Err(eyre!(
             "manifest path '{}' does not contain a 'manifests/' directory",
@@ -70,6 +71,11 @@ pub async fn handle_lifecycle_test(
         print_human_report(&report);
     }
 
+    tracing::debug!(
+        package_id,
+        overall_status = ?report.overall_status,
+        "exiting handle_lifecycle_test"
+    );
     match report.overall_status {
         LifecycleStatus::Pass | LifecycleStatus::PartialPass => Ok(()),
         LifecycleStatus::Fail => {

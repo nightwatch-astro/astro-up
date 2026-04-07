@@ -126,7 +126,7 @@ pub enum Commands {
     },
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 pub enum ShowFilter {
     /// Show all catalog packages (default)
     All,

@@ -10,6 +10,7 @@ use crate::state::CliState;
 
 /// T019: Search the catalog via FTS5.
 pub async fn handle_search(state: &CliState, query: &str, mode: &OutputMode) -> Result<()> {
+    tracing::debug!(query, "entering handle_search");
     let reader = state.open_catalog_reader_ensure().await?;
     let results = reader.search(query)?;
 
@@ -30,6 +31,7 @@ pub async fn handle_search(state: &CliState, query: &str, mode: &OutputMode) -> 
         print_table(&rows)?;
         println!("\n{} result(s)", results.len());
     }
+    tracing::debug!(query, results = results.len(), "exiting handle_search");
     Ok(())
 }
 

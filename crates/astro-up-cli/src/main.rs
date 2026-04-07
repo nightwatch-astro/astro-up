@@ -41,6 +41,20 @@ async fn main() -> ExitCode {
 
     tracing::info!(version = astro_up_core::version(), "starting astro-up");
 
+    let subcommand = match &cli.command {
+        astro_up_cli::Commands::Show { .. } => "show",
+        astro_up_cli::Commands::Install { .. } => "install",
+        astro_up_cli::Commands::Update { .. } => "update",
+        astro_up_cli::Commands::Scan => "scan",
+        astro_up_cli::Commands::Search { .. } => "search",
+        astro_up_cli::Commands::Backup { .. } => "backup",
+        astro_up_cli::Commands::Restore { .. } => "restore",
+        astro_up_cli::Commands::Config { .. } => "config",
+        astro_up_cli::Commands::SelfUpdate { .. } => "self-update",
+        astro_up_cli::Commands::LifecycleTest { .. } => "lifecycle-test",
+    };
+    tracing::info!(command = subcommand, "dispatching command");
+
     let cancel = CancellationToken::new();
     let cancel_clone = cancel.clone();
     tokio::spawn(async move {

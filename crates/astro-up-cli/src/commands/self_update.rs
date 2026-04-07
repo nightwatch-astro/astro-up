@@ -10,6 +10,7 @@ use crate::output::json::print_json;
 /// `self_replace`. We avoid the high-level `Update::update()` because our
 /// release assets are bare executables, not archives.
 pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> {
+    tracing::debug!(dry_run, "entering handle_self_update");
     let current_str = env!("CARGO_PKG_VERSION");
     let current = semver::Version::parse(current_str)
         .map_err(|e| eyre!("failed to parse current version: {e}"))?;
@@ -139,6 +140,7 @@ pub async fn handle_self_update(dry_run: bool, mode: &OutputMode) -> Result<()> 
     .map_err(|e| eyre!("task join error: {e}"))??;
 
     println!("Updated to v{latest}. Restart astro-up to use the new version.");
+    tracing::debug!(%latest, "exiting handle_self_update");
     Ok(())
 }
 

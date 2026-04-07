@@ -6,10 +6,13 @@ use crate::output::json::print_json;
 
 /// Manage application configuration.
 pub async fn handle_config(action: ConfigAction, mode: &OutputMode) -> Result<()> {
-    match action {
+    tracing::debug!("entering handle_config");
+    let result = match action {
         ConfigAction::Init => handle_config_init(mode),
         ConfigAction::Show => handle_config_show(mode),
-    }
+    };
+    tracing::debug!(ok = result.is_ok(), "exiting handle_config");
+    result
 }
 
 fn handle_config_init(mode: &OutputMode) -> Result<()> {

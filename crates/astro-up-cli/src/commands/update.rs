@@ -31,6 +31,7 @@ pub async fn handle_update(
     mode: &OutputMode,
     cancel: CancellationToken,
 ) -> Result<()> {
+    tracing::debug!(?package, all, dry_run, allow_major, "entering handle_update");
     // Determine which packages to update
     let pkg_ids: Vec<PackageId> = if let Some(pkg) = package {
         vec![
@@ -138,5 +139,6 @@ pub async fn handle_update(
     if mode.should_print() {
         println!("Update complete.");
     }
+    tracing::debug!("exiting handle_update");
     Ok(())
 }

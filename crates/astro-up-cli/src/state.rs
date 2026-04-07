@@ -19,6 +19,7 @@ pub struct CliState {
 impl CliState {
     /// Initialize from platform directories.
     pub fn new() -> Result<Self> {
+        tracing::debug!("initializing CLI state");
         let data_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up")
             .map(|dirs| dirs.data_dir().to_owned())
             .ok_or_else(|| eyre!("could not determine data directory"))?;
@@ -42,6 +43,7 @@ impl CliState {
         let backup_dir = data_dir.join("backups");
         let backup_service = BackupService::new(backup_dir, 5);
 
+        tracing::debug!(data_dir = %data_dir.display(), "CLI state initialized");
         Ok(Self {
             data_dir,
             db_path,
