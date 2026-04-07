@@ -137,8 +137,28 @@ pub async fn handle_install(
         // Events already forwarded via broadcast channel
     });
 
+    // Asset selector: prompt user when multiple download options exist
+    let asset_selector: astro_up_core::engine::orchestrator::AssetSelector =
+        Box::new(|package_name, assets| {
+            if assets.len() <= 1 {
+                return Some(0);
+            }
+            let items: Vec<String> = assets
+                .iter()
+                .map(|a| format!("{} ({:.1} MB)", a.name, a.size as f64 / 1024.0 / 1024.0))
+                .collect();
+            println!("Multiple download options for {package_name}:");
+            dialoguer::Select::new()
+                .with_prompt("Choose variant")
+                .items(&items)
+                .default(0)
+                .interact_opt()
+                .ok()
+                .flatten()
+        });
+
     let result = orchestrator
-        .execute(orch_plan, on_event, None, cancel)
+        .execute(orch_plan, on_event, Some(asset_selector), cancel)
         .await
         .map_err(|e| eyre!("install failed: {e}"))?;
 

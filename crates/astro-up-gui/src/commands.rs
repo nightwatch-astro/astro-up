@@ -469,8 +469,22 @@ async fn run_orchestrated_operation(
                     emit_event(&app_for_events, &event);
                 });
 
+            // Auto-pick first asset for GUI; multi-asset dialog is a future feature
+            let asset_selector: astro_up_core::engine::orchestrator::AssetSelector =
+                Box::new(|package_name, assets| {
+                    if assets.len() > 1 {
+                        tracing::warn!(
+                            package = package_name,
+                            count = assets.len(),
+                            selected = assets[0].name,
+                            "multiple assets available, auto-picking first"
+                        );
+                    }
+                    Some(0)
+                });
+
             let result = orchestrator
-                .execute(plan, on_event, None, cancel_token)
+                .execute(plan, on_event, Some(asset_selector), cancel_token)
                 .await?;
             serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
         })
