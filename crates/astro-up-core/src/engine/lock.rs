@@ -135,7 +135,18 @@ fn read_pid_from_file(path: &Path) -> Option<u32> {
     let mut file = File::open(path).ok()?;
     let mut contents = String::new();
     file.read_to_string(&mut contents).ok()?;
-    contents.trim().parse::<u32>().ok()
+    let trimmed = contents.trim();
+    match trimmed.parse::<u32>() {
+        Ok(pid) => Some(pid),
+        Err(_) => {
+            tracing::debug!(
+                raw_value = trimmed,
+                path = %path.display(),
+                "failed to parse PID from lock file"
+            );
+            None
+        }
+    }
 }
 
 /// Check if a process with the given PID is currently running.
