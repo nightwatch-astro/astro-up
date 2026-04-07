@@ -85,10 +85,27 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 
 ## Release
 
-- `release-plz` for automated version management and changelog
+- `release-please` with cargo-workspace plugin for unified versioning
 - Delegates to `nightwatch-astro/.github` shared workflow
-- Trusted publishing to crates.io via OIDC
 - Conventional commits: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `chore`
+- Only `feat` and `fix` appear in the changelog — all other types are hidden
+
+### PR Titles & Bodies (= changelog material)
+
+PR titles become changelog entries via squash merge. The release-please draft PR is manually curated before publish — descriptive raw material matters.
+
+**Titles** — write for end users, not developers:
+- Minor fix: `fix: catalog refresh fails when offline`
+- Minor feature: `feat: show version at startup for diagnostics`
+- Major feature: `feat: automatic software detection via Windows registry and WMI`
+- Breaking: `feat!: migrate config from TOML to SQLite-backed storage`
+- Never include spec IDs, task refs, phase names, or internal jargon
+
+**Bodies** — scale detail to significance:
+- Major features: `## Summary` (2-3 sentences), `## What's new` (bullet list of user-visible changes)
+- Minor changes/fixes: `## Summary` with short bullets
+- Breaking changes: always add `!` to title prefix and include `## Breaking changes` with migration steps
+- Spec context at the bottom under `## Spec Context`
 
 ## Architecture Principles
 
