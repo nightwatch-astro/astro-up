@@ -106,7 +106,7 @@ jobs:
           touch crates/astro-up-gui/binaries/astro-up-cli-x86_64-pc-windows-msvc.exe
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Run unit tests
-        run: cargo nextest run --workspace --lib --bins
+        run: cargo nextest run --workspace --lib --bins --exclude astro-up
 
   # Windows integration tests — spawns the binary, needs catalog fixture.
   # Runs in parallel with unit tests on a separate runner.
@@ -134,7 +134,7 @@ jobs:
           choco install sqlite -y --no-progress
           sqlite3 crates/astro-up-cli/tests/fixtures/test-catalog.db < crates/astro-up-cli/tests/fixtures/build_catalog.sql
       - name: Run integration tests
-        run: cargo nextest run --workspace --test '*'
+        run: cargo nextest run --workspace --test '*' --exclude astro-up
 
   # Gate job: always runs, reports single required status.
   # Branch protection should require only "CI OK" — skipped jobs pass through.

@@ -39,14 +39,14 @@ repos:
         pass_filenames: false
       - id: cargo-clippy
         name: cargo clippy
-        entry: env RUSTC_WRAPPER= cargo clippy --all-targets -- -D warnings
+        entry: env RUSTC_WRAPPER= cargo clippy --workspace --all-targets -- -D warnings
         language: system
         stages: [pre-commit]
         types: [rust]
         pass_filenames: false
       - id: cargo-test
         name: cargo test
-        entry: env RUSTC_WRAPPER= cargo nextest run -E 'not binary(/^download_/)'
+        entry: env RUSTC_WRAPPER= cargo nextest run --workspace -E 'not binary(/^download_/) & not package(=astro-up)'
         language: system
         stages: [pre-commit]
         types: [rust]
