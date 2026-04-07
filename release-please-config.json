@@ -11,11 +11,9 @@
       "changelog-path": "CHANGELOG.md"
     }
   },
-  "group-pull-request-title-pattern": "chore: release ${version}",
   "plugins": [
     {
-      "type": "cargo-workspace",
-      "merge": true
+      "type": "cargo-workspace"
     }
   ],
   "exclude-paths": [
