@@ -57,6 +57,17 @@ just lint     # Clippy + ESLint
 - PrimeVue Aura dark theme, `darkModeSelector: 'system'`
 - VueQuery for server state (wrapping Tauri `invoke()`)
 
+### Logging & Error Handling
+- `#[tracing::instrument(skip_all, fields(...))]` on all public async/sync-with-I/O functions
+- Structured fields: `operation_id` + `package` for operations, `url` + `duration_ms` for network, `path` for file I/O
+- Tight loops: `trace!` event macros, NOT per-call span creation
+- No `unwrap()` in I/O/network/DB/process paths — propagate with `?` + `.map_err()`
+- `let _ =` and `.ok()` require `warn!`/`debug!` when suppressing meaningful failures
+- No passwords or tokens in structured log fields (paths and package names are fine)
+- CLI/GUI: boundary logging only — MUST NOT re-log what core already reports
+- Frontend: VueQuery `onError` → toast + errorLog on all mutations, no `console.log`/`alert()`
+- Frontend logging: use `logger` utility writing to LogPanel store, not browser console
+
 ## CI
 
 **Tauri CI requirements:**
