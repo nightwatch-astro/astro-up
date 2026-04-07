@@ -111,8 +111,8 @@
 ### Implementation
 
 - [x] T021 [US5] Create frontend logging utility in `frontend/src/utils/logger.ts` — export `logger` object with `debug(context, message)`, `info(context, message)`, `warn(context, message)`, `error(context, message)` methods. Writes to LogPanel store via existing `useLogPanel().addLog()` infrastructure (FR-019).
-- [ ] T022 [P] [US5] Add debug logging to composables: `frontend/src/composables/useOperations.ts` (debug on start/complete/fail/cancel with operation details), `useCoreEvents.ts` (debug on event listener setup, warn on listener failure), `useInvoke.ts` (debug on mutation trigger with command name) (FR-021).
-- [ ] T023 [P] [US5] Add debug logging to views and key components: route navigation in `frontend/src/views/*.vue` (onMounted debug), install/update/backup button clicks in `frontend/src/components/detail/DetailHero.vue` and `PackageRow.vue`, settings saves in `SettingsView.vue`. Use logger utility from T021 (FR-020).
+- [x] T022 [P] [US5] Add debug logging to composables: `frontend/src/composables/useOperations.ts` (debug on start/complete/fail/cancel with operation details), `useCoreEvents.ts` (debug on event listener setup, warn on listener failure), `useInvoke.ts` (debug on mutation trigger with command name) (FR-021).
+- [x] T023 [P] [US5] Add debug logging to views and key components: route navigation in `frontend/src/views/*.vue` (onMounted debug), install/update/backup button clicks in `frontend/src/components/detail/DetailHero.vue` and `PackageRow.vue`, settings saves in `SettingsView.vue`. Use logger utility from T021 (FR-020).
 
 **Checkpoint**: US5 complete — frontend actions visible in LogPanel at debug level.
 

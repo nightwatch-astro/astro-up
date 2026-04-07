@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from "vue-router";
+import { logger } from "../utils/logger";
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -35,6 +36,10 @@ const router = createRouter({
       component: () => import("../views/SettingsView.vue"),
     },
   ],
+});
+
+router.afterEach((to, from) => {
+  logger.debug("router", `${String(from.name ?? from.path)} → ${String(to.name ?? to.path)}`);
 });
 
 export default router;

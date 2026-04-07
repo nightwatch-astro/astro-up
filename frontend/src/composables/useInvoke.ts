@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "primevue/usetoast";
 import { useErrorLog } from "../stores/errorLog";
+import { logger } from "../utils/logger";
 import type { OperationId } from "../types/commands";
 
 function useMutationErrorHandler(operation: string) {
@@ -9,6 +10,7 @@ function useMutationErrorHandler(operation: string) {
   const { addEntry } = useErrorLog();
   return (err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);
+    logger.error("useInvoke", `${operation} failed: ${message}`);
     addEntry("error", `${operation} failed`, message);
     toast.add({
       severity: "error",
@@ -17,6 +19,10 @@ function useMutationErrorHandler(operation: string) {
       life: 5000,
     });
   };
+}
+
+function logMutation(operation: string, detail?: string) {
+  logger.debug("useInvoke", `mutation: ${operation}${detail ? ` (${detail})` : ""}`);
 }
 
 // --- Read queries ---
@@ -97,7 +103,7 @@ export function useSyncCatalog() {
   const queryClient = useQueryClient();
   const onError = useMutationErrorHandler("Catalog sync");
   return useMutation({
-    mutationFn: () => invoke<string>("sync_catalog"),
+    mutationFn: () => { logMutation("sync_catalog"); return invoke<string>("sync_catalog"); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
       queryClient.invalidateQueries({ queryKey: ["updates"] });
@@ -125,8 +131,7 @@ export function useInstallSoftware() {
   const queryClient = useQueryClient();
   const onError = useMutationErrorHandler("Install");
   return useMutation({
-    mutationFn: (id: string) =>
-      invoke<OperationId>("install_software", { id }),
+    mutationFn: (id: string) => { logMutation("install_software", id); return invoke<OperationId>("install_software", { id }); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
     },
@@ -138,8 +143,7 @@ export function useUpdateSoftware() {
   const queryClient = useQueryClient();
   const onError = useMutationErrorHandler("Update");
   return useMutation({
-    mutationFn: (id: string) =>
-      invoke<OperationId>("update_software", { id }),
+    mutationFn: (id: string) => { logMutation("update_software", id); return invoke<OperationId>("update_software", { id }); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
       queryClient.invalidateQueries({ queryKey: ["updates"] });
@@ -152,8 +156,7 @@ export function useUpdateAll() {
   const queryClient = useQueryClient();
   const onError = useMutationErrorHandler("Update all");
   return useMutation({
-    mutationFn: () =>
-      invoke<OperationId>("update_all"),
+    mutationFn: () => { logMutation("update_all"); return invoke<OperationId>("update_all"); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
       queryClient.invalidateQueries({ queryKey: ["updates"] });
@@ -166,7 +169,7 @@ export function useScanInstalled() {
   const queryClient = useQueryClient();
   const onError = useMutationErrorHandler("Scan installed");
   return useMutation({
-    mutationFn: () => invoke<unknown>("scan_installed"),
+    mutationFn: () => { logMutation("scan_installed"); return invoke<unknown>("scan_installed"); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
     },
