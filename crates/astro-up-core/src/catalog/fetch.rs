@@ -24,12 +24,14 @@ pub enum FetchOutcome {
 ///
 /// Sends an `If-None-Match` header if `etag` is provided. Retries once on
 /// transient failure (timeout, 5xx) with a 2-second backoff.
+#[tracing::instrument(skip_all, fields(url = %catalog_url, has_etag = etag.is_some()))]
 pub async fn fetch_catalog(
     catalog_url: &str,
     etag: Option<&str>,
     timeout: Duration,
 ) -> Result<FetchOutcome, CoreError> {
-    match fetch_catalog_inner(catalog_url, etag, timeout).await {
+    let start = std::time::Instant::now();
+    let result = match fetch_catalog_inner(catalog_url, etag, timeout).await {
         Ok(outcome) => Ok(outcome),
         Err(e) if is_transient(&e) => {
             tracing::warn!("catalog fetch failed (transient), retrying in 2s: {e}");
@@ -37,7 +39,24 @@ pub async fn fetch_catalog(
             fetch_catalog_inner(catalog_url, etag, timeout).await
         }
         Err(e) => Err(e),
+    };
+    let duration_ms = start.elapsed().as_millis();
+    match &result {
+        Ok(FetchOutcome::Downloaded { catalog_bytes, .. }) => {
+            tracing::info!(
+                duration_ms,
+                bytes = catalog_bytes.len(),
+                "catalog fetched (new)"
+            );
+        }
+        Ok(FetchOutcome::NotModified) => {
+            tracing::info!(duration_ms, "catalog not modified (304)");
+        }
+        Err(e) => {
+            tracing::error!(duration_ms, error = %e, "catalog fetch failed");
+        }
     }
+    result
 }
 
 async fn fetch_catalog_inner(
@@ -134,6 +153,7 @@ fn is_transient(err: &CoreError) -> bool {
 }
 
 /// Convenience: save fetched bytes to disk atomically.
+#[tracing::instrument(skip_all, fields(path = %catalog_path.display(), bytes = catalog_bytes.len()))]
 pub fn save_fetched(
     catalog_path: &Path,
     catalog_bytes: &[u8],
