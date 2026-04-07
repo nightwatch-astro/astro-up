@@ -49,6 +49,9 @@ Thumbs.db
 # Embedding model cache
 .fastembed_cache/
 
+# Isengard CLI cache
+isengardcli_cache_*/
+
 # Signing keys (secret key must never be committed)
 minisign.key
 *.secret.key

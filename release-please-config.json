@@ -18,13 +18,36 @@
       "merge": true
     }
   ],
+  "exclude-paths": [
+    "specs",
+    ".specify",
+    ".claude",
+    ".serena",
+    ".config",
+    ".github",
+    ".playwright-mcp",
+    "research",
+    "docs",
+    "tests",
+    ".pre-commit-config.yaml",
+    "release-please-config.json",
+    ".release-please-manifest.json",
+    "CLAUDE.md",
+    "clippy.toml",
+    "_typos.toml",
+    "Justfile",
+    "rust-toolchain.toml",
+    ".gitignore",
+    ".gitattributes"
+  ],
   "changelog-sections": [
     { "type": "feat", "section": "Features" },
     { "type": "fix", "section": "Bug Fixes" },
-    { "type": "perf", "section": "Performance" },
-    { "type": "refactor", "section": "Refactoring" },
-    { "type": "docs", "section": "Documentation" },
-    { "type": "test", "section": "Testing" },
-    { "type": "chore", "section": "Miscellaneous", "hidden": true }
+    { "type": "perf", "section": "Performance", "hidden": true },
+    { "type": "refactor", "section": "Refactoring", "hidden": true },
+    { "type": "docs", "section": "Documentation", "hidden": true },
+    { "type": "test", "section": "Testing", "hidden": true },
+    { "type": "chore", "section": "Miscellaneous", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true }
   ]
 }
