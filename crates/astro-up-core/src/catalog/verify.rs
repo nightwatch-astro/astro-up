@@ -47,12 +47,14 @@ pub fn verify_catalog_with_key(
     pk.verify(&data, &sig, false)
         .map_err(|_| CoreError::CatalogSignatureInvalid)?;
 
+    tracing::info!(catalog = %catalog_path.display(), "signature verification passed");
     Ok(())
 }
 
 /// Verify catalog bytes and signature bytes in memory (no disk I/O).
 ///
 /// Used by CatalogManager to verify before saving, preserving the previous catalog on failure.
+#[tracing::instrument(skip_all, fields(catalog_size = catalog_bytes.len()))]
 pub fn verify_bytes(catalog_bytes: &[u8], sig_bytes: &[u8]) -> Result<(), CoreError> {
     verify_bytes_with_key(catalog_bytes, sig_bytes, MINISIGN_PUBLIC_KEY.trim())
 }
@@ -76,6 +78,7 @@ pub fn verify_bytes_with_key(
     pk.verify(catalog_bytes, &sig, false)
         .map_err(|_| CoreError::CatalogSignatureInvalid)?;
 
+    tracing::info!("in-memory signature verification passed");
     Ok(())
 }
 
