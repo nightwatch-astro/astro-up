@@ -5,7 +5,7 @@
   "bump-patch-for-minor-pre-major": true,
   "draft": true,
   "include-component-in-tag": false,
-  "group-pull-request-title-pattern": "chore: release ${version}",
+  "group-pull-request-title-pattern": "chore: release astro-up ${version}",
   "linked-versions": true,
   "packages": {
     "crates/astro-up-core": {
