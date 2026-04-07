@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use chrono::Utc;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::detect::{
     DetectionCache, DetectionError, DetectionResult, PackageDetection, PathResolver, ScanResult,
@@ -58,9 +58,11 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
     }
 
     /// Run a full scan across all catalog packages.
+    #[tracing::instrument(skip_all)]
     pub async fn scan(&self) -> Result<ScanResult, DetectionError> {
         let start = Instant::now();
         let packages = self.packages.list_all()?;
+        info!(package_count = packages.len(), "starting catalog scan");
 
         // Build ledger path index for PE detection fallback (#215)
         let ledger_paths: std::collections::HashMap<String, String> = self
@@ -119,10 +121,19 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         // Sync ledger: update Acknowledged entries
         self.sync_ledger(&results)?;
 
+        let detected_count = results.iter().filter(|r| r.result.is_installed()).count();
+        let elapsed = start.elapsed();
+        info!(
+            detected_count,
+            error_count = errors.len(),
+            duration_ms = elapsed.as_millis() as u64,
+            "catalog scan complete"
+        );
+
         Ok(ScanResult {
             results,
             errors,
-            duration: start.elapsed(),
+            duration: elapsed,
             scanned_at: Utc::now(),
         })
     }

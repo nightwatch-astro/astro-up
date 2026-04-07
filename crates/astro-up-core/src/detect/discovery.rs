@@ -2,6 +2,9 @@
 //! detection signatures for packages without a `[detection]` config.
 
 use serde::Serialize;
+use tracing::debug;
+#[cfg(windows)]
+use tracing::{trace, warn};
 
 use crate::types::{DetectionConfig, DetectionMethod, Software, Version};
 
@@ -60,30 +63,37 @@ impl DiscoveryScanner {
         let mut probed = Vec::new();
 
         // Run all probes, collecting candidates and probe locations
+        debug!(package = %software.id, "probing registry");
         let (mut reg_candidates, mut reg_probed) = self.probe_registry(software).await;
         candidates.append(&mut reg_candidates);
         probed.append(&mut reg_probed);
 
+        debug!(package = %software.id, "probing PE files");
         let (mut pe_candidates, mut pe_probed) = self.probe_pe_files(software, &candidates).await;
         candidates.append(&mut pe_candidates);
         probed.append(&mut pe_probed);
 
+        debug!(package = %software.id, "probing file existence");
         let (mut file_candidates, mut file_probed) = self.probe_file_exists(software).await;
         candidates.append(&mut file_candidates);
         probed.append(&mut file_probed);
 
+        debug!(package = %software.id, "probing config files");
         let (mut config_candidates, mut config_probed) = self.probe_config_file(software).await;
         candidates.append(&mut config_candidates);
         probed.append(&mut config_probed);
 
+        debug!(package = %software.id, "probing ASCOM");
         let (mut ascom_candidates, mut ascom_probed) = self.probe_ascom(software).await;
         candidates.append(&mut ascom_candidates);
         probed.append(&mut ascom_probed);
 
+        debug!(package = %software.id, "probing WMI");
         let (mut wmi_candidates, mut wmi_probed) = self.probe_wmi(software).await;
         candidates.append(&mut wmi_candidates);
         probed.append(&mut wmi_probed);
 
+        debug!(package = %software.id, "probing driver store");
         let (mut driver_candidates, mut driver_probed) = self.probe_driver_store(software).await;
         candidates.append(&mut driver_candidates);
         probed.append(&mut driver_probed);
@@ -216,10 +226,12 @@ impl DiscoveryScanner {
 
                 let version_str: Option<String> = subkey
                     .get_value::<String, _>("DisplayVersion")
+                    .inspect_err(|e| trace!(method = "registry", field = "DisplayVersion", error = %e, "swallowed registry read error"))
                     .ok()
                     .filter(|s| !s.trim().is_empty());
                 let install_location: Option<String> = subkey
                     .get_value::<String, _>("InstallLocation")
+                    .inspect_err(|e| trace!(method = "registry", field = "InstallLocation", error = %e, "swallowed registry read error"))
                     .ok()
                     .filter(|s| !s.trim().is_empty());
 
@@ -341,10 +353,19 @@ impl DiscoveryScanner {
                 let pe_result = tokio::task::spawn_blocking({
                     let exe_path = exe_path.clone();
                     move || -> Option<(Option<Version>, Option<String>)> {
-                        let data = std::fs::read(&exe_path).ok()?;
-                        let pe = pelite::PeFile::from_bytes(&data).ok()?;
-                        let resources = pe.resources().ok()?;
-                        let version_info = resources.version_info().ok()?;
+                        let exe_display = exe_path.display().to_string();
+                        let data = std::fs::read(&exe_path)
+                            .inspect_err(|e| trace!(method = "pe_file", path = %exe_display, error = %e, "swallowed file read error"))
+                            .ok()?;
+                        let pe = pelite::PeFile::from_bytes(&data)
+                            .inspect_err(|e| trace!(method = "pe_file", path = %exe_display, error = %e, "swallowed PE parse error"))
+                            .ok()?;
+                        let resources = pe.resources()
+                            .inspect_err(|e| trace!(method = "pe_file", path = %exe_display, error = %e, "swallowed PE resources error"))
+                            .ok()?;
+                        let version_info = resources.version_info()
+                            .inspect_err(|e| trace!(method = "pe_file", path = %exe_display, error = %e, "swallowed PE version_info error"))
+                            .ok()?;
 
                         // Try binary version first
                         let version = version_info.fixed().map(|fixed| {
@@ -363,6 +384,7 @@ impl DiscoveryScanner {
                     }
                 })
                 .await
+                .inspect_err(|e| trace!(method = "pe_file", error = %e, "swallowed spawn_blocking join error"))
                 .ok()
                 .flatten();
 
@@ -606,9 +628,12 @@ impl DiscoveryScanner {
         let wmi_result: Result<Option<Vec<WmiDriver>>, _> =
             tokio::time::timeout(std::time::Duration::from_secs(10), async {
                 tokio::task::spawn_blocking(move || {
-                    let wmi_con = wmi::WMIConnection::new().ok()?;
+                    let wmi_con = wmi::WMIConnection::new()
+                        .inspect_err(|e| warn!(method = "wmi", error = %e, "WMI connection failed"))
+                        .ok()?;
                     let rows: Vec<std::collections::HashMap<String, wmi::Variant>> = wmi_con
                         .raw_query("SELECT DriverProviderName, DriverVersion, DeviceClass, InfName FROM Win32_PnPSignedDriver")
+                        .inspect_err(|e| warn!(method = "wmi", error = %e, "WMI query failed"))
                         .ok()?;
                     let drivers: Vec<WmiDriver> = rows
                         .iter()
@@ -630,11 +655,13 @@ impl DiscoveryScanner {
                     Some(drivers)
                 })
                 .await
+                .inspect_err(|e| trace!(method = "wmi", error = %e, "swallowed spawn_blocking join error"))
                 .ok()?
             })
             .await;
 
         let Ok(Some(drivers)) = wmi_result else {
+            warn!(method = "wmi", "WMI probe returned no results or timed out");
             probed.push(ProbedLocation {
                 method: DetectionMethod::Wmi,
                 location: "Win32_PnPSignedDriver".into(),
