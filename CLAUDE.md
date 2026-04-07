@@ -116,6 +116,8 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - Rust 2024 edition + tauri 2, tauri-plugin-{window-state,single-instance,updater,autostart,dialog}, dashmap 6, directories 6, uuid 1 (016-tauri-app-shell)
 - Vue 3 + PrimeVue 4 (Aura), @tanstack/vue-query 5, @tauri-apps/{api,plugin-window-state,plugin-autostart,plugin-updater} 2, TypeScript 5 (016-tauri-app-shell)
 - SQLite (existing — catalog + config via astro-up-core, rusqlite 0.39) (016-tauri-app-shell)
+- Rust 2024 edition (1.85+), TypeScript 5, Vue 3 + racing 0.1, tracing-subscriber 0.3 (fmt, json, env-filter), tracing-appender 0.2, PrimeVue 4 (toast), @tanstack/vue-query 5 (027-logging-debugging)
+- N/A (no new storage — logging is file/stderr/LogPanel) (027-logging-debugging)
 
 - Vue 3 + vue-router 4 (hash mode), PrimeVue 4 (Aura), @tanstack/vue-query 5, @vueuse/core 14, valibot 1, TypeScript 5 (022-vue-frontend)
 - localStorage for config snapshots, mock data layer for stubbed Tauri commands (022-vue-frontend)
