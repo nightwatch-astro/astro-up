@@ -132,9 +132,17 @@ impl OrchestrationLock {
 
 /// Read PID from a lock file, returning `None` on any failure.
 fn read_pid_from_file(path: &Path) -> Option<u32> {
-    let mut file = File::open(path).ok()?;
+    let mut file = File::open(path)
+        .inspect_err(|e| {
+            tracing::debug!(error = %e, path = %path.display(), "failed to open lock file for PID read");
+        })
+        .ok()?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents).ok()?;
+    file.read_to_string(&mut contents)
+        .inspect_err(|e| {
+            tracing::debug!(error = %e, path = %path.display(), "failed to read lock file contents");
+        })
+        .ok()?;
     let trimmed = contents.trim();
     match trimmed.parse::<u32>() {
         Ok(pid) => Some(pid),
