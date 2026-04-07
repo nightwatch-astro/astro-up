@@ -82,6 +82,10 @@ pub struct LifecycleOptions {
     pub install_dir: Option<PathBuf>,
     pub dry_run: bool,
     pub timeout: Duration,
+    /// Path to a compiled catalog.db — used to resolve the latest version
+    /// when `version` is `None`. Falls back to the `versions/` directory scan
+    /// if not provided.
+    pub catalog_path: Option<PathBuf>,
 }
 
 impl Default for LifecycleOptions {
@@ -93,6 +97,7 @@ impl Default for LifecycleOptions {
             install_dir: None,
             dry_run: false,
             timeout: Duration::from_secs(600), // 10 minutes
+            catalog_path: None,
         }
     }
 }
@@ -114,8 +119,27 @@ impl LifecycleRunner {
 
         let version_str = match &options.version {
             Some(v) => v.clone(),
-            None => Self::resolve_latest_version(&options.manifest_path, &options.package_id)?
-                .to_string(),
+            None => {
+                if let Some(catalog_path) = &options.catalog_path {
+                    // Resolve from compiled catalog
+                    let reader = crate::catalog::reader::SqliteCatalogReader::open(catalog_path)?;
+                    let pkg_id =
+                        crate::catalog::PackageId::new(&options.package_id).map_err(|e| {
+                            CoreError::NotFound {
+                                input: e.to_string(),
+                            }
+                        })?;
+                    reader
+                        .latest_version(&pkg_id)?
+                        .ok_or_else(|| CoreError::NotFound {
+                            input: format!("no versions in catalog for '{}'", options.package_id),
+                        })?
+                        .version
+                } else {
+                    Self::resolve_latest_version(&options.manifest_path, &options.package_id)?
+                        .to_string()
+                }
+            }
         };
 
         let mut phases = Vec::new();

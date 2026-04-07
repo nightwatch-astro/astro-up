@@ -46,6 +46,7 @@ async fn dry_run_skips_install_uninstall() {
         package_id: "test-pkg".into(),
         version: Some("1.0.0".into()),
         install_dir: None,
+        catalog_path: None,
         dry_run: true,
         timeout: Duration::from_secs(30),
     };
@@ -91,6 +92,7 @@ async fn dry_run_resolves_download_url() {
         package_id: "test-pkg".into(),
         version: Some("2.5.0".into()),
         install_dir: None,
+        catalog_path: None,
         dry_run: true,
         timeout: Duration::from_secs(30),
     };
@@ -119,6 +121,7 @@ async fn dry_run_overall_not_fail_on_no_detection() {
         package_id: "test-pkg".into(),
         version: Some("1.0.0".into()),
         install_dir: None,
+        catalog_path: None,
         dry_run: true,
         timeout: Duration::from_secs(30),
     };
