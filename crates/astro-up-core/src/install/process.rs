@@ -1,6 +1,11 @@
 use std::time::Duration;
+#[cfg(windows)]
+use std::time::Instant;
 
 use tokio_util::sync::CancellationToken;
+use tracing::error;
+#[cfg(windows)]
+use tracing::{debug, info, warn};
 
 use crate::error::CoreError;
 
@@ -11,6 +16,7 @@ use crate::error::CoreError;
 ///
 /// Returns the process exit code.
 #[cfg(windows)]
+#[tracing::instrument(skip_all, fields(exe = %exe, timeout_secs = timeout.as_secs()))]
 pub async fn spawn_simple(
     exe: &str,
     args: &[String],
@@ -19,31 +25,48 @@ pub async fn spawn_simple(
 ) -> Result<i32, CoreError> {
     use tokio::process::Command;
 
-    let mut child = Command::new(exe).args(args).kill_on_drop(true).spawn()?;
+    info!(args = ?args, "spawning installer process");
+    let start = Instant::now();
 
-    tokio::select! {
+    let mut child = match Command::new(exe).args(args).kill_on_drop(true).spawn() {
+        Ok(child) => child,
+        Err(e) => {
+            error!(error = %e, "failed to spawn installer process");
+            return Err(CoreError::Io(e));
+        }
+    };
+
+    let result = tokio::select! {
         result = child.wait() => {
             let status = result?;
-            Ok(status.code().unwrap_or(-1))
+            let code = status.code().unwrap_or(-1);
+            info!(exit_code = code, duration_ms = start.elapsed().as_millis() as u64, "installer process exited");
+            Ok(code)
         }
         () = cancel_token.cancelled() => {
             child.kill().await.ok();
+            warn!(duration_ms = start.elapsed().as_millis() as u64, "installer process cancelled");
             Err(CoreError::Cancelled)
         }
         () = tokio::time::sleep(timeout) => {
             child.kill().await.ok();
+            warn!(timeout_secs = timeout.as_secs(), duration_ms = start.elapsed().as_millis() as u64, "installer process timed out");
             Err(CoreError::InstallerTimeout { timeout_secs: timeout.as_secs() })
         }
-    }
+    };
+
+    result
 }
 
 #[cfg(not(windows))]
+#[tracing::instrument(skip_all, fields(exe = %_exe, timeout_secs = _timeout.as_secs()))]
 pub async fn spawn_simple(
     _exe: &str,
     _args: &[String],
     _timeout: Duration,
     _cancel_token: CancellationToken,
 ) -> Result<i32, CoreError> {
+    error!("installer execution is only supported on Windows");
     Err(CoreError::Io(std::io::Error::new(
         std::io::ErrorKind::Unsupported,
         "installer execution is only supported on Windows",
@@ -62,6 +85,7 @@ pub async fn spawn_simple(
 /// 4. Resume thread
 /// 5. Wait for process with timeout/cancellation
 #[cfg(windows)]
+#[tracing::instrument(skip_all, fields(exe = %exe, timeout_secs = timeout.as_secs()))]
 pub async fn spawn_with_job_object(
     exe: &str,
     args: &[String],
@@ -84,6 +108,9 @@ pub async fn spawn_with_job_object(
 
     use super::wide::to_wide_null;
 
+    info!(args = ?args, "spawning installer process with job object");
+    let start = Instant::now();
+
     let cmd_line = if args.is_empty() {
         format!("\"{exe}\"")
     } else {
@@ -92,6 +119,7 @@ pub async fn spawn_with_job_object(
     let mut cmd_wide = to_wide_null(&cmd_line);
 
     // Create job object
+    debug!("creating Windows Job Object");
     let job = unsafe { CreateJobObjectW(None, None) }
         .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
 
@@ -107,6 +135,7 @@ pub async fn spawn_with_job_object(
         )
     }
     .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
+    debug!("Job Object configured with KILL_ON_JOB_CLOSE");
 
     // Create process suspended
     let si = STARTUPINFOW {
@@ -115,7 +144,7 @@ pub async fn spawn_with_job_object(
     };
     let mut pi = PROCESS_INFORMATION::default();
 
-    unsafe {
+    if let Err(e) = unsafe {
         CreateProcessW(
             None,
             Some(PWSTR(cmd_wide.as_mut_ptr())),
@@ -128,15 +157,19 @@ pub async fn spawn_with_job_object(
             &raw const si,
             &raw mut pi,
         )
+    } {
+        error!(error = %e, "failed to create suspended process");
+        return Err(CoreError::Io(std::io::Error::other(e)));
     }
-    .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
 
     let process_handle = pi.hProcess;
     let thread_handle = pi.hThread;
 
     // Assign to job, then resume
+    debug!("assigning process to Job Object");
     let assign_result = unsafe { AssignProcessToJobObject(job, process_handle) };
     if assign_result.is_err() {
+        error!("failed to assign process to Job Object");
         // Cleanup on failure
         unsafe {
             windows::Win32::System::Threading::TerminateProcess(process_handle, 1).ok();
@@ -153,6 +186,7 @@ pub async fn spawn_with_job_object(
         ResumeThread(thread_handle);
         CloseHandle(thread_handle).ok();
     }
+    debug!("process resumed within Job Object");
 
     // Extract raw handles as isize for Send safety across spawn_blocking
     let raw_process = process_handle.0 as isize;
@@ -184,12 +218,22 @@ pub async fn spawn_with_job_object(
             code
         }) => {
             match join_result {
-                Ok(Ok(code)) => Ok(code),
-                Ok(Err(secs)) => Err(CoreError::InstallerTimeout { timeout_secs: secs }),
-                Err(e) => Err(CoreError::Io(std::io::Error::other(e))),
+                Ok(Ok(code)) => {
+                    info!(exit_code = code, duration_ms = start.elapsed().as_millis() as u64, "job object process exited");
+                    Ok(code)
+                }
+                Ok(Err(secs)) => {
+                    warn!(timeout_secs = secs, duration_ms = start.elapsed().as_millis() as u64, "job object process timed out");
+                    Err(CoreError::InstallerTimeout { timeout_secs: secs })
+                }
+                Err(e) => {
+                    error!(error = %e, "job object spawn_blocking task failed");
+                    Err(CoreError::Io(std::io::Error::other(e)))
+                }
             }
         }
         () = cancel_token.cancelled() => {
+            warn!(duration_ms = start.elapsed().as_millis() as u64, "job object process cancelled");
             Err(CoreError::Cancelled)
         }
     };
@@ -198,12 +242,14 @@ pub async fn spawn_with_job_object(
 }
 
 #[cfg(not(windows))]
+#[tracing::instrument(skip_all, fields(exe = %_exe, timeout_secs = _timeout.as_secs()))]
 pub async fn spawn_with_job_object(
     _exe: &str,
     _args: &[String],
     _timeout: Duration,
     _cancel_token: CancellationToken,
 ) -> Result<i32, CoreError> {
+    error!("job object execution is only supported on Windows");
     Err(CoreError::Io(std::io::Error::new(
         std::io::ErrorKind::Unsupported,
         "job object execution is only supported on Windows",
