@@ -117,10 +117,12 @@ impl DownloadManager {
             }
         }
 
-        let _ = self.event_tx.send(Event::DownloadStarted {
+        if let Err(e) = self.event_tx.send(Event::DownloadStarted {
             id: request.filename.clone(),
             url: request.url.clone(),
-        });
+        }) {
+            tracing::debug!("failed to send DownloadStarted event: {e}");
+        }
 
         let result = stream::stream_download(
             &self.client,
@@ -140,7 +142,9 @@ impl DownloadManager {
             let actual: String = crate::hex_encode(&digest);
             if actual != *expected {
                 // Clean up .part file on mismatch
-                let _ = tokio::fs::remove_file(&request.part_path()).await;
+                if let Err(e) = tokio::fs::remove_file(&request.part_path()).await {
+                    tracing::debug!(path = %request.part_path().display(), error = %e, "failed to remove .part file after hash mismatch");
+                }
 
                 // If this was a resumed download, retry once from scratch (CHK012)
                 if result.resumed {
@@ -163,7 +167,9 @@ impl DownloadManager {
                     let digest = retry.hasher.finalize();
                     let retry_actual: String = crate::hex_encode(&digest);
                     if retry_actual != *expected {
-                        let _ = tokio::fs::remove_file(&request.part_path()).await;
+                        if let Err(e) = tokio::fs::remove_file(&request.part_path()).await {
+                            tracing::debug!(path = %request.part_path().display(), error = %e, "failed to remove .part file after retry hash mismatch");
+                        }
                         return Err(CoreError::ChecksumMismatch {
                             expected: expected.clone(),
                             actual: retry_actual,
@@ -210,12 +216,16 @@ impl DownloadManager {
 
         // Store ETag for future conditional requests (FR-008)
         if let Some(etag) = &result.etag {
-            let _ = tokio::fs::write(&etag_path, etag).await;
+            if let Err(e) = tokio::fs::write(&etag_path, etag).await {
+                tracing::debug!(path = %etag_path.display(), error = %e, "failed to write ETag cache");
+            }
         }
 
-        let _ = self.event_tx.send(Event::DownloadComplete {
+        if let Err(e) = self.event_tx.send(Event::DownloadComplete {
             id: request.filename.clone(),
-        });
+        }) {
+            tracing::debug!("failed to send DownloadComplete event: {e}");
+        }
 
         let elapsed = download_start.elapsed();
         tracing::info!(
