@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use chrono::Utc;
 use sha2::{Digest, Sha256};
-use tracing::{info, warn};
+use tracing::{info, trace, warn};
 use walkdir::WalkDir;
 
 use crate::backup::types::{BackupMetadata, BackupRequest};
@@ -157,6 +157,12 @@ fn create_archive_sync(
             zip.start_file(&archive_entry_path, options)
                 .map_err(|e| CoreError::Io(io::Error::other(e)))?;
             zip.write_all(&contents)?;
+
+            trace!(
+                file = %archive_entry_path,
+                size = contents.len(),
+                "archived file"
+            );
 
             total_size += contents.len() as u64;
             file_count += 1;
@@ -318,7 +324,10 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
 
         // Resolve target path: find which dir prefix matches, map to original path
         let target = resolve_restore_target(&name, &dir_to_path);
-        let Some(target) = target else { continue };
+        let Some(target) = target else {
+            warn!(entry = %name, "skipping archive entry: cannot resolve restore target");
+            continue;
+        };
 
         if entry.is_dir() {
             fs::create_dir_all(&target)?;
@@ -328,6 +337,7 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
             }
             let mut outfile = File::create(&target)?;
             io::copy(&mut entry, &mut outfile)?;
+            trace!(file = %target.display(), "restored file");
         }
     }
 

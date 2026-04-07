@@ -714,11 +714,20 @@ where
 
         for sw in all_software {
             // Look up installed version from ledger
-            let installed = self.detector.list_acknowledged().ok().and_then(|ack| {
-                ack.into_iter()
+            let installed = match self.detector.list_acknowledged() {
+                Ok(ack) => ack
+                    .into_iter()
                     .find(|e| AsRef::<str>::as_ref(&e.package_id) == AsRef::<str>::as_ref(&sw.id))
-                    .map(|e| e.version)
-            });
+                    .map(|e| e.version),
+                Err(e) => {
+                    tracing::warn!(
+                        package = %sw.id,
+                        error = %e,
+                        "failed to query acknowledged packages, treating as not installed"
+                    );
+                    None
+                }
+            };
 
             // Look up the latest version entry from the catalog
             let Some(ve) = self
@@ -870,11 +879,14 @@ where
 
     #[tracing::instrument(skip(self))]
     async fn history(&self, filter: HistoryFilter) -> Result<Vec<OperationRecord>, CoreError> {
+        tracing::debug!(?filter, "querying operation history");
         let conn = self
             .db
             .lock()
             .map_err(|e| CoreError::Database(format!("failed to lock db connection: {e}")))?;
-        super::history::query_history(&conn, &filter)
+        let records = super::history::query_history(&conn, &filter)?;
+        tracing::debug!(count = records.len(), "operation history query complete");
+        Ok(records)
     }
 }
 

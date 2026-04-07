@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 
+use tracing::{info, warn};
+
 use crate::catalog::manifest::ManifestReader;
 use crate::detect::PathResolver;
 use crate::detect::discovery::DiscoveryScanner;
@@ -101,6 +103,13 @@ pub struct LifecycleRunner;
 impl LifecycleRunner {
     /// Run the full lifecycle test for a package.
     pub async fn run(options: &LifecycleOptions) -> Result<LifecycleReport, CoreError> {
+        info!(
+            package = %options.package_id,
+            version = ?options.version,
+            dry_run = options.dry_run,
+            "starting lifecycle test"
+        );
+
         let software = ManifestReader::read_by_id(&options.manifest_path, &options.package_id)?;
 
         let version_str = match &options.version {
@@ -202,9 +211,9 @@ impl LifecycleRunner {
                 // Install failed — attempt cleanup
                 let cleanup = Self::run_uninstall(&options.package_id).await;
                 if !matches!(cleanup.status, PhaseStatus::Pass) {
-                    tracing::warn!(
+                    warn!(
                         package = %options.package_id,
-                        "cleanup after failed install also failed"
+                        "stale state: cleanup after failed install also failed, manual intervention may be needed"
                     );
                 }
                 phases.push(PhaseResult {
@@ -669,6 +678,11 @@ impl LifecycleRunner {
 
         let mut warnings = Vec::new();
         if !result.candidates.is_empty() {
+            warn!(
+                package = %software.id.as_ref(),
+                leftovers = result.candidates.len(),
+                "stale state detected after uninstall: leftover artifacts remain"
+            );
             for c in &result.candidates {
                 warnings.push(format!(
                     "leftover: {} — {:?}",

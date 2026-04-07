@@ -193,6 +193,7 @@ pub fn compare_versions(a: &str, b: &str, format: &VersionFormat) -> Ordering {
 /// Semver comparison using lenient parsing. Falls back to raw string comparison
 /// when either version cannot be parsed.
 fn compare_semver(a: &str, b: &str) -> Ordering {
+    tracing::trace!(a, b, format = "semver", "comparing versions");
     match (try_parse_lenient(a), try_parse_lenient(b)) {
         (Some(ref va), Some(ref vb)) => Ord::cmp(va, vb),
         (Some(_), None) => Ordering::Greater,
@@ -204,6 +205,7 @@ fn compare_semver(a: &str, b: &str) -> Ordering {
 /// Date comparison using [`parse_date`]. Falls back to lexicographic comparison
 /// when either date cannot be parsed.
 fn compare_date(a: &str, b: &str) -> Ordering {
+    tracing::trace!(a, b, format = "date", "comparing versions");
     match (parse_date(a), parse_date(b)) {
         (Some(da), Some(db)) => da.cmp(&db),
         _ => a.cmp(b),
@@ -232,6 +234,7 @@ pub fn parse_custom(raw: &str, re: &Regex) -> Option<Vec<u64>> {
 /// component-by-component. Falls back to string comparison when the regex
 /// is invalid or doesn't match either version.
 fn compare_custom(a: &str, b: &str, pattern: &str) -> Ordering {
+    tracing::trace!(a, b, pattern, format = "custom", "comparing versions");
     let re = {
         let Ok(mut cache) = REGEX_CACHE.lock() else {
             return a.cmp(b);
