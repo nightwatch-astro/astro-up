@@ -76,29 +76,25 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         std::thread::spawn(move || {
             let _ = wmi_tx.send(wmi_apps::enumerate_installed());
         });
-        let wmi_programs = match tokio::time::timeout(
-            std::time::Duration::from_secs(5),
-            wmi_rx,
-        )
-        .await
-        {
-            Ok(Ok(Ok(scan))) => {
-                debug!(
-                    wmi_count = scan.programs.len(),
-                    wmi_ms = scan.duration.as_millis() as u64,
-                    "WMI enumeration complete"
-                );
-                scan.programs
-            }
-            Ok(Ok(Err(e))) => {
-                debug!(error = %e, "WMI enumeration failed, using legacy detection only");
-                Vec::new()
-            }
-            _ => {
-                debug!("WMI enumeration timed out or panicked, using legacy detection only");
-                Vec::new()
-            }
-        };
+        let wmi_programs =
+            match tokio::time::timeout(std::time::Duration::from_secs(5), wmi_rx).await {
+                Ok(Ok(Ok(scan))) => {
+                    debug!(
+                        wmi_count = scan.programs.len(),
+                        wmi_ms = scan.duration.as_millis() as u64,
+                        "WMI enumeration complete"
+                    );
+                    scan.programs
+                }
+                Ok(Ok(Err(e))) => {
+                    debug!(error = %e, "WMI enumeration failed, using legacy detection only");
+                    Vec::new()
+                }
+                _ => {
+                    debug!("WMI enumeration timed out or panicked, using legacy detection only");
+                    Vec::new()
+                }
+            };
 
         // Build ledger path index for PE detection fallback (#215)
         let ledger_paths: std::collections::HashMap<String, String> = self
