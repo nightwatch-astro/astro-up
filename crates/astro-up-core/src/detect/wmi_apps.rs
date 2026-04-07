@@ -29,12 +29,41 @@ pub struct WmiScanResult {
 ///
 /// Returns all entries from `Win32_InstalledWin32Program`.
 /// This is fast (< 1s) and covers MSI, InnoSetup, NSIS, WiX installs.
+///
+/// Includes a 5s internal timeout: `WMIConnection::new()` can hang
+/// indefinitely if the WMI service is unavailable (e.g., CI runners).
 #[cfg(windows)]
 pub fn enumerate_installed() -> Result<WmiScanResult, String> {
-    use std::time::Instant;
+    use std::sync::mpsc;
+    use std::time::{Duration, Instant};
 
     let start = Instant::now();
 
+    // Run WMI calls in a nested thread with a channel timeout.
+    // WMIConnection::new() initializes COM and connects to root\CIMV2 —
+    // this blocks indefinitely if the WMI service is down.
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(wmi_query_inner());
+    });
+
+    let result = rx
+        .recv_timeout(Duration::from_secs(5))
+        .map_err(|_| "WMI query timed out after 5s".to_string())?;
+
+    let programs = result?;
+    let duration = start.elapsed();
+    debug!(
+        count = programs.len(),
+        duration_ms = duration.as_millis() as u64,
+        "WMI enumeration complete"
+    );
+
+    Ok(WmiScanResult { programs, duration })
+}
+
+#[cfg(windows)]
+fn wmi_query_inner() -> Result<Vec<InstalledProgram>, String> {
     let wmi_con = wmi::WMIConnection::new().map_err(|e| format!("WMI connection failed: {e}"))?;
 
     #[derive(Deserialize, Debug)]
@@ -51,7 +80,7 @@ pub fn enumerate_installed() -> Result<WmiScanResult, String> {
         .query()
         .map_err(|e| format!("WMI query failed: {e}"))?;
 
-    let programs: Vec<InstalledProgram> = results
+    Ok(results
         .into_iter()
         .filter_map(|p| {
             let name = p.name.filter(|n| !n.is_empty())?;
@@ -62,16 +91,7 @@ pub fn enumerate_installed() -> Result<WmiScanResult, String> {
                 program_id: p.program_id.unwrap_or_default(),
             })
         })
-        .collect();
-
-    let duration = start.elapsed();
-    debug!(
-        count = programs.len(),
-        duration_ms = duration.as_millis() as u64,
-        "WMI enumeration complete"
-    );
-
-    Ok(WmiScanResult { programs, duration })
+        .collect())
 }
 
 #[cfg(not(windows))]
