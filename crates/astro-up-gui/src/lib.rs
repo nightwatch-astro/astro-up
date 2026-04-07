@@ -201,6 +201,7 @@ pub fn run() {
             commands::backup_preview,
             commands::delete_backup,
             commands::clear_directory,
+            commands::resolve_asset_selection,
         ])
         .setup(|app| {
             let start = std::time::Instant::now();

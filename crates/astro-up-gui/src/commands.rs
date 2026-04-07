@@ -1,6 +1,6 @@
 use std::fmt;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::broadcast;
 
@@ -12,6 +12,28 @@ use astro_up_core::events::Event;
 
 use crate::state::{AppState, OperationId};
 use astro_up_core::adapters::{CatalogPackageSource, SqliteLedgerStore};
+
+/// Payload emitted to the frontend when the orchestrator needs asset selection.
+#[derive(Debug, Clone, Serialize)]
+pub struct AssetSelectionRequest {
+    pub package_name: String,
+    pub assets: Vec<AssetOption>,
+}
+
+/// A single asset option for the selection dialog.
+#[derive(Debug, Clone, Serialize)]
+pub struct AssetOption {
+    pub index: usize,
+    pub name: String,
+    pub size: u64,
+}
+
+/// Frontend response to an asset selection request.
+#[derive(Debug, Deserialize)]
+pub struct AssetSelectionResponse {
+    /// Selected asset index, or null to cancel.
+    pub index: Option<usize>,
+}
 
 /// Error type returned to the frontend via Tauri invoke.
 #[derive(Debug, Clone, Serialize)]
@@ -423,6 +445,9 @@ async fn run_orchestrated_operation(
     let (event_tx, rx) = broadcast::channel::<Event>(64);
     forward_events(app.clone(), rx);
 
+    // Clone the pending asset tx Arc so it can move into spawn_blocking
+    let pending_asset_tx = state.pending_asset_tx.clone();
+
     let handle = tokio::runtime::Handle::current();
     tokio::task::spawn_blocking(move || {
         handle.block_on(async move {
@@ -464,19 +489,93 @@ async fn run_orchestrated_operation(
                 })
                 .await?;
 
+            // Clone before move into on_event closure
+            let app_for_assets = app_for_events.clone();
+
             let on_event: astro_up_core::engine::orchestrator::EventCallback =
                 Box::new(move |event| {
                     emit_event(&app_for_events, &event);
                 });
 
+            // Asset selector: emit event to frontend, block until user responds
+            let pending_tx = pending_asset_tx;
+            let asset_selector: astro_up_core::engine::orchestrator::AssetSelector =
+                Box::new(move |package_name, assets| {
+                    if assets.len() <= 1 {
+                        return Some(0);
+                    }
+
+                    // Create a one-shot channel for this selection
+                    let (tx, rx) = std::sync::mpsc::channel();
+
+                    // Store the sender so resolve_asset_selection can find it
+                    *pending_tx.lock().unwrap() = Some(tx);
+
+                    // Emit event to frontend with asset options
+                    let request = AssetSelectionRequest {
+                        package_name: package_name.to_string(),
+                        assets: assets
+                            .iter()
+                            .enumerate()
+                            .map(|(i, a)| AssetOption {
+                                index: i,
+                                name: a.name.clone(),
+                                size: a.size,
+                            })
+                            .collect(),
+                    };
+                    if let Err(e) = app_for_assets.emit("asset-selection-required", &request) {
+                        tracing::error!("Failed to emit asset selection event: {e}");
+                        return Some(0);
+                    }
+
+                    tracing::info!(
+                        package = package_name,
+                        count = assets.len(),
+                        "waiting for user to select asset"
+                    );
+
+                    // Block until the frontend responds (30s timeout)
+                    let result = match rx.recv_timeout(std::time::Duration::from_secs(30)) {
+                        Ok(choice) => choice,
+                        Err(_) => {
+                            tracing::warn!(
+                                package = package_name,
+                                "asset selection timed out, auto-picking first"
+                            );
+                            Some(0)
+                        }
+                    };
+
+                    // Clear the pending sender
+                    *pending_tx.lock().unwrap() = None;
+                    result
+                });
+
             let result = orchestrator
-                .execute(plan, on_event, None, cancel_token)
+                .execute(plan, on_event, Some(asset_selector), cancel_token)
                 .await?;
             serde_json::to_value(&result).map_err(|e| CoreError::from(e.to_string()))
         })
     })
     .await
     .map_err(|e| CoreError::from(e.to_string()))?
+}
+
+/// Tauri command: resolve a pending asset selection from the frontend dialog.
+#[tauri::command]
+pub async fn resolve_asset_selection(
+    state: State<'_, AppState>,
+    response: AssetSelectionResponse,
+) -> Result<(), CoreError> {
+    let tx = state.pending_asset_tx.lock().unwrap().take();
+    if let Some(tx) = tx {
+        let _ = tx.send(response.index);
+        tracing::info!(index = ?response.index, "asset selection resolved");
+        Ok(())
+    } else {
+        Err(CoreError::from("no pending asset selection".to_string()))
+    }
 }
 
 #[tauri::command]

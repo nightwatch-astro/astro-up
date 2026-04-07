@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,13 @@ use tokio_util::sync::CancellationToken;
 use astro_up_core::backup::BackupService;
 use astro_up_core::catalog::{CatalogManager, SqliteCatalogReader};
 use astro_up_core::config::{self, AppConfig, ConfigStore, PathsConfig};
+
+/// Shared handle for the pending asset selection channel.
+///
+/// When the orchestrator encounters multiple assets, it creates a `mpsc` channel,
+/// stores the `Sender` here, and blocks on the `Receiver`. The frontend calls
+/// `resolve_asset_selection` which finds this sender and sends the user's choice.
+pub type PendingAssetTx = Arc<Mutex<Option<std::sync::mpsc::Sender<Option<usize>>>>>;
 
 /// Unique identifier for a long-running operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,6 +45,9 @@ pub struct AppState {
     pub catalog_manager: CatalogManager,
     /// Backup service.
     pub backup_service: BackupService,
+    /// Channel sender for the pending asset selection dialog.
+    /// The orchestrator sets this before blocking; `resolve_asset_selection` reads it.
+    pub pending_asset_tx: PendingAssetTx,
 }
 
 impl AppState {
@@ -65,6 +75,7 @@ impl AppState {
             db_path,
             catalog_manager,
             backup_service,
+            pending_asset_tx: Arc::new(Mutex::new(None)),
         })
     }
 

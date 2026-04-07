@@ -11,6 +11,7 @@ import AppSidebar from "./components/layout/AppSidebar.vue";
 import AppStatusBar from "./components/layout/AppStatusBar.vue";
 import OperationsDock from "./components/layout/OperationsDock.vue";
 import LogPanel from "./components/layout/LogPanel.vue";
+import AssetSelectionDialog from "./components/shared/AssetSelectionDialog.vue";
 import type { CoreEvent } from "./types/commands";
 
 const toast = useToast();
@@ -180,6 +181,7 @@ onUnmounted(() => {
 
 <template>
   <Toast position="bottom-right" />
+  <AssetSelectionDialog />
 
   <!-- Update notification banner -->
   <div
