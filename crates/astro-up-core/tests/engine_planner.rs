@@ -68,6 +68,7 @@ fn make_entry(id: &str, installed: &str, catalog: &str, deps: Vec<&str>) -> Cata
             discovered_at: Utc::now(),
             release_notes_url: None,
             pre_release: false,
+            assets: Vec::new(),
         },
         version_format: VersionFormat::Semver,
         policy: astro_up_core::types::PolicyLevel::Major,

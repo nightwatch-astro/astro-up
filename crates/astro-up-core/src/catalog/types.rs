@@ -149,6 +149,18 @@ pub struct VersionEntry {
     pub discovered_at: DateTime<Utc>,
     pub release_notes_url: Option<String>,
     pub pre_release: bool,
+    /// Filtered release assets (GitHub provider only). When present, the client
+    /// can offer asset selection instead of using the single `url` field.
+    #[serde(default)]
+    pub assets: Vec<ReleaseAsset>,
+}
+
+/// A downloadable asset from a release.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReleaseAsset {
+    pub name: String,
+    pub url: String,
+    pub size: u64,
 }
 
 // ---------------------------------------------------------------------------

@@ -510,6 +510,7 @@ mod tests {
                 discovered_at: Utc::now(),
                 release_notes_url: None,
                 pre_release: false,
+                assets: Vec::new(),
             },
             version_format: VersionFormat::Semver,
             policy: crate::types::PolicyLevel::Major,

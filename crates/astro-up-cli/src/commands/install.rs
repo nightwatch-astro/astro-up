@@ -138,7 +138,7 @@ pub async fn handle_install(
     });
 
     let result = orchestrator
-        .execute(orch_plan, on_event, cancel)
+        .execute(orch_plan, on_event, None, cancel)
         .await
         .map_err(|e| eyre!("install failed: {e}"))?;
 
