@@ -145,16 +145,15 @@ As a pipeline operator, I want manifest validation integrated into CI — so bro
 - **FR-011**: URL validation MUST be opt-out via `--skip-url-validation` for faster runs
 - **FR-012**: Version files MUST include a `url_status` field: `reachable`, `unreachable`, or `unchecked`
 
-**Install Method Detection & Schema Migration**
+**Install Method Detection & Installer Type Capture**
 
 - **FR-013**: MUST detect file type by downloading the first 512 bytes and checking magic bytes
 - **FR-014**: File type detection MUST recognize: PE/MZ (exe), PK (zip), MSI (D0CF11E0), NSIS (Nullsoft signature in PE), Inno Setup (signature in PE overlay)
 - **FR-015**: MUST compare detected file type against declared install method and report mismatches
-- **FR-015a**: When a PE executable is detected, MUST identify the specific installer framework (Inno Setup, NSIS, or generic exe). The detected framework determines which silent install flags to pass (e.g., `/VERYSILENT` for Inno, `/S` for NSIS). The correct framework MUST be set as `install.method`.
-- **FR-015b**: For zip downloads, MUST inspect zip contents to detect if it contains a nested installer (exe/msi inside zip). If found, `install.method` MUST be set to the inner installer's framework (e.g., `inno_setup`) and `install.zip_wrapped` MUST be set to `true`.
-- **FR-015c**: The `zip_wrap` install method is REMOVED. It is replaced by the combination of `install.method` (the actual installer framework) + `install.zip_wrapped: bool` (delivery format). Valid install methods: `inno_setup`, `nsis`, `msi`, `exe`, `download_only`. A plain zip with no installer (portable app) uses `method = "download_only"` + `zip_wrapped = true`.
-- **FR-015d**: `install.zip_wrapped` defaults to `false`. Only manifests whose download is a zip archive set it to `true`.
-- **FR-016**: Install method detection MUST be skipped for `download_only` install methods (unless `zip_wrapped = true`, in which case zip contents are still inspected to detect if the method should be upgraded to a real installer framework)
+- **FR-015a**: When a PE executable is detected, MUST identify the specific installer framework (Inno Setup, NSIS, or generic exe) and record it. This applies to both `exe` and `inno_setup`/`nsis` install methods — the detected framework determines which silent install flags to pass (e.g., `/VERYSILENT` for Inno, `/S` for NSIS).
+- **FR-015b**: For `zip_wrap` manifests, MUST inspect the zip contents to detect if it contains a nested installer (exe/msi inside zip) and record the inner installer type if present.
+- **FR-015c**: The detected installer type MUST be stored in the manifest as `install.detected_type` (values: `inno_setup`, `nsis`, `msi`, `generic_exe`, `zip`, `zip_with_installer`). This field captures ground truth for future use by the GUI and CLI when passing install flags.
+- **FR-016**: Install method detection MUST be skipped for `download_only` install methods
 - **FR-016a**: For `manual` provider manifests, validation MUST perform partial checks only: homepage URL reachability and install method detection (if a download URL exists). Version cross-checks MUST be skipped since manual providers return a placeholder version.
 - **FR-017**: When range requests are blocked, MUST fall back to downloading the first 8KB via full GET
 
@@ -195,7 +194,7 @@ As a pipeline operator, I want manifest validation integrated into CI — so bro
 - **`PackageValidationResult`**: Complete cross-check result for one manifest — manifest ID, provider type, checker version, Playwright version, versions match, URL HTTP status, declared install method, detected file type, methods match, overall pass/fail, failure details
 - **`UrlStatus`**: Reachability state — reachable (HTTP 2xx), unreachable (HTTP 4xx with code), transient_failure (HTTP 5xx), unchecked
 - **`FileTypeSignature`**: Detected binary format — pe_exe, zip, msi, nsis, inno_setup, unknown, detection_failed
-- **`InstallerFramework`**: Detected installer framework from binary inspection — inno_setup, nsis, msi, exe (generic PE). Stored directly as `install.method`. Combined with `install.zip_wrapped: bool` to indicate delivery format. Replaces the former `zip_wrap` method and `detected_type` field.
+- **`DetectedInstallerType`**: Specific installer framework detected from binary inspection — inno_setup, nsis, msi, generic_exe, zip, zip_with_installer. Stored in manifest `install.detected_type` for future GUI/CLI use when passing silent install flags.
 - **`VersionCrossCheck`**: Multi-method version comparison — checker version, Playwright version (via MCP), API version (for github/gitlab), all match (yes/no), discrepancy details
 - **`ValidationSummary`**: Aggregate across all manifests — total checked, passed, failed by category (URL, version, install method, scrape discrepancy), list of actionable fixes
 
@@ -219,7 +218,7 @@ As a pipeline operator, I want manifest validation integrated into CI — so bro
 
 - Q: When cross-checking versions between methods, what counts as "the same version"? → A: URL-driven precision — if the download URL embeds a version string, the discovered version must match it exactly (partial match = regex is wrong). If the URL is generic/version-agnostic, normalized comparison applies (strip `v` prefix, trailing `.0` segments).
 - Q: How should `manual` provider manifests be handled during validation? → A: Partial validation only — check homepage URL reachability and install method detection if a download URL exists, but skip version cross-checks.
-- Q: Should detected installer type be captured for future use? → A: Yes. Remove `zip_wrap` as a method. Split into `install.method` (real framework: inno_setup, nsis, msi, exe, download_only) + `install.zip_wrapped: bool` (delivery format, default false). Plain zip = `download_only` + `zip_wrapped = true`. Create deferred issues for GUI/CLI to handle both fields.
+- Q: Should detected installer type be captured for future use? → A: Yes. Store as `install.detected_type` in the manifest. The GUI and CLI will use this to pass correct silent install flags (e.g., `/VERYSILENT` for Inno, `/S` for NSIS). Create deferred issues for GUI/CLI to consume this field.
 - Q: Is Playwright embedded in the checker or CI? → A: No. Playwright is used interactively via MCP tools during the one-time audit to cross-check the checker's scraping. The existing chromiumoxide browser_scrape provider remains the production scraper. No Node.js dependency in the pipeline.
 
 ## Assumptions
