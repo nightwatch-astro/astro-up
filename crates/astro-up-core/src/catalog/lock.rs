@@ -12,6 +12,7 @@ pub struct PidLock {
 
 impl PidLock {
     /// Acquire the lockfile. Checks for stale locks (dead PIDs).
+    #[tracing::instrument(skip_all, fields(path = %path.display()))]
     pub fn acquire(path: &Path) -> Result<Self, CoreError> {
         if path.exists() {
             let contents = std::fs::read_to_string(path)?;
@@ -39,7 +40,9 @@ impl PidLock {
 
 impl Drop for PidLock {
     fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.path);
+        if let Err(e) = std::fs::remove_file(&self.path) {
+            tracing::debug!(path = %self.path.display(), error = %e, "failed to remove lockfile on drop");
+        }
     }
 }
 

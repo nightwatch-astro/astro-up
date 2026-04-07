@@ -144,7 +144,10 @@ impl DownloadManager {
 
                 // If this was a resumed download, retry once from scratch (CHK012)
                 if result.resumed {
-                    tracing::warn!(retry_count = 1, "hash mismatch after resumed download, retrying from scratch");
+                    tracing::warn!(
+                        retry_count = 1,
+                        "hash mismatch after resumed download, retrying from scratch"
+                    );
                     let retry = stream::stream_download(
                         &self.client,
                         &request.url,

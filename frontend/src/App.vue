@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onErrorCaptured, onMounted, onUnmounted, ref } from "vue";
+import { onLog } from "./utils/logger";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -60,6 +61,11 @@ useKeyboard({
 const updateVersion = ref<string | null>(null);
 let unlistenUpdate: UnlistenFn | null = null;
 let unlistenBackendLog: UnlistenFn | null = null;
+
+// Wire frontend logger to LogPanel
+const unlistenLogger = onLog((entry) => {
+  logPanel.value?.addEntry(entry);
+});
 
 // Forward backend tracing logs to the log panel
 async function setupBackendLogListener() {
@@ -204,6 +210,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (unlistenUpdate) unlistenUpdate();
   if (unlistenBackendLog) unlistenBackendLog();
+  unlistenLogger();
 });
 </script>
 

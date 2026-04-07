@@ -4,6 +4,9 @@
 **Created**: 2026-04-07
 **Status**: Draft
 **Type**: implementation
+**Project**: Astro-Up
+**Project Number**: 3
+**Project ID**: PVT_kwDOECmZr84BT6uK
 **Input**: User description: "Comprehensive logging, error handling, and observability across the entire codebase (Rust backend + Vue frontend). Every action gets appropriate structured logging (debug/trace minimum, info+debug ideal). Every error properly handled — no silent swallowing. Every exception/non-standard behavior gets error or warn logging. Constitution updated with Principle VII (Observability). CLAUDE.md updated with logging conventions."
 
 ## User Scenarios & Testing
