@@ -1,3 +1,5 @@
+use tracing::trace;
+
 use crate::detect::DetectionResult;
 use crate::types::DetectionConfig;
 #[cfg(windows)]
@@ -8,6 +10,7 @@ use crate::types::{DetectionMethod, Version};
 /// Checks HKLM + HKCU, both 64-bit and 32-bit (WOW6432Node) views.
 /// Reads the registry value specified in `config.registry_value` (default: DisplayVersion).
 pub async fn detect(config: &DetectionConfig) -> DetectionResult {
+    trace!(method = "registry", registry_key = ?config.registry_key, "detect_registry entry");
     #[cfg(windows)]
     {
         detect_windows(config)
@@ -23,6 +26,7 @@ pub async fn detect(config: &DetectionConfig) -> DetectionResult {
 
 #[cfg(windows)]
 fn detect_windows(config: &DetectionConfig) -> DetectionResult {
+    use tracing::debug;
     use winreg::RegKey;
     use winreg::enums::{
         HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY,
@@ -67,8 +71,10 @@ fn detect_windows(config: &DetectionConfig) -> DetectionResult {
 
         match subkey.get_value::<String, _>(value_name) {
             Ok(version_str) if !version_str.trim().is_empty() => {
+                let version = Version::parse(version_str.trim());
+                debug!(method = "registry", ?version, key = %uninstall_path, "registry version parsed");
                 return DetectionResult::Installed {
-                    version: Version::parse(version_str.trim()),
+                    version,
                     method: DetectionMethod::Registry,
                     install_path,
                 };

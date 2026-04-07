@@ -14,6 +14,7 @@ import PathsSection from "../components/settings/PathsSection.vue";
 import LoggingSection from "../components/settings/LoggingSection.vue";
 import AboutSection from "../components/settings/AboutSection.vue";
 import { useConfig, useSaveConfig } from "../composables/useInvoke";
+import { logger } from "../utils/logger";
 import type { AppConfig } from "../types/config";
 
 const toast = useToast();
@@ -81,6 +82,7 @@ watch(config, () => {
 
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    logger.debug("SettingsView", "saving config changes");
     saveMutation.mutate(config as unknown as Record<string, unknown>, {
       onError: (err) => {
         toast.add({ severity: "error", summary: "Save failed", detail: String(err), life: 5000 });

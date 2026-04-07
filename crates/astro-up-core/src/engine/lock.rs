@@ -79,6 +79,12 @@ impl OrchestrationLock {
         write!(guard, "{}", std::process::id())?;
         guard.sync_all()?;
 
+        tracing::info!(
+            pid = std::process::id(),
+            path = %lock_path.display(),
+            "orchestration lock acquired"
+        );
+
         Ok(Self {
             _guard: guard,
             path: lock_path.to_owned(),
@@ -132,10 +138,29 @@ impl OrchestrationLock {
 
 /// Read PID from a lock file, returning `None` on any failure.
 fn read_pid_from_file(path: &Path) -> Option<u32> {
-    let mut file = File::open(path).ok()?;
+    let mut file = File::open(path)
+        .inspect_err(|e| {
+            tracing::debug!(error = %e, path = %path.display(), "failed to open lock file for PID read");
+        })
+        .ok()?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents).ok()?;
-    contents.trim().parse::<u32>().ok()
+    file.read_to_string(&mut contents)
+        .inspect_err(|e| {
+            tracing::debug!(error = %e, path = %path.display(), "failed to read lock file contents");
+        })
+        .ok()?;
+    let trimmed = contents.trim();
+    match trimmed.parse::<u32>() {
+        Ok(pid) => Some(pid),
+        Err(_) => {
+            tracing::debug!(
+                raw_value = trimmed,
+                path = %path.display(),
+                "failed to parse PID from lock file"
+            );
+            None
+        }
+    }
 }
 
 /// Check if a process with the given PID is currently running.

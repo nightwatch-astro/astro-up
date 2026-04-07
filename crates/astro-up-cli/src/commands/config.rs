@@ -6,19 +6,24 @@ use crate::output::json::print_json;
 
 /// Manage application configuration.
 pub async fn handle_config(action: ConfigAction, mode: &OutputMode) -> Result<()> {
-    match action {
+    tracing::debug!("entering handle_config");
+    let result = match action {
         ConfigAction::Init => handle_config_init(mode),
         ConfigAction::Show => handle_config_show(mode),
-    }
+    };
+    tracing::debug!(ok = result.is_ok(), "exiting handle_config");
+    result
 }
 
 fn handle_config_init(mode: &OutputMode) -> Result<()> {
+    tracing::debug!("config init: resolving config directory");
     let config_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up")
         .map(|dirs| dirs.config_dir().to_owned())
         .ok_or_else(|| eyre!("could not determine config directory"))?;
 
     std::fs::create_dir_all(&config_dir)?;
     let config_path = config_dir.join("config.toml");
+    tracing::debug!(path = %config_path.display(), "config init: target path resolved");
 
     if config_path.exists() {
         if *mode == OutputMode::Json {
@@ -50,6 +55,7 @@ fn handle_config_init(mode: &OutputMode) -> Result<()> {
 }
 
 fn handle_config_show(mode: &OutputMode) -> Result<()> {
+    tracing::debug!("config show: reading effective configuration");
     let config = astro_up_core::config::AppConfig::default();
 
     if *mode == OutputMode::Json {

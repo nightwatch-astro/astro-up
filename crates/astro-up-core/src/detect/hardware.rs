@@ -66,6 +66,12 @@ pub async fn discover(
     managed_packages: &std::collections::HashSet<String>,
 ) -> Vec<HardwareMatch> {
     use std::time::Duration;
+    use tracing::{debug, trace};
+
+    debug!(
+        patterns = manifest_patterns.len(),
+        "hardware discovery: enumerating USB devices"
+    );
 
     #[derive(serde::Deserialize, Debug)]
     #[allow(non_snake_case)]
@@ -104,6 +110,12 @@ pub async fn discover(
 
         for (pattern, package_id) in manifest_patterns {
             if pattern.matches(&device_vidpid) {
+                trace!(
+                    vid_pid = %device_vidpid,
+                    device_name = ?device.Name,
+                    package = %package_id,
+                    "hardware discovery: matched device"
+                );
                 matches.push(HardwareMatch {
                     vid_pid: device_vidpid.clone(),
                     device_name: device.Name.clone().unwrap_or_default(),

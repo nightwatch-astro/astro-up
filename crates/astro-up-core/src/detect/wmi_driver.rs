@@ -1,3 +1,5 @@
+use tracing::debug;
+
 use crate::detect::DetectionResult;
 use crate::types::DetectionConfig;
 #[cfg(windows)]
@@ -8,6 +10,13 @@ use crate::types::{DetectionMethod, Version};
 /// Filters by DriverProviderName, DeviceClass, and InfName (AND logic).
 /// 10-second timeout enforced via tokio::time::timeout.
 pub async fn detect(config: &DetectionConfig) -> DetectionResult {
+    debug!(
+        method = "wmi",
+        inf_provider = ?config.inf_provider,
+        device_class = ?config.device_class,
+        inf_name = ?config.inf_name,
+        "detect_wmi entry"
+    );
     #[cfg(windows)]
     {
         detect_windows(config).await
@@ -26,6 +35,7 @@ async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
     use std::time::Duration;
 
     use serde::Deserialize;
+    use tracing::warn;
 
     #[derive(Deserialize, Debug)]
     #[allow(non_snake_case, dead_code)]
@@ -95,9 +105,15 @@ async fn detect_windows(config: &DetectionConfig) -> DetectionResult {
                 DetectionResult::NotInstalled
             }
         }
-        Ok(Err(e)) => DetectionResult::Unavailable { reason: e },
-        Err(_) => DetectionResult::Unavailable {
-            reason: "WMI query timed out (10s)".into(),
-        },
+        Ok(Err(ref e)) => {
+            warn!(method = "wmi", error = %e, "WMI query failed");
+            DetectionResult::Unavailable { reason: e.clone() }
+        }
+        Err(_) => {
+            warn!(method = "wmi", "WMI query timed out (10s)");
+            DetectionResult::Unavailable {
+                reason: "WMI query timed out (10s)".into(),
+            }
+        }
     }
 }

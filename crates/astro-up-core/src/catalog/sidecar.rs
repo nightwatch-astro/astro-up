@@ -15,19 +15,24 @@ pub struct CatalogSidecar {
 impl CatalogSidecar {
     /// Load sidecar from disk. Returns `None` if the file doesn't exist.
     pub fn load(path: &Path) -> Result<Option<Self>, std::io::Error> {
+        tracing::debug!(path = %path.display(), "loading catalog sidecar");
         match std::fs::read_to_string(path) {
             Ok(contents) => {
                 let sidecar: Self =
                     serde_json::from_str(&contents).map_err(std::io::Error::other)?;
                 Ok(Some(sidecar))
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                tracing::debug!(path = %path.display(), "sidecar file not found");
+                Ok(None)
+            }
             Err(e) => Err(e),
         }
     }
 
     /// Save sidecar to disk.
     pub fn save(&self, path: &Path) -> Result<(), std::io::Error> {
+        tracing::debug!(path = %path.display(), "saving catalog sidecar");
         let json = serde_json::to_string_pretty(self).map_err(std::io::Error::other)?;
         std::fs::write(path, json)
     }

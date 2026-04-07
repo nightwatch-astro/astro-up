@@ -48,6 +48,15 @@ impl SqliteCatalogReader {
             });
         }
 
+        let package_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM packages", [], |row| row.get(0))
+            .unwrap_or(0);
+        tracing::info!(
+            schema_version = %meta.schema_version,
+            package_count,
+            "catalog opened"
+        );
+
         Ok(Self {
             conn,
             path: path.to_owned(),
@@ -84,20 +93,25 @@ impl SqliteCatalogReader {
 
     /// Resolve a single package by exact ID.
     pub fn resolve(&self, id: &PackageId) -> Result<PackageSummary, CoreError> {
+        tracing::debug!(package_id = %id, "resolving package from catalog");
         let mut stmt = self.conn.prepare(
             "SELECT id, manifest_version, name, description, publisher, homepage,
                     category, type, slug, license, tags, aliases, dependencies, icon_base64
              FROM packages WHERE id = ?1",
         )?;
 
-        stmt.query_row(params![id.as_ref()], row_to_package)
+        let result = stmt
+            .query_row(params![id.as_ref()], row_to_package)
             .map_err(|_| CoreError::NotFound {
                 input: id.to_string(),
-            })
+            })?;
+        tracing::trace!(package_id = %id, name = %result.name, "package resolved");
+        Ok(result)
     }
 
     /// Full-text search across name, description, tags, aliases, publisher.
     pub fn search(&self, query: &str) -> Result<Vec<SearchResult>, CoreError> {
+        tracing::debug!(query, "searching catalog");
         let mut stmt = self.conn.prepare(
             "SELECT p.id, p.manifest_version, p.name, p.description, p.publisher,
                     p.homepage, p.category, p.type, p.slug, p.license,
@@ -118,6 +132,11 @@ impl SqliteCatalogReader {
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
+        tracing::debug!(
+            query,
+            result_count = results.len(),
+            "catalog search complete"
+        );
         Ok(results)
     }
 
@@ -155,7 +174,9 @@ impl SqliteCatalogReader {
 
     /// List all packages (unfiltered).
     pub fn list_all(&self) -> Result<Vec<PackageSummary>, CoreError> {
-        self.filter(&CatalogFilter::default())
+        let results = self.filter(&CatalogFilter::default())?;
+        tracing::debug!(count = results.len(), "listed all catalog packages");
+        Ok(results)
     }
 
     /// Get all known versions for a package, newest first.

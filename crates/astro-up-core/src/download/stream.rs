@@ -125,7 +125,9 @@ pub(crate) async fn stream_download(
             }
             // If we get here: server returned 200 (no Range), or freshness check failed,
             // or .part is corrupt — delete and restart
-            let _ = tokio::fs::remove_file(part_path).await;
+            if let Err(e) = tokio::fs::remove_file(part_path).await {
+                tracing::debug!(path = %part_path.display(), error = %e, "failed to remove stale .part file");
+            }
         }
     }
 
@@ -295,6 +297,7 @@ async fn stream_response(
                 None
             };
 
+            // Intentionally silent: high-frequency progress event (hundreds per download)
             let _ = event_tx.send(Event::DownloadProgress {
                 id: id.to_owned(),
                 progress,

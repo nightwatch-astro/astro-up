@@ -10,6 +10,12 @@ pub fn default_user_agent() -> String {
 
 /// Build a configured reqwest client from network settings.
 pub fn build_client(config: &NetworkConfig) -> Result<reqwest::Client, CoreError> {
+    tracing::debug!(
+        connect_timeout = ?config.connect_timeout,
+        read_timeout = ?config.timeout,
+        has_proxy = config.proxy.is_some(),
+        "building HTTP client"
+    );
     let ua = if config.user_agent.is_empty() {
         default_user_agent()
     } else {
@@ -32,6 +38,7 @@ pub fn build_client(config: &NetworkConfig) -> Result<reqwest::Client, CoreError
         builder = builder.proxy(proxy);
     }
 
+    tracing::debug!(user_agent = %ua, "HTTP client configured");
     builder.build().map_err(|e| CoreError::DownloadFailed {
         url: String::new(),
         status: 0,

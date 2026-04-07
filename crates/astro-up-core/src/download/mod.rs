@@ -68,11 +68,18 @@ impl DownloadManager {
     }
 
     /// Download a file. Returns error if another download is in progress.
+    #[tracing::instrument(skip_all, fields(url = %request.url, expected_hash))]
     pub async fn download(
         &self,
         request: &DownloadRequest,
         cancel_token: CancellationToken,
     ) -> Result<DownloadResult, CoreError> {
+        let download_start = std::time::Instant::now();
+        tracing::info!(
+            url = %request.url,
+            expected_hash = request.expected_hash.as_deref().unwrap_or("none"),
+            "download started"
+        );
         let _guard = self.try_acquire(&request.url)?;
 
         // Auto-create destination directory (FR-019)
@@ -99,15 +106,23 @@ impl DownloadManager {
 
             if let Ok(resp) = req_builder.send().await {
                 if resp.status() == reqwest::StatusCode::NOT_MODIFIED {
+                    let elapsed = download_start.elapsed();
+                    tracing::info!(
+                        duration_ms = elapsed.as_millis() as u64,
+                        cached = true,
+                        "download complete (cached)"
+                    );
                     return Ok(DownloadResult::Cached { path: dest });
                 }
             }
         }
 
-        let _ = self.event_tx.send(Event::DownloadStarted {
+        if let Err(e) = self.event_tx.send(Event::DownloadStarted {
             id: request.filename.clone(),
             url: request.url.clone(),
-        });
+        }) {
+            tracing::debug!("failed to send DownloadStarted event: {e}");
+        }
 
         let result = stream::stream_download(
             &self.client,
@@ -127,11 +142,16 @@ impl DownloadManager {
             let actual: String = crate::hex_encode(&digest);
             if actual != *expected {
                 // Clean up .part file on mismatch
-                let _ = tokio::fs::remove_file(&request.part_path()).await;
+                if let Err(e) = tokio::fs::remove_file(&request.part_path()).await {
+                    tracing::debug!(path = %request.part_path().display(), error = %e, "failed to remove .part file after hash mismatch");
+                }
 
                 // If this was a resumed download, retry once from scratch (CHK012)
                 if result.resumed {
-                    tracing::warn!("hash mismatch after resumed download, retrying from scratch");
+                    tracing::warn!(
+                        retry_count = 1,
+                        "hash mismatch after resumed download, retrying from scratch"
+                    );
                     let retry = stream::stream_download(
                         &self.client,
                         &request.url,
@@ -147,7 +167,9 @@ impl DownloadManager {
                     let digest = retry.hasher.finalize();
                     let retry_actual: String = crate::hex_encode(&digest);
                     if retry_actual != *expected {
-                        let _ = tokio::fs::remove_file(&request.part_path()).await;
+                        if let Err(e) = tokio::fs::remove_file(&request.part_path()).await {
+                            tracing::debug!(path = %request.part_path().display(), error = %e, "failed to remove .part file after retry hash mismatch");
+                        }
                         return Err(CoreError::ChecksumMismatch {
                             expected: expected.clone(),
                             actual: retry_actual,
@@ -194,12 +216,25 @@ impl DownloadManager {
 
         // Store ETag for future conditional requests (FR-008)
         if let Some(etag) = &result.etag {
-            let _ = tokio::fs::write(&etag_path, etag).await;
+            if let Err(e) = tokio::fs::write(&etag_path, etag).await {
+                tracing::debug!(path = %etag_path.display(), error = %e, "failed to write ETag cache");
+            }
         }
 
-        let _ = self.event_tx.send(Event::DownloadComplete {
+        if let Err(e) = self.event_tx.send(Event::DownloadComplete {
             id: request.filename.clone(),
-        });
+        }) {
+            tracing::debug!("failed to send DownloadComplete event: {e}");
+        }
+
+        let elapsed = download_start.elapsed();
+        tracing::info!(
+            bytes_downloaded = result.bytes_downloaded,
+            duration_ms = elapsed.as_millis() as u64,
+            cached = false,
+            resumed = result.resumed,
+            "download complete"
+        );
 
         Ok(DownloadResult::Success {
             path: dest,

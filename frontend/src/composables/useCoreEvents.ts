@@ -1,5 +1,6 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { logger } from "../utils/logger";
 import type { CoreEvent } from "../types/commands";
 
 /**
@@ -16,8 +17,9 @@ export function useCoreEvents(callback: (event: CoreEvent) => void) {
         callback(event.payload);
       });
       listening.value = true;
+      logger.debug("useCoreEvents", "core-event listener established");
     } catch {
-      // Not running inside Tauri — listeners unavailable
+      logger.warn("useCoreEvents", "core-event listener unavailable (not in Tauri)");
     }
   });
 

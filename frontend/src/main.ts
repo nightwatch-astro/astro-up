@@ -3,8 +3,10 @@ import PrimeVue from "primevue/config";
 import { definePreset } from "@primeuix/themes";
 import Aura from "@primeuix/themes/aura";
 import ToastService from "primevue/toastservice";
-import { VueQueryPlugin } from "@tanstack/vue-query";
+import { VueQueryPlugin, QueryClient } from "@tanstack/vue-query";
 import router from "./router";
+import { useErrorLog } from "./stores/errorLog";
+import { logger } from "./utils/logger";
 import App from "./App.vue";
 import "./styles.css";
 
@@ -74,6 +76,29 @@ app.use(PrimeVue, {
 });
 
 app.use(ToastService);
-app.use(VueQueryPlugin);
+
+// Global QueryClient with default onError safety net (FR-016)
+const queryClient = new QueryClient({
+  defaultOptions: {
+    mutations: {
+      onError: (err) => {
+        const message = err instanceof Error ? err.message : String(err);
+        const { addEntry } = useErrorLog();
+        addEntry("error", "Operation failed", message);
+        logger.error("QueryClient", `unhandled mutation error: ${message}`);
+      },
+    },
+  },
+});
+app.use(VueQueryPlugin, { queryClient });
+
+// Global uncaught error handler (safety net for errors not caught by onErrorCaptured)
+app.config.errorHandler = (err, instance, info) => {
+  const message = err instanceof Error ? err.message : String(err);
+  const component = instance?.$options?.name ?? "unknown";
+  const { addEntry } = useErrorLog();
+  addEntry("error", `Uncaught error in ${component}`, `${message} (${info})`);
+  logger.error("errorHandler", `${component}: ${message} (${info})`);
+};
 
 app.mount("#app");

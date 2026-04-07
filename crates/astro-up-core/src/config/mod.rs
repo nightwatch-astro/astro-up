@@ -8,6 +8,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use garde::Validate;
+use tracing::{debug, warn};
 
 use crate::error::CoreError;
 
@@ -26,6 +27,8 @@ pub fn load_config(
     log_file: PathBuf,
     cli_overrides: &[(&str, &str)],
 ) -> Result<AppConfig, CoreError> {
+    debug!(db_path = %db_path.display(), overrides = cli_overrides.len(), "loading configuration");
+
     // Layer 1: compiled defaults with caller-provided platform paths
     let mut config = AppConfig::with_paths(default_paths, log_file);
 
@@ -42,7 +45,16 @@ pub fn load_config(
     merge_overrides(&mut config, &cli_pairs)?;
 
     // Validate
-    config.validate().map_err(CoreError::from)?;
+    if let Err(e) = config.validate() {
+        warn!(error = %e, "config validation failed, check stored overrides");
+        return Err(CoreError::from(e));
+    }
+
+    debug!(
+        theme = %config.ui.theme,
+        log_level = %config.logging.level,
+        "configuration loaded successfully"
+    );
 
     Ok(config)
 }
@@ -63,12 +75,14 @@ fn recover_corrupt(
     original_err: rusqlite::Error,
 ) -> Result<ConfigStore, CoreError> {
     let corrupt_path = db_path.with_extension("corrupt");
-    tracing::warn!(
-        "Config database corrupt ({}), renaming to {} and starting fresh",
-        original_err,
-        corrupt_path.display()
+    warn!(
+        error = %original_err,
+        corrupt_path = %corrupt_path.display(),
+        "config database corrupt, renaming and starting fresh"
     );
-    let _ = std::fs::rename(db_path, &corrupt_path);
+    if let Err(e) = std::fs::rename(db_path, &corrupt_path) {
+        warn!(path = %db_path.display(), error = %e, "failed to rename corrupt config database");
+    }
     let conn = rusqlite::Connection::open(db_path)?;
     Ok(ConfigStore::new(conn)?)
 }

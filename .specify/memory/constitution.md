@@ -1,12 +1,8 @@
 <!--
 Sync Impact Report
-- Version change: 0.0.0 → 1.0.0 (initial ratification)
-- Added principles: I–VI (all new)
-- Added sections: Technical Stack, Development Workflow, Governance
-- Templates requiring updates:
-  - .specify/templates/plan-template.md — ⚠ pending (Technical Context defaults need updating for Rust/Tauri/Vue)
-  - .specify/templates/spec-template.md — ✅ no changes needed (generic enough)
-  - .specify/templates/tasks-template.md — ⚠ pending (path conventions need Cargo workspace layout)
+- Version change: 1.0.0 → 1.1.0 (added Principle VII)
+- Added principles: VII (Observability)
+- Templates requiring updates: none
 - Follow-up TODOs: none
 -->
 
@@ -63,6 +59,33 @@ of code is better than a premature abstraction. Add complexity only when the cur
 approach demonstrably fails. YAGNI applies to error handling, configuration options,
 and extensibility points equally.
 
+### VII. Observability
+
+Every public function MUST have structured logging appropriate to its role. Log levels:
+
+| Level | Use |
+|-------|-----|
+| `error!` | Operation failed, caller cannot recover |
+| `warn!` | Unexpected state, operation continues with fallback |
+| `info!` | Operation boundary — start/complete with summary stats |
+| `debug!` | Developer context — method selection, timing, cache hits |
+| `trace!` | Per-item detail in loops, raw values |
+
+Rules:
+- All public async functions and sync functions with I/O: `#[tracing::instrument(skip_all, fields(...))]`
+  with minimum fields per operation type (operations: `operation_id` + `package`;
+  network: `url` + `duration_ms`; file I/O: `path`).
+- Functions called in tight loops MUST use `trace!` event macros, NOT per-call spans.
+- Silent error suppression (`let _ =`, `.ok()`) MUST log at `warn!` or `debug!` when
+  the suppressed result represents a meaningful failure (data loss, resource leak,
+  broken user expectation).
+- `unwrap()` only for: `Mutex::lock()`, compile-time constants, regex compilation, test code.
+  I/O, network, database, and process operations MUST propagate errors with `?`.
+- Structured log fields MUST NOT contain passwords, API tokens, or authentication
+  credentials. User filesystem paths and package names are acceptable (logging is local-only).
+- Frontend: global error boundary, all mutations have `onError`, no `alert()`.
+  Frontend logging writes to LogPanel store, not browser console.
+
 ## Technical Stack
 
 | Layer | Choice | Rationale |
@@ -97,4 +120,4 @@ semver (MAJOR for principle removal/redefinition, MINOR for additions, PATCH for
 clarifications). All specs and plans MUST verify compliance with these principles via
 the Constitution Check in plan-template.md.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-29 | **Last Amended**: 2026-03-29
+**Version**: 1.1.0 | **Ratified**: 2026-03-29 | **Last Amended**: 2026-04-07

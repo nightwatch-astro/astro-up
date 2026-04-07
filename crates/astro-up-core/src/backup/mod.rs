@@ -5,7 +5,7 @@ pub mod types;
 
 use std::path::{Path, PathBuf};
 
-use tracing::{info, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
 use crate::error::CoreError;
 use crate::events::Event;
@@ -37,15 +37,19 @@ impl BackupService {
             )));
         }
 
-        let _ = request.event_tx.send(Event::BackupStarted {
+        if let Err(e) = request.event_tx.send(Event::BackupStarted {
             id: request.package_id.clone(),
-        });
+        }) {
+            debug!("failed to send BackupStarted event: {e}");
+        }
 
         let metadata = archive::create_backup(request, &self.backup_dir).await?;
 
-        let _ = request.event_tx.send(Event::BackupComplete {
+        if let Err(e) = request.event_tx.send(Event::BackupComplete {
             id: request.package_id.clone(),
-        });
+        }) {
+            debug!("failed to send BackupComplete event: {e}");
+        }
 
         // Auto-prune after backup
         if self.retention > 0 {
@@ -74,15 +78,19 @@ impl BackupService {
             }
         }
 
-        let _ = request.event_tx.send(Event::RestoreStarted {
+        if let Err(e) = request.event_tx.send(Event::RestoreStarted {
             id: request.archive_path.display().to_string(),
-        });
+        }) {
+            debug!("failed to send RestoreStarted event: {e}");
+        }
 
         archive::restore(&request.archive_path, request.path_filter.as_deref()).await?;
 
-        let _ = request.event_tx.send(Event::RestoreComplete {
+        if let Err(e) = request.event_tx.send(Event::RestoreComplete {
             id: request.archive_path.display().to_string(),
-        });
+        }) {
+            debug!("failed to send RestoreComplete event: {e}");
+        }
 
         Ok(())
     }
@@ -97,7 +105,9 @@ impl BackupService {
 
     #[instrument(skip_all, fields(package = %package_id))]
     pub async fn list(&self, package_id: &str) -> Result<Vec<BackupListEntry>, CoreError> {
-        prune::list_backups(&self.backup_dir, package_id).await
+        let entries = prune::list_backups(&self.backup_dir, package_id).await?;
+        debug!(count = entries.len(), "backups found");
+        Ok(entries)
     }
 
     #[instrument(skip_all, fields(package = %package_id, keep))]

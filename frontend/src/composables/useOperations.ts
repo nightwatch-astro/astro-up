@@ -1,5 +1,6 @@
 import { ref, computed, readonly } from "vue";
 import { useToast } from "primevue/usetoast";
+import { logger } from "../utils/logger";
 import type { Operation, OperationStep } from "../types/operations";
 
 const activeOperation = ref<Operation | null>(null);
@@ -38,6 +39,7 @@ export function useOperations() {
       status: "running",
       steps: [],
     };
+    logger.debug("useOperations", `started: ${id} (${label})`);
     return true;
   }
 
@@ -60,18 +62,21 @@ export function useOperations() {
 
   function completeOperation() {
     if (!activeOperation.value) return;
+    logger.debug("useOperations", `completed: ${activeOperation.value.id}`);
     activeOperation.value.status = "complete";
     activeOperation.value.progress = 100;
   }
 
   function failOperation(error: string) {
     if (!activeOperation.value) return;
+    logger.debug("useOperations", `failed: ${activeOperation.value.id} — ${error}`);
     activeOperation.value.status = "failed";
     addStep("error", error);
   }
 
   function cancelOperation() {
     if (!activeOperation.value) return;
+    logger.debug("useOperations", `cancelled: ${activeOperation.value.id}`);
     activeOperation.value.status = "cancelled";
   }
 

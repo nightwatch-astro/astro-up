@@ -1,7 +1,7 @@
 //! Catalog manager — orchestrates fetch, verify, and refresh.
 
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use chrono::Utc;
 
@@ -35,8 +35,9 @@ impl CatalogManager {
     }
 
     /// Ensure a valid catalog is available. Fetches if needed.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip_all, fields(catalog = %self.catalog_path.display()))]
     pub async fn ensure_catalog(&self) -> Result<FetchResult, CoreError> {
+        let start = Instant::now();
         let sidecar_path = CatalogSidecar::path_for(&self.catalog_path);
         let sidecar = CatalogSidecar::load(&sidecar_path)?;
         let has_local = self.catalog_path.exists();
@@ -47,6 +48,11 @@ impl CatalogManager {
                 let age = Utc::now().signed_duration_since(sc.fetched_at);
                 if age < chrono::Duration::from_std(self.config.cache_ttl).unwrap_or_default() {
                     tracing::debug!("catalog within TTL, using local");
+                    tracing::info!(
+                        duration_ms = start.elapsed().as_millis() as u64,
+                        result = "unchanged",
+                        "ensure_catalog complete"
+                    );
                     return Ok(FetchResult::Unchanged);
                 }
             }
@@ -66,6 +72,11 @@ impl CatalogManager {
                     fetched_at: Utc::now(),
                 };
                 new_sidecar.save(&sidecar_path)?;
+                tracing::info!(
+                    duration_ms = start.elapsed().as_millis() as u64,
+                    result = "unchanged",
+                    "ensure_catalog complete (not modified)"
+                );
                 Ok(FetchResult::Unchanged)
             }
             Ok(FetchOutcome::Downloaded {
@@ -84,6 +95,11 @@ impl CatalogManager {
                             fetched_at: Utc::now(),
                         };
                         new_sidecar.save(&sidecar_path)?;
+                        tracing::info!(
+                            duration_ms = start.elapsed().as_millis() as u64,
+                            result = "updated",
+                            "ensure_catalog complete"
+                        );
                         Ok(FetchResult::Updated)
                     }
                     Err(e) => {
@@ -91,7 +107,10 @@ impl CatalogManager {
                             "signature verification failed, keeping previous catalog: {e}"
                         );
                         if has_local {
-                            tracing::warn!("falling back to existing local catalog");
+                            tracing::warn!(
+                                duration_ms = start.elapsed().as_millis() as u64,
+                                "falling back to existing local catalog"
+                            );
                             Ok(FetchResult::FallbackToLocal {
                                 reason: "signature verification failed on downloaded catalog"
                                     .into(),
@@ -104,7 +123,10 @@ impl CatalogManager {
             }
             Err(e) => {
                 if has_local {
-                    tracing::warn!("catalog fetch failed, using local: {e}");
+                    tracing::warn!(
+                        duration_ms = start.elapsed().as_millis() as u64,
+                        "catalog fetch failed, using local: {e}"
+                    );
                     Ok(FetchResult::FallbackToLocal {
                         reason: e.to_string(),
                     })
@@ -116,7 +138,9 @@ impl CatalogManager {
     }
 
     /// Force a refresh regardless of TTL.
+    #[tracing::instrument(skip_all, fields(catalog = %self.catalog_path.display()))]
     pub async fn refresh(&self) -> Result<FetchResult, CoreError> {
+        let start = Instant::now();
         let _lock = PidLock::acquire(&self.lock_path)?;
         let sidecar_path = CatalogSidecar::path_for(&self.catalog_path);
         let timeout = Duration::from_secs(30);
@@ -137,10 +161,20 @@ impl CatalogManager {
                     fetched_at: Utc::now(),
                 };
                 new_sidecar.save(&sidecar_path)?;
+                tracing::info!(
+                    duration_ms = start.elapsed().as_millis() as u64,
+                    result = "updated",
+                    "refresh complete"
+                );
                 Ok(FetchResult::Updated)
             }
             Ok(FetchOutcome::NotModified) => {
                 // Shouldn't happen without ETag, but handle it
+                tracing::info!(
+                    duration_ms = start.elapsed().as_millis() as u64,
+                    result = "unchanged",
+                    "refresh complete (not modified)"
+                );
                 Ok(FetchResult::Unchanged)
             }
             Err(e) => Err(e),
@@ -148,6 +182,7 @@ impl CatalogManager {
     }
 
     /// Open the catalog reader (read-only).
+    #[tracing::instrument(skip_all, fields(catalog = %self.catalog_path.display()))]
     pub fn open_reader(&self) -> Result<SqliteCatalogReader, CoreError> {
         SqliteCatalogReader::open(&self.catalog_path)
     }

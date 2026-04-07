@@ -402,6 +402,13 @@ pub fn topological_sort(updates: Vec<PlannedUpdate>) -> Result<Vec<PlannedUpdate
         }
     }
 
+    let edge_count: usize = dependents.iter().map(Vec::len).sum();
+    tracing::debug!(
+        nodes = n,
+        edges = edge_count,
+        "dependency graph built for topological sort"
+    );
+
     let mut queue: VecDeque<usize> = in_degree
         .iter()
         .enumerate()

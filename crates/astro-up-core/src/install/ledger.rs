@@ -13,6 +13,12 @@ pub fn record_install(
     version: &Version,
     install_path: Option<&Path>,
 ) -> LedgerEntry {
+    tracing::debug!(
+        package_id,
+        version = %version,
+        install_path = ?install_path,
+        "recording install ledger entry"
+    );
     LedgerEntry {
         package_id: package_id.to_string(),
         version: version.clone(),

@@ -22,6 +22,7 @@ impl ManifestReader {
     ///
     /// Looks for `{manifests_root}/manifests/{package_id}.toml`.
     pub fn read_by_id(manifests_root: &Path, package_id: &str) -> Result<Software, CoreError> {
+        tracing::debug!(package_id, manifests_root = %manifests_root.display(), "reading manifest by id");
         let path = manifests_root
             .join("manifests")
             .join(format!("{package_id}.toml"));

@@ -15,6 +15,7 @@ use crate::state::CliState;
 
 /// Create a backup for a package's configuration (T020-T021).
 pub async fn handle_backup(state: &CliState, package: &str, mode: &OutputMode) -> Result<()> {
+    tracing::debug!(package, "entering handle_backup");
     let reader = state.open_catalog_reader_ensure().await?;
 
     let _id: PackageId = package
@@ -84,5 +85,10 @@ pub async fn handle_backup(state: &CliState, package: &str, mode: &OutputMode) -
             package, metadata.file_count, metadata.total_size
         );
     }
+    tracing::debug!(
+        package,
+        file_count = metadata.file_count,
+        "exiting handle_backup"
+    );
     Ok(())
 }

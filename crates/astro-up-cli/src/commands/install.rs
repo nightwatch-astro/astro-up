@@ -32,6 +32,7 @@ pub async fn handle_install(
     mode: &OutputMode,
     cancel: CancellationToken,
 ) -> Result<()> {
+    tracing::debug!(package, dry_run, yes, "entering handle_install");
     let reader = state.open_catalog_reader_ensure().await?;
 
     let id: PackageId = package
@@ -198,6 +199,7 @@ pub async fn handle_install(
             );
         }
     }
+    tracing::debug!(package, verified, "exiting handle_install");
     Ok(())
 }
 

@@ -57,6 +57,17 @@ just lint     # Clippy + ESLint
 - PrimeVue Aura dark theme, `darkModeSelector: 'system'`
 - VueQuery for server state (wrapping Tauri `invoke()`)
 
+### Logging & Error Handling
+- `#[tracing::instrument(skip_all, fields(...))]` on all public async/sync-with-I/O functions
+- Structured fields: `operation_id` + `package` for operations, `url` + `duration_ms` for network, `path` for file I/O
+- Tight loops: `trace!` event macros, NOT per-call span creation
+- No `unwrap()` in I/O/network/DB/process paths — propagate with `?` + `.map_err()`
+- `let _ =` and `.ok()` require `warn!`/`debug!` when suppressing meaningful failures
+- No passwords or tokens in structured log fields (paths and package names are fine)
+- CLI/GUI: boundary logging only — MUST NOT re-log what core already reports
+- Frontend: VueQuery `onError` → toast + errorLog on all mutations, no `console.log`/`alert()`
+- Frontend logging: use `logger` utility writing to LogPanel store, not browser console
+
 ## CI
 
 **Tauri CI requirements:**
@@ -116,6 +127,8 @@ Semantic PR titles enforced (`amannn/action-semantic-pull-request`).
 - Rust 2024 edition + tauri 2, tauri-plugin-{window-state,single-instance,updater,autostart,dialog}, dashmap 6, directories 6, uuid 1 (016-tauri-app-shell)
 - Vue 3 + PrimeVue 4 (Aura), @tanstack/vue-query 5, @tauri-apps/{api,plugin-window-state,plugin-autostart,plugin-updater} 2, TypeScript 5 (016-tauri-app-shell)
 - SQLite (existing — catalog + config via astro-up-core, rusqlite 0.39) (016-tauri-app-shell)
+- Rust 2024 edition (1.85+), TypeScript 5, Vue 3 + racing 0.1, tracing-subscriber 0.3 (fmt, json, env-filter), tracing-appender 0.2, PrimeVue 4 (toast), @tanstack/vue-query 5 (027-logging-debugging)
+- N/A (no new storage — logging is file/stderr/LogPanel) (027-logging-debugging)
 
 - Vue 3 + vue-router 4 (hash mode), PrimeVue 4 (Aura), @tanstack/vue-query 5, @vueuse/core 14, valibot 1, TypeScript 5 (022-vue-frontend)
 - localStorage for config snapshots, mock data layer for stubbed Tauri commands (022-vue-frontend)
