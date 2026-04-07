@@ -11,12 +11,7 @@
       "changelog-path": "CHANGELOG.md"
     }
   },
-  "plugins": [
-    {
-      "type": "cargo-workspace",
-      "merge": true
-    }
-  ],
+  "plugins": [],
   "exclude-paths": [
     "specs",
     ".specify",

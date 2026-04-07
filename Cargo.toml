@@ -1,6 +1,6 @@
 [package]
 name = "astro-up"
-version = "0.1.12"
+version.workspace = true
 publish = false
 edition.workspace = true
 license.workspace = true
@@ -11,7 +11,7 @@ resolver = "2"
 members = ["crates/astro-up-core", "crates/astro-up-cli", "crates/astro-up-gui"]
 
 [workspace.package]
-version = "0.1.10"
+version = "0.1.12"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/nightwatch-astro/astro-up"
