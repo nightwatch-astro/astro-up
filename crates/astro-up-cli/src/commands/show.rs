@@ -18,7 +18,8 @@ pub async fn handle_show(
     filter: Option<ShowFilter>,
     mode: &OutputMode,
 ) -> Result<()> {
-    match filter {
+    tracing::debug!(?filter, "entering handle_show");
+    let result = match filter {
         None | Some(ShowFilter::All) => {
             let reader = state.open_catalog_reader_ensure().await?;
             show_all(&reader, mode)
@@ -26,7 +27,9 @@ pub async fn handle_show(
         Some(ShowFilter::Installed) => show_installed(state, mode).await,
         Some(ShowFilter::Outdated) => show_outdated(state, mode).await,
         Some(ShowFilter::Backups { package }) => show_backups(package.as_deref(), mode).await,
-    }
+    };
+    tracing::debug!(ok = result.is_ok(), "exiting handle_show");
+    result
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +223,7 @@ pub fn handle_show_detail(
     package: &str,
     mode: &OutputMode,
 ) -> Result<()> {
+    tracing::debug!(package, "entering handle_show_detail");
     let id: PackageId = package
         .parse()
         .map_err(|_| eyre!("invalid package id: {package}"))?;
@@ -272,6 +276,7 @@ pub fn handle_show_detail(
     if !detail.dependencies.is_empty() {
         println!("Depends on:  {}", detail.dependencies.join(", "));
     }
+    tracing::debug!(package, "exiting handle_show_detail");
     Ok(())
 }
 

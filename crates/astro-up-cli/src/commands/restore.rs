@@ -18,6 +18,7 @@ pub async fn handle_restore(
     yes: bool,
     mode: &OutputMode,
 ) -> Result<()> {
+    tracing::debug!(package, yes, "entering handle_restore");
     let data_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up")
         .map(|dirs| dirs.data_dir().to_owned())
         .ok_or_else(|| eyre!("could not determine data directory"))?;
@@ -102,6 +103,7 @@ pub async fn handle_restore(
 
     service.restore(&request).await?;
     println!("Restored {} v{}", package, selected.version.raw);
+    tracing::debug!(package, version = %selected.version.raw, "exiting handle_restore");
     Ok(())
 }
 

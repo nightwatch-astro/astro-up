@@ -12,6 +12,7 @@ use crate::state::CliState;
 
 /// Wire scan command to core Scanner (T006).
 pub async fn handle_scan(state: &CliState, mode: &OutputMode) -> Result<()> {
+    tracing::debug!("entering handle_scan");
     // Ensure catalog is available
     state.open_catalog_reader_ensure().await?;
 
@@ -99,6 +100,11 @@ pub async fn handle_scan(state: &CliState, mode: &OutputMode) -> Result<()> {
             scan_result.errors.len()
         );
     }
+    tracing::debug!(
+        installed = rows.iter().filter(|r| r.status == "Installed").count(),
+        errors = scan_result.errors.len(),
+        "exiting handle_scan"
+    );
     Ok(())
 }
 
