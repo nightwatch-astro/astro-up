@@ -67,9 +67,18 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         let packages = self.packages.list_all()?;
 
         // Step 1: WMI enumeration (single system call, with timeout)
+        //
+        // Use std::thread::spawn + oneshot instead of spawn_blocking so the
+        // thread is fully detached. spawn_blocking tasks block tokio runtime
+        // shutdown — if WMI hangs (e.g., no WMI service on CI), the runtime
+        // can never shut down, causing test timeouts.
+        let (wmi_tx, wmi_rx) = tokio::sync::oneshot::channel();
+        std::thread::spawn(move || {
+            let _ = wmi_tx.send(wmi_apps::enumerate_installed());
+        });
         let wmi_programs = match tokio::time::timeout(
             std::time::Duration::from_secs(5),
-            tokio::task::spawn_blocking(wmi_apps::enumerate_installed),
+            wmi_rx,
         )
         .await
         {
