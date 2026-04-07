@@ -79,6 +79,12 @@ impl OrchestrationLock {
         write!(guard, "{}", std::process::id())?;
         guard.sync_all()?;
 
+        tracing::info!(
+            pid = std::process::id(),
+            path = %lock_path.display(),
+            "orchestration lock acquired"
+        );
+
         Ok(Self {
             _guard: guard,
             path: lock_path.to_owned(),
