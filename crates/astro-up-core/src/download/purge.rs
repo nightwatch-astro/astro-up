@@ -59,6 +59,13 @@ pub(crate) async fn purge(
         }
     }
 
+    tracing::debug!(
+        files_deleted,
+        bytes_reclaimed,
+        max_age_days,
+        "purge complete"
+    );
+
     Ok(PurgeResult {
         files_deleted,
         bytes_reclaimed,

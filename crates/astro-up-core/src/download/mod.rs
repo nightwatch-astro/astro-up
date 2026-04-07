@@ -68,11 +68,18 @@ impl DownloadManager {
     }
 
     /// Download a file. Returns error if another download is in progress.
+    #[tracing::instrument(skip_all, fields(url = %request.url, expected_hash))]
     pub async fn download(
         &self,
         request: &DownloadRequest,
         cancel_token: CancellationToken,
     ) -> Result<DownloadResult, CoreError> {
+        let download_start = std::time::Instant::now();
+        tracing::info!(
+            url = %request.url,
+            expected_hash = request.expected_hash.as_deref().unwrap_or("none"),
+            "download started"
+        );
         let _guard = self.try_acquire(&request.url)?;
 
         // Auto-create destination directory (FR-019)
@@ -99,6 +106,12 @@ impl DownloadManager {
 
             if let Ok(resp) = req_builder.send().await {
                 if resp.status() == reqwest::StatusCode::NOT_MODIFIED {
+                    let elapsed = download_start.elapsed();
+                    tracing::info!(
+                        duration_ms = elapsed.as_millis() as u64,
+                        cached = true,
+                        "download complete (cached)"
+                    );
                     return Ok(DownloadResult::Cached { path: dest });
                 }
             }
@@ -131,7 +144,7 @@ impl DownloadManager {
 
                 // If this was a resumed download, retry once from scratch (CHK012)
                 if result.resumed {
-                    tracing::warn!("hash mismatch after resumed download, retrying from scratch");
+                    tracing::warn!(retry_count = 1, "hash mismatch after resumed download, retrying from scratch");
                     let retry = stream::stream_download(
                         &self.client,
                         &request.url,
@@ -200,6 +213,15 @@ impl DownloadManager {
         let _ = self.event_tx.send(Event::DownloadComplete {
             id: request.filename.clone(),
         });
+
+        let elapsed = download_start.elapsed();
+        tracing::info!(
+            bytes_downloaded = result.bytes_downloaded,
+            duration_ms = elapsed.as_millis() as u64,
+            cached = false,
+            resumed = result.resumed,
+            "download complete"
+        );
 
         Ok(DownloadResult::Success {
             path: dest,
