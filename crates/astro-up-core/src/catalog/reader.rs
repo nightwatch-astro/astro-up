@@ -48,6 +48,15 @@ impl SqliteCatalogReader {
             });
         }
 
+        let package_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM packages", [], |row| row.get(0))
+            .unwrap_or(0);
+        tracing::info!(
+            schema_version = %meta.schema_version,
+            package_count,
+            "catalog opened"
+        );
+
         Ok(Self {
             conn,
             path: path.to_owned(),
