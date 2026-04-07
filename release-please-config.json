@@ -6,21 +6,16 @@
   "draft": true,
   "include-component-in-tag": false,
   "group-pull-request-title-pattern": "chore: release astro-up ${version}",
-  "linked-versions": true,
   "packages": {
-    "crates/astro-up-core": {
-      "component": "astro-up-core"
-    },
-    "crates/astro-up-cli": {
-      "component": "astro-up-cli"
-    },
-    "crates/astro-up-gui": {
-      "component": "astro-up-gui"
+    ".": {
+      "component": "astro-up",
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "plugins": [
     {
-      "type": "cargo-workspace"
+      "type": "cargo-workspace",
+      "merge": true
     }
   ],
   "changelog-sections": [
