@@ -16,7 +16,7 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
         DISPATCH_METHOD, DISPATCH_PROPERTYGET, DISPPARAMS, IDispatch,
     };
     use windows::Win32::System::Variant::VARIANT;
-    use windows::core::{BSTR, Interface, PCWSTR};
+    use windows::core::{BSTR, PCWSTR};
 
     // COM must be initialized on this thread
     let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
@@ -48,12 +48,12 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
     };
 
     // Helper: invoke method
-    let invoke = |obj: &IDispatch, dispid: i32, args: &mut [VARIANT]| -> Result<VARIANT, String> {
-        let mut params = DISPPARAMS {
+    let invoke = |obj: &IDispatch, dispid: i32, args: &[VARIANT]| -> Result<VARIANT, String> {
+        let params = DISPPARAMS {
             rgvarg: if args.is_empty() {
                 std::ptr::null_mut()
             } else {
-                args.as_mut_ptr()
+                args.as_ptr().cast_mut()
             },
             rgdispidNamedArgs: std::ptr::null_mut(),
             cArgs: args.len() as u32,
@@ -66,7 +66,7 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
                 &windows::core::GUID::zeroed(),
                 0x0400,
                 DISPATCH_METHOD,
-                &mut params,
+                &params,
                 Some(&mut result),
                 None,
                 None,
@@ -78,7 +78,7 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
 
     // Helper: get property
     let get_prop = |obj: &IDispatch, dispid: i32| -> Result<VARIANT, String> {
-        let mut params = DISPPARAMS::default();
+        let params = DISPPARAMS::default();
         let mut result = VARIANT::default();
         unsafe {
             obj.Invoke(
@@ -86,7 +86,7 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
                 &windows::core::GUID::zeroed(),
                 0x0400,
                 DISPATCH_PROPERTYGET,
-                &mut params,
+                &params,
                 Some(&mut result),
                 None,
                 None,
@@ -106,22 +106,22 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
     let open_id = get_id(&conn, "Open")?;
     let conn_str =
         BSTR::from("Provider=Search.CollatorDSO;Extended Properties='Application=Windows'");
-    let mut open_args = [
+    let open_args = [
         VARIANT::from(0i32),        // Options
         VARIANT::from(BSTR::new()), // Password
         VARIANT::from(BSTR::new()), // UserID
         VARIANT::from(conn_str),    // ConnectionString
     ];
-    invoke(&conn, open_id, &mut open_args).map_err(|e| format!("Connection.Open failed: {e}"))?;
+    invoke(&conn, open_id, &open_args).map_err(|e| format!("Connection.Open failed: {e}"))?;
 
     // conn.Execute(sql)
     let exec_id = get_id(&conn, "Execute")?;
-    let mut exec_args = [
+    let exec_args = [
         VARIANT::from(0i32),                     // Options
         VARIANT::default(),                      // RecordsAffected
         VARIANT::from(BSTR::from(sql.as_str())), // CommandText
     ];
-    let rs_variant = invoke(&conn, exec_id, &mut exec_args)
+    let rs_variant = invoke(&conn, exec_id, &exec_args)
         .map_err(|e| format!("Connection.Execute failed: {e}"))?;
 
     // Extract recordset IDispatch
@@ -135,7 +135,7 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
     if is_eof {
         let _ = get_id(&conn, "Close")
             .ok()
-            .map(|id| invoke(&conn, id, &mut []));
+            .map(|id| invoke(&conn, id, &[]));
         return Ok(None);
     }
 
@@ -145,9 +145,9 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
     let fields = IDispatch::try_from(&fields_val).map_err(|e| format!("Fields: {e}"))?;
 
     let item_id = get_id(&fields, "Item")?;
-    let mut item_args = [VARIANT::from(0i32)];
+    let item_args = [VARIANT::from(0i32)];
     let field_val =
-        invoke(&fields, item_id, &mut item_args).map_err(|e| format!("Fields.Item(0): {e}"))?;
+        invoke(&fields, item_id, &item_args).map_err(|e| format!("Fields.Item(0): {e}"))?;
     let field = IDispatch::try_from(&field_val).map_err(|e| format!("Field: {e}"))?;
 
     let value_id = get_id(&field, "Value")?;
@@ -156,7 +156,7 @@ pub fn find_file(filename: &str) -> Result<Option<String>, String> {
 
     let _ = get_id(&conn, "Close")
         .ok()
-        .map(|id| invoke(&conn, id, &mut []));
+        .map(|id| invoke(&conn, id, &[]));
 
     let result = path.to_string();
     if result.is_empty() {
