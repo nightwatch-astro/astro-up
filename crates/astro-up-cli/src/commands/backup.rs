@@ -85,6 +85,10 @@ pub async fn handle_backup(state: &CliState, package: &str, mode: &OutputMode) -
             package, metadata.file_count, metadata.total_size
         );
     }
-    tracing::debug!(package, file_count = metadata.file_count, "exiting handle_backup");
+    tracing::debug!(
+        package,
+        file_count = metadata.file_count,
+        "exiting handle_backup"
+    );
     Ok(())
 }

@@ -40,6 +40,7 @@ fn which_sudo() -> Option<std::path::PathBuf> {
 #[cfg(windows)]
 pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
     let current_exe = std::env::current_exe()?;
+    tracing::info!(exe = %current_exe.display(), args_count = args.len(), "re-executing with elevated privileges");
 
     if detect_sudo() {
         // Sudo path: inline elevation in the same terminal
@@ -105,6 +106,7 @@ pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
 
 #[cfg(not(windows))]
 pub async fn elevate_and_reexec(_args: &[String]) -> Result<(), CoreError> {
+    tracing::info!("elevation requested but not supported on this platform");
     Err(CoreError::Io(std::io::Error::new(
         std::io::ErrorKind::Unsupported,
         "elevation is only supported on Windows",

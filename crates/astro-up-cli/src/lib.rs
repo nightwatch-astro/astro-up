@@ -148,15 +148,18 @@ pub enum ConfigAction {
 
 pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
     let mode = OutputMode::detect(cli.json, cli.quiet);
-
     // Commands that don't need shared state (config, self-update) run without it.
     // All others initialize CliState lazily.
     match cli.command {
         Commands::Config { action } => {
-            return commands::config::handle_config(action, &mode).await;
+            let result = commands::config::handle_config(action, &mode).await;
+            tracing::debug!(ok = result.is_ok(), "command dispatch complete");
+            return result;
         }
         Commands::SelfUpdate { dry_run } => {
-            return commands::self_update::handle_self_update(dry_run, &mode).await;
+            let result = commands::self_update::handle_self_update(dry_run, &mode).await;
+            tracing::debug!(ok = result.is_ok(), "command dispatch complete");
+            return result;
         }
         _ => {}
     }
@@ -164,7 +167,7 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
     // Initialize shared state for commands that need catalog/ledger/backup.
     let state = CliState::new()?;
 
-    match cli.command {
+    let result = match cli.command {
         Commands::Show { package, filter } => {
             if let Some(ref pkg) = package {
                 let reader = state.open_catalog_reader_ensure().await?;
@@ -230,7 +233,9 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
         }
         // Already handled above
         Commands::Config { .. } | Commands::SelfUpdate { .. } => unreachable!(),
-    }
+    };
+    tracing::debug!(ok = result.is_ok(), "command dispatch complete");
+    result
 }
 
 #[cfg(test)]

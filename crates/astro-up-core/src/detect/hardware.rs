@@ -68,7 +68,10 @@ pub async fn discover(
     use std::time::Duration;
     use tracing::{debug, trace};
 
-    debug!(patterns = manifest_patterns.len(), "hardware discovery: enumerating USB devices");
+    debug!(
+        patterns = manifest_patterns.len(),
+        "hardware discovery: enumerating USB devices"
+    );
 
     #[derive(serde::Deserialize, Debug)]
     #[allow(non_snake_case)]

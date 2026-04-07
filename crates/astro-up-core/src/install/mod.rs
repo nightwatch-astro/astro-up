@@ -12,7 +12,7 @@ pub mod zip;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use tracing::{info, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
 use crate::error::CoreError;
 use crate::events::Event;
@@ -63,9 +63,11 @@ impl InstallerService {
         let start = Instant::now();
         let config = &request.install_config;
 
-        let _ = request.event_tx.send(Event::InstallStarted {
+        if let Err(e) = request.event_tx.send(Event::InstallStarted {
             id: request.package_id.clone(),
-        });
+        }) {
+            debug!("failed to send InstallStarted event: {e}");
+        }
 
         // DownloadOnly: open folder, no execution
         if config.method == InstallMethod::DownloadOnly {
@@ -78,10 +80,12 @@ impl InstallerService {
         for hook_cmd in &config.pre_install {
             info!(hook = %hook_cmd, "running pre-install hook");
             if let Err(e) = hooks::run_hook(hook_cmd).await {
-                let _ = request.event_tx.send(Event::InstallFailed {
+                if let Err(send_err) = request.event_tx.send(Event::InstallFailed {
                     id: request.package_id.clone(),
                     error: format!("pre-install hook failed: {e}"),
-                });
+                }) {
+                    debug!("failed to send InstallFailed event: {send_err}");
+                }
                 return Err(e);
             }
         }
@@ -156,20 +160,26 @@ impl InstallerService {
         // Emit completion events
         match &result {
             Ok(InstallResult::Success { .. } | InstallResult::Cancelled) => {
-                let _ = request.event_tx.send(Event::InstallComplete {
+                if let Err(e) = request.event_tx.send(Event::InstallComplete {
                     id: request.package_id.clone(),
-                });
+                }) {
+                    debug!("failed to send InstallComplete event: {e}");
+                }
             }
             Ok(InstallResult::SuccessRebootRequired { .. }) => {
-                let _ = request.event_tx.send(Event::InstallRebootRequired {
+                if let Err(e) = request.event_tx.send(Event::InstallRebootRequired {
                     id: request.package_id.clone(),
-                });
+                }) {
+                    debug!("failed to send InstallRebootRequired event: {e}");
+                }
             }
             Err(e) => {
-                let _ = request.event_tx.send(Event::InstallFailed {
+                if let Err(send_err) = request.event_tx.send(Event::InstallFailed {
                     id: request.package_id.clone(),
                     error: e.to_string(),
-                });
+                }) {
+                    debug!("failed to send InstallFailed event: {send_err}");
+                }
             }
         }
 

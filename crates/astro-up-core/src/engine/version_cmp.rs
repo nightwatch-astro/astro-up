@@ -161,14 +161,22 @@ pub fn parse_date(raw: &str) -> Option<NaiveDate> {
             let year: i32 = match parts[0].parse() {
                 Ok(v) => v,
                 Err(_) => {
-                    tracing::debug!(raw, component = parts[0], "failed to parse year in date version");
+                    tracing::debug!(
+                        raw,
+                        component = parts[0],
+                        "failed to parse year in date version"
+                    );
                     return None;
                 }
             };
             let month: u32 = match parts[1].parse() {
                 Ok(v) => v,
                 Err(_) => {
-                    tracing::debug!(raw, component = parts[1], "failed to parse month in date version");
+                    tracing::debug!(
+                        raw,
+                        component = parts[1],
+                        "failed to parse month in date version"
+                    );
                     return None;
                 }
             };
@@ -181,7 +189,11 @@ pub fn parse_date(raw: &str) -> Option<NaiveDate> {
             let day: u32 = match day_str.parse() {
                 Ok(v) => v,
                 Err(_) => {
-                    tracing::debug!(raw, component = day_str, "failed to parse day in date version");
+                    tracing::debug!(
+                        raw,
+                        component = day_str,
+                        "failed to parse day in date version"
+                    );
                     return None;
                 }
             };
@@ -266,7 +278,10 @@ fn compare_custom(a: &str, b: &str, pattern: &str) -> Ordering {
     tracing::trace!(a, b, pattern, format = "custom", "comparing versions");
     let re = {
         let Ok(mut cache) = REGEX_CACHE.lock() else {
-            tracing::debug!(pattern, "regex cache poisoned, falling back to string comparison");
+            tracing::debug!(
+                pattern,
+                "regex cache poisoned, falling back to string comparison"
+            );
             return a.cmp(b);
         };
         if let Some(cached) = cache.get(pattern) {

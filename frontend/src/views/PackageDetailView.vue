@@ -14,6 +14,7 @@ import TechnicalTab from "../components/detail/TechnicalTab.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
 import { useSoftwareList, useVersions, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
+import { logger } from "../utils/logger";
 // useOperations not needed here — core events handle operation lifecycle
 import type { PackageWithStatus, VersionEntry } from "../types/package";
 
@@ -45,20 +46,24 @@ const pkg = computed<PackageWithStatus | undefined>(() => {
 
 function handleInstall() {
   if (!pkg.value) return;
+  logger.debug("PackageDetailView", `install clicked: ${pkg.value.id}`);
   installMutation.mutate(pkg.value.id);
 }
 
 function handleUpdate() {
   if (!pkg.value) return;
+  logger.debug("PackageDetailView", `update clicked: ${pkg.value.id}`);
   updateMutation.mutate(pkg.value.id);
 }
 
 function handleBackup() {
+  logger.debug("PackageDetailView", `backup clicked: ${pkg.value?.id}`);
   showBackupConfirm.value = true;
 }
 
 function confirmBackup() {
   if (!pkg.value) return;
+  logger.debug("PackageDetailView", `backup confirmed: ${pkg.value.id}`);
   backupMutation.mutate([]);
 }
 </script>

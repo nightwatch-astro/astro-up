@@ -132,7 +132,11 @@ impl SqliteCatalogReader {
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
-        tracing::debug!(query, result_count = results.len(), "catalog search complete");
+        tracing::debug!(
+            query,
+            result_count = results.len(),
+            "catalog search complete"
+        );
         Ok(results)
     }
 
