@@ -15,12 +15,12 @@
 
 **Purpose**: Core types and file detection module that ALL user stories depend on
 
-- [ ] T001 [P] Create audit data model types (enums + structs) in `crates/shared/src/audit_types.rs` — `ResultStatus`, `CheckStatus`, `UrlFailureType`, `FileType`, `InstallerType`, `MatchResult`, `UrlCheck`, `VersionCheck`, `InstallMethodCheck`, `PrecisionCheck`, `PackageValidationResult`, `AuditReport`, `ValidationSummary` per data-model.md
-- [ ] T002 [P] Implement file type detection module in `crates/shared/src/file_type.rs` — `detect_file_type(bytes: &[u8]) -> FileType` (magic bytes: MZ=pe_exe, PK=zip, D0CF11E0=msi), `detect_installer_type(bytes: &[u8]) -> InstallerType` (pelite PE overlay scan for "NullsoftInst"=nsis, "Inno Setup"=inno_setup, else generic_exe), `detect_zip_contents(bytes: &[u8]) -> InstallerType` (check zip central directory for exe/msi)
-- [ ] T003 [P] Add `detected_type: Option<String>` to `Install` struct in `crates/shared/src/manifest.rs` — serde default None, skip_serializing_if Option::is_none. Add to `KNOWN_DETECTED_TYPES` const in `crates/shared/src/validate.rs`
-- [ ] T004 [P] Add `url_status: Option<String>` to `VersionEntry` struct in `crates/shared/src/version_file.rs` — serde default None, skip_serializing_if Option::is_none. Values: "reachable", "unreachable", "unchecked"
-- [ ] T005 Wire new modules into `crates/shared/src/lib.rs` — add `pub mod audit_types;` and `pub mod file_type;`
-- [ ] T006 Add tests for file type detection in `crates/shared/tests/file_type_detection.rs` — test fixtures with known magic bytes for PE, ZIP, MSI, NSIS (with Nullsoft string), Inno Setup (with signature), and unknown format
+- [x] T001 [P] Create audit data model types (enums + structs) in `crates/shared/src/audit_types.rs` — `ResultStatus`, `CheckStatus`, `UrlFailureType`, `FileType`, `InstallerType`, `MatchResult`, `UrlCheck`, `VersionCheck`, `InstallMethodCheck`, `PrecisionCheck`, `PackageValidationResult`, `AuditReport`, `ValidationSummary` per data-model.md
+- [x] T002 [P] Implement file type detection module in `crates/shared/src/file_type.rs` — `detect_file_type(bytes: &[u8]) -> FileType` (magic bytes: MZ=pe_exe, PK=zip, D0CF11E0=msi), `detect_installer_type(bytes: &[u8]) -> InstallerType` (pelite PE overlay scan for "NullsoftInst"=nsis, "Inno Setup"=inno_setup, else generic_exe), `detect_zip_contents(bytes: &[u8]) -> InstallerType` (check zip central directory for exe/msi)
+- [x] T003 [P] Add `detected_type: Option<String>` to `Install` struct in `crates/shared/src/manifest.rs` — serde default None, skip_serializing_if Option::is_none. Add to `KNOWN_DETECTED_TYPES` const in `crates/shared/src/validate.rs`
+- [x] T004 [P] Add `url_status: Option<String>` to `VersionEntry` struct in `crates/shared/src/version_file.rs` — serde default None, skip_serializing_if Option::is_none. Values: "reachable", "unreachable", "unchecked"
+- [x] T005 Wire new modules into `crates/shared/src/lib.rs` — add `pub mod audit_types;` and `pub mod file_type;`
+- [x] T006 Add tests for file type detection in `crates/shared/tests/file_type_detection.rs` — test fixtures with known magic bytes for PE, ZIP, MSI, NSIS (with Nullsoft string), Inno Setup (with signature), and unknown format
 
 **Checkpoint**: Foundation ready — shared types and detection logic available for checker
 
