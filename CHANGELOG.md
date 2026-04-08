@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.15](https://github.com/nightwatch-astro/astro-up/compare/v0.1.14...v0.1.15) (2026-04-08)
+
+
+### Features
+
+* manifest validation, zip_wrapped install flow, Burn/Wix methods ([#919](https://github.com/nightwatch-astro/astro-up/issues/919)) ([05dc532](https://github.com/nightwatch-astro/astro-up/commit/05dc5321cb669bf61a040b977029609db9960834))
+* manifest validation, zip_wrapped schema, silent install mode (spec 028) ([#918](https://github.com/nightwatch-astro/astro-up/issues/918)) ([d5a685b](https://github.com/nightwatch-astro/astro-up/commit/d5a685b77e29a15a46d6dabcfac3b4b9454bab17))
+
 ## [0.1.14](https://github.com/nightwatch-astro/astro-up/compare/v0.1.13...v0.1.14) (2026-04-07)
 
 
