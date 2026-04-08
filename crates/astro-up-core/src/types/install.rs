@@ -11,11 +11,10 @@ pub enum InstallMethod {
     Exe,
     Msi,
     InnoSetup,
-    Nullsoft,
+    Nsis,
     Wix,
     Burn,
     Zip,
-    ZipWrap,
     Portable,
     DownloadOnly,
 }
@@ -86,6 +85,10 @@ pub struct InstallerSwitches {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InstallConfig {
     pub method: InstallMethod,
+    /// Whether the download is a zip containing the installer.
+    /// When true: extract zip first, then run inner installer using `method`.
+    #[serde(default)]
+    pub zip_wrapped: bool,
     #[serde(default)]
     pub scope: Option<Scope>,
     #[serde(default)]
@@ -114,6 +117,7 @@ impl Default for InstallConfig {
     fn default() -> Self {
         Self {
             method: InstallMethod::Exe,
+            zip_wrapped: false,
             scope: None,
             elevation: None,
             upgrade_behavior: None,

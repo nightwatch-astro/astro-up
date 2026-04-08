@@ -123,7 +123,7 @@ impl InstallerService {
 
         // Execute based on method
         let result = match config.method {
-            InstallMethod::Zip | InstallMethod::ZipWrap => self.handle_zip_install(request).await,
+            InstallMethod::Zip => self.handle_zip_install(request).await,
             InstallMethod::Portable => self.handle_portable_install(request).await,
             _ => self.handle_exe_install(request).await,
         };
@@ -289,7 +289,7 @@ impl InstallerService {
     #[instrument(skip_all, fields(package = %request.package_id))]
     pub async fn uninstall(&self, request: &UninstallRequest) -> Result<(), CoreError> {
         match request.method {
-            InstallMethod::Zip | InstallMethod::ZipWrap | InstallMethod::Portable => {
+            InstallMethod::Zip | InstallMethod::Portable => {
                 let dir = request
                     .install_dir
                     .as_ref()
@@ -363,11 +363,10 @@ impl Installer for InstallerService {
             InstallMethod::Exe
                 | InstallMethod::Msi
                 | InstallMethod::InnoSetup
-                | InstallMethod::Nullsoft
+                | InstallMethod::Nsis
                 | InstallMethod::Wix
                 | InstallMethod::Burn
                 | InstallMethod::Zip
-                | InstallMethod::ZipWrap
                 | InstallMethod::Portable
                 | InstallMethod::DownloadOnly
         )

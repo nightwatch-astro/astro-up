@@ -342,6 +342,16 @@ impl SqliteCatalogReader {
         };
 
         let method = parse_install_method(&method_str);
+        // zip_wrapped: try to read from catalog (new schema) or infer from legacy zip_wrap method
+        let zip_wrapped = self
+            .conn
+            .query_row(
+                "SELECT zip_wrapped FROM install WHERE package_id = ?1",
+                params![id.as_ref()],
+                |row| row.get::<_, i32>(0),
+            )
+            .map(|v| v != 0)
+            .unwrap_or(method_str == "zip_wrap"); // legacy catalogs: infer from old method
         let scope = scope_str.and_then(|s| s.parse().ok());
         let elevation = if elevation_int != 0 {
             Some(crate::types::Elevation::Required)
@@ -393,6 +403,7 @@ impl SqliteCatalogReader {
 
         Ok(Some(crate::types::InstallConfig {
             method,
+            zip_wrapped,
             scope,
             elevation,
             upgrade_behavior: None,
@@ -473,11 +484,10 @@ fn parse_install_method(method_str: &str) -> crate::types::InstallMethod {
         "exe" => crate::types::InstallMethod::Exe,
         "msi" => crate::types::InstallMethod::Msi,
         "inno_setup" => crate::types::InstallMethod::InnoSetup,
-        "nullsoft" | "nsis" => crate::types::InstallMethod::Nullsoft,
+        "nsis" => crate::types::InstallMethod::Nsis,
         "wix" => crate::types::InstallMethod::Wix,
         "burn" => crate::types::InstallMethod::Burn,
         "zip" => crate::types::InstallMethod::Zip,
-        "zip_wrap" => crate::types::InstallMethod::ZipWrap,
         "portable" => crate::types::InstallMethod::Portable,
         "download_only" => crate::types::InstallMethod::DownloadOnly,
         _ => crate::types::InstallMethod::Exe, // default fallback

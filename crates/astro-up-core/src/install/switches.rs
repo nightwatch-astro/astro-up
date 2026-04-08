@@ -11,14 +11,13 @@ fn default_silent_switches(method: &InstallMethod) -> Vec<String> {
             "/SUPPRESSMSGBOXES".into(),
         ],
         InstallMethod::Msi => vec!["/qn".into(), "/norestart".into()],
-        InstallMethod::Nullsoft => vec!["/S".into()],
+        InstallMethod::Nsis => vec!["/S".into()],
         InstallMethod::Wix | InstallMethod::Burn => {
             vec!["/quiet".into(), "/norestart".into()]
         }
-        // Exe, Zip, ZipWrap, Portable, DownloadOnly have no default switches
+        // Exe, Zip, Portable, DownloadOnly have no default switches
         InstallMethod::Exe
         | InstallMethod::Zip
-        | InstallMethod::ZipWrap
         | InstallMethod::Portable
         | InstallMethod::DownloadOnly => vec![],
     }
@@ -42,9 +41,9 @@ fn install_dir_switch(method: &InstallMethod, dir: &Path) -> Option<String> {
     match method {
         InstallMethod::InnoSetup => Some(format!("/DIR={dir_str}")),
         InstallMethod::Msi => Some(format!("INSTALLDIR={dir_str}")),
-        InstallMethod::Nullsoft => Some(format!("/D={dir_str}")),
+        InstallMethod::Nsis => Some(format!("/D={dir_str}")),
         InstallMethod::Wix | InstallMethod::Burn => Some(format!("INSTALLDIR={dir_str}")),
-        // Zip/ZipWrap/Portable use the dir directly (not as a switch)
+        // Zip/Portable use the dir directly (not as a switch)
         // Exe, DownloadOnly: no standard directory switch
         _ => None,
     }
@@ -118,8 +117,8 @@ mod tests {
     }
 
     #[test]
-    fn nullsoft_defaults() {
-        let config = config_for(InstallMethod::Nullsoft);
+    fn nsis_defaults() {
+        let config = config_for(InstallMethod::Nsis);
         let switches = resolve_switches(&config);
         assert_eq!(switches, vec!["/S"]);
     }
@@ -214,8 +213,8 @@ mod tests {
     }
 
     #[test]
-    fn nullsoft_with_dir_override() {
-        let config = config_for(InstallMethod::Nullsoft);
+    fn nsis_with_dir_override() {
+        let config = config_for(InstallMethod::Nsis);
         let dir = Path::new("C:\\Programs\\PHD2");
         let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir));
         assert!(args.contains(&"/D=C:\\Programs\\PHD2".to_string()));

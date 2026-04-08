@@ -488,24 +488,7 @@ where
         check_cancel!();
 
         // 6. Install
-        let install_config =
-            planned
-                .software
-                .install
-                .clone()
-                .unwrap_or_else(|| crate::types::InstallConfig {
-                    method: crate::types::InstallMethod::Exe,
-                    scope: None,
-                    elevation: None,
-                    upgrade_behavior: None,
-                    install_modes: vec![],
-                    success_codes: vec![],
-                    pre_install: vec![],
-                    post_install: vec![],
-                    switches: None,
-                    known_exit_codes: std::collections::HashMap::new(),
-                    timeout: None,
-                });
+        let install_config = planned.software.install.clone().unwrap_or_default();
 
         let timeout = install_config
             .timeout

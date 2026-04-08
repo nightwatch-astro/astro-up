@@ -60,9 +60,8 @@ fn detection_method_round_trip(#[case] input: &str, #[case] expected: DetectionM
 #[case("exe", InstallMethod::Exe)]
 #[case("msi", InstallMethod::Msi)]
 #[case("inno_setup", InstallMethod::InnoSetup)]
-#[case("nullsoft", InstallMethod::Nullsoft)]
+#[case("nsis", InstallMethod::Nsis)]
 #[case("zip", InstallMethod::Zip)]
-#[case("zip_wrap", InstallMethod::ZipWrap)]
 #[case("portable", InstallMethod::Portable)]
 #[case("download_only", InstallMethod::DownloadOnly)]
 fn install_method_round_trip(#[case] input: &str, #[case] expected: InstallMethod) {
