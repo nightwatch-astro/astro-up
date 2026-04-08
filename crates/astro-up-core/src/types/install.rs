@@ -89,6 +89,9 @@ pub struct InstallConfig {
     /// When true: extract zip first, then run inner installer using `method`.
     #[serde(default)]
     pub zip_wrapped: bool,
+    /// Subfolder inside the ZIP to find the installer (e.g., `"x64"` for 64-bit).
+    #[serde(default)]
+    pub zip_inner_path: Option<String>,
     #[serde(default)]
     pub scope: Option<Scope>,
     #[serde(default)]
@@ -118,6 +121,7 @@ impl Default for InstallConfig {
         Self {
             method: InstallMethod::Exe,
             zip_wrapped: false,
+            zip_inner_path: None,
             scope: None,
             elevation: None,
             upgrade_behavior: None,

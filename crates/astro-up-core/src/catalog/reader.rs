@@ -352,6 +352,14 @@ impl SqliteCatalogReader {
             )
             .map(|v| v != 0)
             .unwrap_or(method_str == "zip_wrap"); // legacy catalogs: infer from old method
+        let zip_inner_path: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT zip_inner_path FROM install WHERE package_id = ?1",
+                params![id.as_ref()],
+                |row| row.get(0),
+            )
+            .unwrap_or(None);
         let scope = scope_str.and_then(|s| s.parse().ok());
         let elevation = if elevation_int != 0 {
             Some(crate::types::Elevation::Required)
@@ -404,6 +412,7 @@ impl SqliteCatalogReader {
         Ok(Some(crate::types::InstallConfig {
             method,
             zip_wrapped,
+            zip_inner_path,
             scope,
             elevation,
             upgrade_behavior: None,

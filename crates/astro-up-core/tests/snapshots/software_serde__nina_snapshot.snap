@@ -59,6 +59,7 @@ expression: software
   "install": {
     "method": "inno_setup",
     "zip_wrapped": false,
+    "zip_inner_path": null,
     "scope": "either",
     "elevation": "self",
     "upgrade_behavior": "install",

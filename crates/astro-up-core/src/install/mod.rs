@@ -287,8 +287,19 @@ impl InstallerService {
         info!(path = %extract_path.display(), "zip extracted");
 
         // Find the inner installer (first .exe or .msi)
+        // When zip_inner_path is set, search only that subfolder (e.g., "x64")
+        let search_dir = if let Some(ref inner_path) = config.zip_inner_path {
+            let inner = extract_path.join(inner_path);
+            if inner.exists() {
+                inner
+            } else {
+                extract_path.clone()
+            }
+        } else {
+            extract_path.clone()
+        };
         let mut inner_installer = None;
-        if let Ok(mut entries) = tokio::fs::read_dir(&extract_path).await {
+        if let Ok(mut entries) = tokio::fs::read_dir(&search_dir).await {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 let path = entry.path();
                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
