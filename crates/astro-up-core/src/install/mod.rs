@@ -17,7 +17,7 @@ use tracing::{debug, info, instrument, warn};
 use crate::error::CoreError;
 use crate::events::Event;
 use crate::traits::Installer;
-use crate::types::{Elevation, InstallMethod, UpgradeBehavior};
+use crate::types::{Elevation, InstallConfig, InstallMethod, UpgradeBehavior};
 
 use self::exit_codes::interpret_exit_code;
 use self::switches::build_args;
@@ -121,11 +121,17 @@ impl InstallerService {
             });
         }
 
-        // Execute based on method
-        let result = match config.method {
-            InstallMethod::Zip | InstallMethod::ZipWrap => self.handle_zip_install(request).await,
-            InstallMethod::Portable => self.handle_portable_install(request).await,
-            _ => self.handle_exe_install(request).await,
+        // Execute based on method (with zip_wrapped pre-extraction)
+        let result = if config.zip_wrapped {
+            // Extract zip first, then run inner installer
+            info!(package = %request.package_id, "zip_wrapped: extracting before install");
+            self.handle_zip_wrapped_install(request, config).await
+        } else {
+            match config.method {
+                InstallMethod::Zip => self.handle_zip_install(request).await,
+                InstallMethod::Portable => self.handle_portable_install(request).await,
+                _ => self.handle_exe_install(request).await,
+            }
         };
 
         // Post-install hooks (warn on failure, don't abort)
@@ -196,6 +202,7 @@ impl InstallerService {
             config,
             &request.installer_path,
             request.install_dir.as_deref(),
+            request.quiet,
         );
 
         let exit_code = if matches!(config.method, InstallMethod::Burn) {
@@ -260,6 +267,100 @@ impl InstallerService {
         Ok(InstallResult::Success { path: Some(path) })
     }
 
+    /// Handle zip-wrapped packages: extract zip to temp dir, find the inner
+    /// installer (exe/msi), then run it using the method's install logic.
+    async fn handle_zip_wrapped_install(
+        &self,
+        request: &InstallRequest,
+        config: &InstallConfig,
+    ) -> Result<InstallResult, CoreError> {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "astro-up-zip-{}",
+            request
+                .package_id
+                .replace(|c: char| !c.is_alphanumeric(), "_")
+        ));
+        tokio::fs::create_dir_all(&temp_dir).await?;
+
+        // Extract the zip
+        let extract_path = zip::extract_zip(&request.installer_path, &temp_dir).await?;
+        info!(path = %extract_path.display(), "zip extracted");
+
+        // Find the inner installer (first .exe or .msi)
+        let mut inner_installer = None;
+        if let Ok(mut entries) = tokio::fs::read_dir(&extract_path).await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let path = entry.path();
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if ext.eq_ignore_ascii_case("exe") || ext.eq_ignore_ascii_case("msi") {
+                        inner_installer = Some(path);
+                        break;
+                    }
+                }
+            }
+        }
+
+        let installer_path = inner_installer.ok_or_else(|| {
+            CoreError::Io(std::io::Error::other(format!(
+                "no exe or msi found inside zip for {}",
+                request.package_id
+            )))
+        })?;
+
+        info!(inner = %installer_path.display(), method = %config.method, "running inner installer");
+
+        // Dispatch to the appropriate handler based on the method
+        match config.method {
+            InstallMethod::DownloadOnly => {
+                // Plain zip with no installer — just keep the extracted files
+                let dest = self.resolve_install_dir(request);
+                if extract_path != dest {
+                    // rename may fail across filesystems; fall back to copy
+                    if tokio::fs::rename(&extract_path, &dest).await.is_err() {
+                        std::fs::rename(&extract_path, &dest)?;
+                    }
+                }
+                Ok(InstallResult::Success { path: Some(dest) })
+            }
+            _ => {
+                // Run the inner installer
+                let (exe, args) = build_args(
+                    config,
+                    &installer_path,
+                    request.install_dir.as_deref(),
+                    request.quiet,
+                );
+                let exit_code = process::spawn_simple(
+                    &exe,
+                    &args,
+                    request.timeout,
+                    request.cancel_token.clone(),
+                )
+                .await?;
+                let outcome = interpret_exit_code(exit_code, config);
+                match outcome {
+                    ExitCodeOutcome::Success => Ok(InstallResult::Success { path: None }),
+                    ExitCodeOutcome::SuccessRebootRequired => {
+                        Ok(InstallResult::SuccessRebootRequired { path: None })
+                    }
+                    ExitCodeOutcome::ElevationRequired => Err(CoreError::ElevationRequired),
+                    ExitCodeOutcome::Failed { code, semantic } => {
+                        if let Some(known) = semantic {
+                            Err(CoreError::InstallerFailed {
+                                exit_code: code,
+                                response: known,
+                            })
+                        } else {
+                            Err(CoreError::Io(std::io::Error::other(format!(
+                                "installer failed with exit code {code}"
+                            ))))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     async fn handle_portable_install(
         &self,
         request: &InstallRequest,
@@ -289,7 +390,7 @@ impl InstallerService {
     #[instrument(skip_all, fields(package = %request.package_id))]
     pub async fn uninstall(&self, request: &UninstallRequest) -> Result<(), CoreError> {
         match request.method {
-            InstallMethod::Zip | InstallMethod::ZipWrap | InstallMethod::Portable => {
+            InstallMethod::Zip | InstallMethod::Portable => {
                 let dir = request
                     .install_dir
                     .as_ref()
@@ -363,11 +464,10 @@ impl Installer for InstallerService {
             InstallMethod::Exe
                 | InstallMethod::Msi
                 | InstallMethod::InnoSetup
-                | InstallMethod::Nullsoft
+                | InstallMethod::Nsis
                 | InstallMethod::Wix
                 | InstallMethod::Burn
                 | InstallMethod::Zip
-                | InstallMethod::ZipWrap
                 | InstallMethod::Portable
                 | InstallMethod::DownloadOnly
         )

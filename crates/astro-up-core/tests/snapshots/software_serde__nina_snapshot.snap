@@ -1,5 +1,6 @@
 ---
 source: crates/astro-up-core/tests/software_serde.rs
+assertion_line: 102
 expression: software
 ---
 {
@@ -57,6 +58,7 @@ expression: software
   },
   "install": {
     "method": "inno_setup",
+    "zip_wrapped": false,
     "scope": "either",
     "elevation": "self",
     "upgrade_behavior": "install",

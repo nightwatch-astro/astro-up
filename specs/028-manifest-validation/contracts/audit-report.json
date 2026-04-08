@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuditReport",
+  "description": "Manifest validation audit report — output of checker --audit mode",
+  "type": "object",
+  "required": ["generated_at", "manifests_checked", "manifests_passed", "manifests_failed", "results"],
+  "properties": {
+    "generated_at": { "type": "string", "format": "date-time" },
+    "manifests_checked": { "type": "integer", "minimum": 0 },
+    "manifests_passed": { "type": "integer", "minimum": 0 },
+    "manifests_failed": { "type": "integer", "minimum": 0 },
+    "manifests_skipped": { "type": "integer", "minimum": 0 },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "provider", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "provider": { "type": "string" },
+          "status": { "enum": ["pass", "fail", "skip"] },
+          "version_discovery": {
+            "type": "object",
+            "properties": {
+              "status": { "enum": ["pass", "fail", "skip"] },
+              "version": { "type": ["string", "null"] },
+              "error": { "type": ["string", "null"] }
+            }
+          },
+          "url_reachability": {
+            "type": "object",
+            "properties": {
+              "status": { "enum": ["pass", "fail", "skip"] },
+              "url": { "type": ["string", "null"] },
+              "http_status": { "type": ["integer", "null"] },
+              "failure_type": { "enum": ["permanent", "transient", "blocked", null] },
+              "method_used": { "type": ["string", "null"] }
+            }
+          },
+          "install_method": {
+            "type": "object",
+            "properties": {
+              "status": { "enum": ["pass", "fail", "skip"] },
+              "declared": { "type": "string" },
+              "detected": { "enum": ["pe_exe", "zip", "msi", "nsis", "inno_setup", "unknown", null] },
+              "match_result": { "enum": ["match", "mismatch", "skipped", "detection_failed"] }
+            }
+          },
+          "playwright": {
+            "type": ["object", "null"],
+            "properties": {
+              "status": { "enum": ["pass", "fail", "skip", "timeout"] },
+              "version": { "type": ["string", "null"] },
+              "checker_version": { "type": ["string", "null"] },
+              "versions_match": { "type": ["boolean", "null"] },
+              "selector_matched": { "type": "boolean" },
+              "error": { "type": ["string", "null"] }
+            }
+          },
+          "version_precision": {
+            "type": ["object", "null"],
+            "properties": {
+              "status": { "enum": ["pass", "fail", "skip"] },
+              "url_contains_version": { "type": "boolean" },
+              "url_version_segment": { "type": ["string", "null"] },
+              "discovered_version": { "type": "string" },
+              "comparison_mode": { "enum": ["exact", "normalized"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}
