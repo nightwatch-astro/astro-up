@@ -25,10 +25,10 @@ const showUpdateAllConfirm = ref(false);
 const showScanConfirm = ref(false);
 const pendingUpdatePkg = ref<PackageWithStatus | null>(null);
 
+// Backend "installed" filter returns only packages with ledger entries (post-scan).
+// No client-side filtering needed — all returned packages are installed.
 const installed = computed<PackageWithStatus[]>(() =>
-  ((software.value ?? []) as PackageWithStatus[]).filter(
-    (p) => p.detection?.type === "Installed" || p.detection?.type === "InstalledUnknownVersion",
-  ),
+  (software.value ?? []) as PackageWithStatus[],
 );
 
 const filtered = computed(() => {

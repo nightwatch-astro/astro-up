@@ -11,6 +11,7 @@ import type { PackageWithStatus } from "../types/package";
 
 const router = useRouter();
 const { data: software } = useSoftwareList(() => "all");
+const { data: installedSoftware } = useSoftwareList(() => "installed");
 const { data: updates } = useUpdateCheck();
 const scanMutation = useScanInstalled();
 const updateAllMutation = useUpdateAll();
@@ -21,12 +22,7 @@ const showUpdateAllConfirm = ref(false);
 
 const catalogCount = computed(() => software.value?.length ?? 0);
 
-const installedCount = computed(() => {
-  if (!software.value) return 0;
-  return (software.value as PackageWithStatus[]).filter(
-    (p) => p.detection?.type === "Installed" || p.detection?.type === "InstalledUnknownVersion",
-  ).length;
-});
+const installedCount = computed(() => installedSoftware.value?.length ?? 0);
 
 const updateCount = computed(() => updates.value?.length ?? 0);
 
@@ -132,7 +128,7 @@ function confirmUpdateAll() {
               {{ pkg.name }}
             </div>
             <div class="upd-sub">
-              {{ pkg.category }} &middot; {{ pkg.detection?.type === 'Installed' || pkg.detection?.type === 'InstalledUnknownVersion' ? pkg.detection.method : pkg.software_type }}
+              {{ pkg.category }} &middot; {{ pkg.software_type }}
             </div>
           </div>
           <div class="upd-arrow">

@@ -42,8 +42,8 @@ pub enum InstallScope {
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum InstallMethod {
-    #[default]
     Silent,
+    #[default]
     Interactive,
 }
 

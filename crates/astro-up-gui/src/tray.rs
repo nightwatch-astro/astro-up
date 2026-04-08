@@ -40,6 +40,10 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
             }
             "quit" => {
                 tracing::info!("Tray: quit requested");
+                let state = app.state::<crate::state::AppState>();
+                state
+                    .quit_requested
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
                 app.exit(0);
             }
             _ => {}

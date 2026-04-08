@@ -176,6 +176,24 @@ fn try_list_software(
     let reader = state.open_catalog_reader()?;
     let packages = match filter {
         "all" => reader.list_all()?,
+        "installed" => {
+            // Read ledger to find installed packages, then enrich with catalog data
+            use astro_up_core::detect::scanner::LedgerStore;
+            let ledger = SqliteLedgerStore::new(state.db_path.clone());
+            let entries = ledger
+                .list_acknowledged()
+                .map_err(|e| astro_up_core::error::CoreError::Database(e.to_string()))?;
+            if entries.is_empty() {
+                vec![]
+            } else {
+                let all = reader.list_all()?;
+                let installed_ids: std::collections::HashSet<&str> =
+                    entries.iter().map(|e| e.package_id.as_str()).collect();
+                all.into_iter()
+                    .filter(|p| installed_ids.contains(p.id.as_ref()))
+                    .collect()
+            }
+        }
         f if f.starts_with("category:") => {
             let category = f.strip_prefix("category:").unwrap();
             let cat_filter = CatalogFilter {
@@ -477,6 +495,8 @@ async fn run_orchestrated_operation(
             let backup = BackupService::new(backup_dir, 5);
             let db_conn =
                 rusqlite::Connection::open(&db_path).map_err(|e| CoreError::from(e.to_string()))?;
+            astro_up_core::engine::history::create_table(&db_conn)
+                .map_err(|e| CoreError::from(format!("failed to create operations table: {e}")))?;
             let db = std::sync::Arc::new(std::sync::Mutex::new(db_conn));
 
             let download_dir = if config.paths.download_dir.as_os_str().is_empty() {
@@ -495,6 +515,8 @@ async fn run_orchestrated_operation(
                 download_dir,
             )?;
 
+            let quiet =
+                config.ui.default_install_method == astro_up_core::config::InstallMethod::Silent;
             let plan = orchestrator
                 .plan(UpdateRequest {
                     packages: pkg_ids,
@@ -502,6 +524,7 @@ async fn run_orchestrated_operation(
                     allow_downgrade: false,
                     dry_run: false,
                     confirmed: true,
+                    quiet,
                 })
                 .await?;
 

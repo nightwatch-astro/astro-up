@@ -55,7 +55,7 @@ expression: value
     "auto_notify_updates": true,
     "auto_scan_on_launch": false,
     "check_interval": "1day",
-    "default_install_method": "silent",
+    "default_install_method": "interactive",
     "default_install_scope": "user",
     "font_size": "medium",
     "theme": "system"

@@ -82,6 +82,8 @@ impl CliState {
     ) -> Result<std::sync::Arc<std::sync::Mutex<astro_up_core::rusqlite::Connection>>> {
         let conn = astro_up_core::rusqlite::Connection::open(&self.db_path)
             .map_err(|e| eyre!("failed to open database: {e}"))?;
+        astro_up_core::engine::history::create_table(&conn)
+            .map_err(|e| eyre!("failed to create operations table: {e}"))?;
         Ok(std::sync::Arc::new(std::sync::Mutex::new(conn)))
     }
 }

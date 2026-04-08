@@ -112,6 +112,9 @@ pub struct UpdatePlan {
     pub skipped: Vec<SkippedPackage>,
     /// Non-fatal warnings encountered during planning.
     pub warnings: Vec<String>,
+    /// Run installers silently (true) or show installer UI (false).
+    #[serde(default = "super::orchestrator::default_quiet")]
+    pub quiet: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -320,6 +323,7 @@ impl UpdatePlanner {
             items,
             skipped,
             warnings,
+            quiet: false,
         })
     }
 
@@ -369,6 +373,7 @@ impl UpdatePlanner {
             items,
             skipped,
             warnings,
+            quiet: full_plan.quiet,
         })
     }
 }

@@ -40,13 +40,15 @@ async fn chain_pe_fallback_on_non_windows() {
     // On non-Windows, registry returns Unavailable, chain should fall through to PE
     let config = DetectionConfig {
         fallback: Some(Box::new(pe_config("tests/fixtures/test.exe"))),
-        ..registry_config("NonExistent")
+        ..registry_config(
+            r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NonExistent",
+        )
     };
 
     let resolver = PathResolver::new();
     let result = detect::run_chain(&config, &resolver, None).await;
 
-    // On non-Windows: registry returns Unavailable (not installed-like), so chain continues to PE
+    // On non-Windows: registry returns Unavailable (not on Windows), so chain continues to PE
     // PE should find version 3.2.1
     if cfg!(not(windows)) {
         // Registry returns Unavailable which is not "installed", so chain falls through
@@ -88,6 +90,49 @@ async fn chain_exhausted_returns_not_installed() {
     let result = detect::run_chain(&config, &resolver, None).await;
 
     assert!(matches!(result, DetectionResult::NotInstalled));
+}
+
+#[tokio::test]
+async fn registry_rejects_relative_key() {
+    // registry_key without HKEY_ prefix should return Unavailable, not silently fail
+    let config = registry_config("PHD 2_is1");
+    let resolver = PathResolver::new();
+    let result = detect::run_chain(&config, &resolver, None).await;
+
+    match result {
+        DetectionResult::Unavailable { reason } => {
+            assert!(
+                reason.contains("absolute path"),
+                "expected absolute path error, got: {reason}"
+            );
+        }
+        other => panic!("expected Unavailable for relative key, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn registry_rejects_relative_key_falls_through_to_pe() {
+    // Chain should continue to PE fallback when registry key is invalid
+    let config = DetectionConfig {
+        fallback: Some(Box::new(pe_config("tests/fixtures/test.exe"))),
+        ..registry_config("SOFTWARE\\Some\\Key")
+    };
+
+    let resolver = PathResolver::new();
+    let result = detect::run_chain(&config, &resolver, None).await;
+
+    // On non-Windows: registry returns Unavailable (bad key), chain falls to PE
+    if cfg!(not(windows)) {
+        match result {
+            DetectionResult::Installed {
+                version, method, ..
+            } => {
+                assert_eq!(version.raw, "3.2.1");
+                assert_eq!(method, DetectionMethod::PeFile);
+            }
+            other => panic!("expected PE fallback after invalid registry key, got {other:?}"),
+        }
+    }
 }
 
 #[tokio::test]
