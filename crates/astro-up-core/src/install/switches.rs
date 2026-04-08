@@ -53,10 +53,15 @@ fn install_dir_switch(method: &InstallMethod, dir: &Path) -> Option<String> {
 ///
 /// For MSI: returns args for msiexec (the installer path is passed as `/i <path>`).
 /// For other types: returns args to pass to the installer executable directly.
+/// Builds the complete argument list for an installer invocation.
+///
+/// When `silent` is true, silent switches are included (default behavior).
+/// When `silent` is false, no switches are passed — the installer shows its UI.
 pub fn build_args(
     config: &InstallConfig,
     installer_path: &Path,
     install_dir: Option<&Path>,
+    silent: bool,
 ) -> (String, Vec<String>) {
     let mut args = Vec::new();
 
@@ -65,7 +70,9 @@ pub fn build_args(
             // MSI uses msiexec as the executable
             args.push("/i".into());
             args.push(installer_path.display().to_string());
-            args.extend(resolve_switches(config));
+            if silent {
+                args.extend(resolve_switches(config));
+            }
             if let Some(dir) = install_dir {
                 if let Some(switch) = install_dir_switch(&config.method, dir) {
                     args.push(switch);
@@ -75,7 +82,9 @@ pub fn build_args(
         }
         _ => {
             // All other types: run the installer directly
-            args.extend(resolve_switches(config));
+            if silent {
+                args.extend(resolve_switches(config));
+            }
             if let Some(dir) = install_dir {
                 if let Some(switch) = install_dir_switch(&config.method, dir) {
                     args.push(switch);
@@ -198,7 +207,7 @@ mod tests {
     #[test]
     fn msi_build_args() {
         let config = config_for(InstallMethod::Msi);
-        let (exe, args) = build_args(&config, Path::new("installer.msi"), None);
+        let (exe, args) = build_args(&config, Path::new("installer.msi"), None, true);
         assert_eq!(exe, "msiexec");
         assert_eq!(args, vec!["/i", "installer.msi", "/qn", "/norestart"]);
     }
@@ -207,7 +216,7 @@ mod tests {
     fn innosetup_with_dir_override() {
         let config = config_for(InstallMethod::InnoSetup);
         let dir = Path::new("C:\\Programs\\NINA");
-        let (exe, args) = build_args(&config, Path::new("setup.exe"), Some(dir));
+        let (exe, args) = build_args(&config, Path::new("setup.exe"), Some(dir), true);
         assert_eq!(exe, "setup.exe");
         assert!(args.contains(&"/DIR=C:\\Programs\\NINA".to_string()));
     }
@@ -216,7 +225,7 @@ mod tests {
     fn nsis_with_dir_override() {
         let config = config_for(InstallMethod::Nsis);
         let dir = Path::new("C:\\Programs\\PHD2");
-        let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir));
+        let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir), true);
         assert!(args.contains(&"/D=C:\\Programs\\PHD2".to_string()));
     }
 
@@ -224,7 +233,7 @@ mod tests {
     fn msi_with_dir_override() {
         let config = config_for(InstallMethod::Msi);
         let dir = Path::new("C:\\Programs\\ASCOM");
-        let (exe, args) = build_args(&config, Path::new("driver.msi"), Some(dir));
+        let (exe, args) = build_args(&config, Path::new("driver.msi"), Some(dir), true);
         assert_eq!(exe, "msiexec");
         assert!(args.contains(&"INSTALLDIR=C:\\Programs\\ASCOM".to_string()));
     }
@@ -233,7 +242,27 @@ mod tests {
     fn wix_with_dir_override() {
         let config = config_for(InstallMethod::Wix);
         let dir = Path::new("C:\\Programs\\SharpCap");
-        let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir));
+        let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir), true);
         assert!(args.contains(&"INSTALLDIR=C:\\Programs\\SharpCap".to_string()));
+    }
+
+    #[test]
+    fn interactive_mode_no_switches() {
+        let config = config_for(InstallMethod::InnoSetup);
+        let (exe, args) = build_args(&config, Path::new("setup.exe"), None, false);
+        assert_eq!(exe, "setup.exe");
+        assert!(args.is_empty(), "interactive mode should pass no switches");
+    }
+
+    #[test]
+    fn interactive_msi_no_switches() {
+        let config = config_for(InstallMethod::Msi);
+        let (exe, args) = build_args(&config, Path::new("setup.msi"), None, false);
+        assert_eq!(exe, "msiexec");
+        assert_eq!(
+            args,
+            vec!["/i", "setup.msi"],
+            "interactive MSI: only /i, no silent switches"
+        );
     }
 }
