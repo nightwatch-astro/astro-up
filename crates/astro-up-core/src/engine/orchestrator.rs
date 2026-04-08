@@ -56,6 +56,9 @@ pub struct UpdateRequest {
     /// Defaults to true for backward compatibility.
     #[serde(default = "default_quiet")]
     pub quiet: bool,
+    /// Install scope: user or machine.
+    #[serde(default)]
+    pub install_scope: crate::config::InstallScope,
 }
 
 pub(crate) fn default_quiet() -> bool {
@@ -271,6 +274,7 @@ where
         asset_selector: &Option<AssetSelector>,
         cancel: &CancellationToken,
         quiet: bool,
+        install_scope: &crate::config::InstallScope,
     ) -> PackageResult {
         use std::time::Instant;
 
@@ -513,6 +517,7 @@ where
             detection_config: planned.software.detection.clone(),
             timeout,
             quiet,
+            install_scope: install_scope.clone(),
             cancel_token: cancel.child_token(),
             event_tx: tokio::sync::broadcast::channel(16).0,
         };
@@ -793,6 +798,7 @@ where
             planner.plan_specific(&request.packages)?
         };
         plan.quiet = request.quiet;
+        plan.install_scope = request.install_scope;
         Ok(plan)
     }
 
@@ -850,7 +856,14 @@ where
             }
 
             let result = self
-                .execute_single(planned, &on_event, &asset_selector, &cancel, plan.quiet)
+                .execute_single(
+                    planned,
+                    &on_event,
+                    &asset_selector,
+                    &cancel,
+                    plan.quiet,
+                    &plan.install_scope,
+                )
                 .await;
 
             match &result.status {
@@ -1244,6 +1257,7 @@ mod tests {
             dry_run: true,
             confirmed: false,
             quiet: false,
+            install_scope: crate::config::InstallScope::default(),
         };
 
         let json = serde_json::to_string(&req).unwrap();
@@ -1299,7 +1313,14 @@ mod tests {
 
         let planned = test_planned_update("nina-app");
         let result = orch
-            .execute_single(&planned, &on_event, &None, &cancel, true)
+            .execute_single(
+                &planned,
+                &on_event,
+                &None,
+                &cancel,
+                true,
+                &crate::config::InstallScope::default(),
+            )
             .await;
 
         assert_eq!(
@@ -1335,7 +1356,14 @@ mod tests {
 
         let planned = test_planned_update("nina-app");
         let result = orch
-            .execute_single(&planned, &on_event, &None, &cancel, true)
+            .execute_single(
+                &planned,
+                &on_event,
+                &None,
+                &cancel,
+                true,
+                &crate::config::InstallScope::default(),
+            )
             .await;
 
         assert_eq!(
@@ -1386,6 +1414,7 @@ mod tests {
             skipped: vec![],
             warnings: vec![],
             quiet: true,
+            install_scope: crate::config::InstallScope::default(),
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -1430,6 +1459,7 @@ mod tests {
             skipped: vec![],
             warnings: vec![],
             quiet: true,
+            install_scope: crate::config::InstallScope::default(),
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -1472,6 +1502,7 @@ mod tests {
             skipped: vec![],
             warnings: vec![],
             quiet: true,
+            install_scope: crate::config::InstallScope::default(),
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();

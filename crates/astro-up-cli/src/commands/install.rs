@@ -130,6 +130,7 @@ pub async fn handle_install(
         dry_run: false,
         confirmed: true,
         quiet,
+        install_scope: state.config.ui.default_install_scope.clone(),
     };
 
     let orch_plan = orchestrator

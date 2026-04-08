@@ -97,6 +97,7 @@ pub async fn handle_update(
         dry_run,
         confirmed: yes,
         quiet,
+        install_scope: state.config.ui.default_install_scope.clone(),
     };
 
     let plan = orchestrator

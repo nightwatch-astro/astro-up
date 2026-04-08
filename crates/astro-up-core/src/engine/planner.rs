@@ -115,6 +115,9 @@ pub struct UpdatePlan {
     /// Run installers silently (true) or show installer UI (false).
     #[serde(default = "super::orchestrator::default_quiet")]
     pub quiet: bool,
+    /// Install scope: user or machine.
+    #[serde(default)]
+    pub install_scope: crate::config::InstallScope,
 }
 
 // ---------------------------------------------------------------------------
@@ -324,6 +327,7 @@ impl UpdatePlanner {
             skipped,
             warnings,
             quiet: false,
+            install_scope: crate::config::InstallScope::default(),
         })
     }
 
@@ -374,6 +378,7 @@ impl UpdatePlanner {
             skipped,
             warnings,
             quiet: full_plan.quiet,
+            install_scope: full_plan.install_scope,
         })
     }
 }

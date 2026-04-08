@@ -525,6 +525,7 @@ async fn run_orchestrated_operation(
                     dry_run: false,
                     confirmed: true,
                     quiet,
+                    install_scope: config.ui.default_install_scope.clone(),
                 })
                 .await?;
 

@@ -1,6 +1,7 @@
 use std::path::Path;
 
-use crate::types::{InstallConfig, InstallMethod};
+use crate::config::InstallScope;
+use crate::types::{InstallConfig, InstallMethod, Scope};
 
 /// Returns the default silent switches for an installer type.
 fn default_silent_switches(method: &InstallMethod) -> Vec<String> {
@@ -49,19 +50,49 @@ fn install_dir_switch(method: &InstallMethod, dir: &Path) -> Option<String> {
     }
 }
 
+/// Returns the scope switch for an installer type, if applicable.
+///
+/// Resolves the effective scope: manifest scope takes priority, then config default.
+/// `Scope::Either` defers to the config default. Only emits a switch for machine scope
+/// (user scope is the default for most installers and needs no flag).
+fn scope_switch(
+    method: &InstallMethod,
+    manifest_scope: Option<&Scope>,
+    config_scope: &InstallScope,
+) -> Option<String> {
+    let is_machine = match manifest_scope {
+        Some(Scope::Machine) => true,
+        Some(Scope::User) => false,
+        Some(Scope::Either) | None => *config_scope == InstallScope::Machine,
+    };
+
+    if !is_machine {
+        return None; // User scope is the default — no flag needed
+    }
+
+    match method {
+        InstallMethod::InnoSetup => Some("/ALLUSERS".into()),
+        InstallMethod::Msi | InstallMethod::Wix | InstallMethod::Burn => Some("ALLUSERS=1".into()),
+        InstallMethod::Nsis => Some("/AllUsers".into()),
+        // Exe, Zip, Portable, DownloadOnly: no standard scope switch
+        _ => None,
+    }
+}
+
 /// Builds the complete argument list for an installer invocation.
 ///
 /// For MSI: returns args for msiexec (the installer path is passed as `/i <path>`).
 /// For other types: returns args to pass to the installer executable directly.
-/// Builds the complete argument list for an installer invocation.
 ///
 /// When `silent` is true, silent switches are included (default behavior).
 /// When `silent` is false, no switches are passed — the installer shows its UI.
+/// `config_scope` is the user's default install scope preference from config.
 pub fn build_args(
     config: &InstallConfig,
     installer_path: &Path,
     install_dir: Option<&Path>,
     silent: bool,
+    config_scope: &InstallScope,
 ) -> (String, Vec<String>) {
     let mut args = Vec::new();
 
@@ -78,6 +109,10 @@ pub fn build_args(
                     args.push(switch);
                 }
             }
+            if let Some(switch) = scope_switch(&config.method, config.scope.as_ref(), config_scope)
+            {
+                args.push(switch);
+            }
             ("msiexec".into(), args)
         }
         _ => {
@@ -90,6 +125,10 @@ pub fn build_args(
                     args.push(switch);
                 }
             }
+            if let Some(switch) = scope_switch(&config.method, config.scope.as_ref(), config_scope)
+            {
+                args.push(switch);
+            }
             (installer_path.display().to_string(), args)
         }
     }
@@ -99,6 +138,7 @@ pub fn build_args(
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use crate::config::InstallScope;
     use crate::types::{InstallConfig, InstallMethod, InstallerSwitches};
 
     fn config_for(method: InstallMethod) -> InstallConfig {
@@ -207,7 +247,13 @@ mod tests {
     #[test]
     fn msi_build_args() {
         let config = config_for(InstallMethod::Msi);
-        let (exe, args) = build_args(&config, Path::new("installer.msi"), None, true);
+        let (exe, args) = build_args(
+            &config,
+            Path::new("installer.msi"),
+            None,
+            true,
+            &InstallScope::default(),
+        );
         assert_eq!(exe, "msiexec");
         assert_eq!(args, vec!["/i", "installer.msi", "/qn", "/norestart"]);
     }
@@ -216,7 +262,13 @@ mod tests {
     fn innosetup_with_dir_override() {
         let config = config_for(InstallMethod::InnoSetup);
         let dir = Path::new("C:\\Programs\\NINA");
-        let (exe, args) = build_args(&config, Path::new("setup.exe"), Some(dir), true);
+        let (exe, args) = build_args(
+            &config,
+            Path::new("setup.exe"),
+            Some(dir),
+            true,
+            &InstallScope::default(),
+        );
         assert_eq!(exe, "setup.exe");
         assert!(args.contains(&"/DIR=C:\\Programs\\NINA".to_string()));
     }
@@ -225,7 +277,13 @@ mod tests {
     fn nsis_with_dir_override() {
         let config = config_for(InstallMethod::Nsis);
         let dir = Path::new("C:\\Programs\\PHD2");
-        let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir), true);
+        let (_, args) = build_args(
+            &config,
+            Path::new("setup.exe"),
+            Some(dir),
+            true,
+            &InstallScope::default(),
+        );
         assert!(args.contains(&"/D=C:\\Programs\\PHD2".to_string()));
     }
 
@@ -233,7 +291,13 @@ mod tests {
     fn msi_with_dir_override() {
         let config = config_for(InstallMethod::Msi);
         let dir = Path::new("C:\\Programs\\ASCOM");
-        let (exe, args) = build_args(&config, Path::new("driver.msi"), Some(dir), true);
+        let (exe, args) = build_args(
+            &config,
+            Path::new("driver.msi"),
+            Some(dir),
+            true,
+            &InstallScope::default(),
+        );
         assert_eq!(exe, "msiexec");
         assert!(args.contains(&"INSTALLDIR=C:\\Programs\\ASCOM".to_string()));
     }
@@ -242,14 +306,26 @@ mod tests {
     fn wix_with_dir_override() {
         let config = config_for(InstallMethod::Wix);
         let dir = Path::new("C:\\Programs\\SharpCap");
-        let (_, args) = build_args(&config, Path::new("setup.exe"), Some(dir), true);
+        let (_, args) = build_args(
+            &config,
+            Path::new("setup.exe"),
+            Some(dir),
+            true,
+            &InstallScope::default(),
+        );
         assert!(args.contains(&"INSTALLDIR=C:\\Programs\\SharpCap".to_string()));
     }
 
     #[test]
     fn interactive_mode_no_switches() {
         let config = config_for(InstallMethod::InnoSetup);
-        let (exe, args) = build_args(&config, Path::new("setup.exe"), None, false);
+        let (exe, args) = build_args(
+            &config,
+            Path::new("setup.exe"),
+            None,
+            false,
+            &InstallScope::default(),
+        );
         assert_eq!(exe, "setup.exe");
         assert!(args.is_empty(), "interactive mode should pass no switches");
     }
@@ -257,7 +333,13 @@ mod tests {
     #[test]
     fn interactive_msi_no_switches() {
         let config = config_for(InstallMethod::Msi);
-        let (exe, args) = build_args(&config, Path::new("setup.msi"), None, false);
+        let (exe, args) = build_args(
+            &config,
+            Path::new("setup.msi"),
+            None,
+            false,
+            &InstallScope::default(),
+        );
         assert_eq!(exe, "msiexec");
         assert_eq!(
             args,

@@ -336,6 +336,7 @@ async fn single_package_happy_path_events_in_order() {
         skipped: vec![],
         warnings: vec![],
         quiet: true,
+        install_scope: astro_up_core::config::InstallScope::default(),
     };
 
     let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -428,6 +429,7 @@ async fn process_blocking_emits_event_and_fails() {
         skipped: vec![],
         warnings: vec![],
         quiet: true,
+        install_scope: astro_up_core::config::InstallScope::default(),
     };
 
     let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -495,6 +497,7 @@ async fn cancellation_mid_pipeline() {
         skipped: vec![],
         warnings: vec![],
         quiet: true,
+        install_scope: astro_up_core::config::InstallScope::default(),
     };
 
     let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -549,6 +552,7 @@ async fn failure_after_backup_includes_backup_path() {
         skipped: vec![],
         warnings: vec![],
         quiet: true,
+        install_scope: astro_up_core::config::InstallScope::default(),
     };
 
     let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
