@@ -56,9 +56,11 @@ Complete cross-check result for one manifest.
 | Field | Type | Description |
 |-------|------|-------------|
 | `status` | CheckStatus | pass, fail, skip |
-| `declared` | String | Manifest's install.method |
+| `declared_method` | String | Manifest's install.method |
+| `declared_zip_wrapped` | bool | Manifest's install.zip_wrapped |
 | `detected` | Option&lt;FileType&gt; | Detected from magic bytes |
-| `detected_installer_type` | Option&lt;InstallerType&gt; | Specific framework (Inno, NSIS, etc.) |
+| `detected_method` | Option&lt;String&gt; | Detected installer framework (inno_setup, nsis, msi, exe) |
+| `detected_zip_wrapped` | bool | Whether download was a zip |
 | `match_result` | MatchResult | match, mismatch, skipped, detection_failed |
 
 ### `PlaywrightCheck`
@@ -96,9 +98,6 @@ permanent (404/403/410) | transient (5xx/timeout) | blocked (CDN rejection)
 ### `FileType`
 pe_exe | zip | msi | nsis | inno_setup | unknown
 
-### `InstallerType`
-inno_setup | nsis | msi | generic_exe | zip | zip_with_installer
-
 ### `MatchResult`
 match | mismatch | skipped | detection_failed
 
@@ -115,13 +114,15 @@ PackageValidationResult 1──? PrecisionCheck        (only when URL embeds ver
 
 ## Extended Manifest Schema
 
-The existing `Install` struct in `crates/shared/src/manifest.rs` gains a new optional field:
+The `Install` struct changes:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `detected_type` | Option&lt;String&gt; | Installer framework detected from binary: inno_setup, nsis, msi, generic_exe, zip, zip_with_installer |
+| Field | Change | Description |
+|-------|--------|-------------|
+| `method` | MODIFIED | Now always the real installer framework: `inno_setup`, `nsis`, `msi`, `exe`, `download_only`. The value `zip_wrap` is removed. |
+| `zip_wrapped` | NEW `bool` | Whether the download is a zip archive containing the installer. Default `false`. A plain zip (portable app) uses `method = "download_only"` + `zip_wrapped = true`. |
+| `detected_type` | REMOVED | Replaced by setting `method` directly to the detected framework. |
 
-Backward compatible: existing manifests without `detected_type` deserialize as `None`. Populated by the audit tool after file type inspection. Used by astro-up GUI/CLI (deferred) to select correct silent install switches.
+The `KNOWN_INSTALL_METHODS` const removes `zip_wrap` and keeps: `inno_setup`, `nsis`, `msi`, `exe`, `download_only`.
 
 ## Extended Version File
 
