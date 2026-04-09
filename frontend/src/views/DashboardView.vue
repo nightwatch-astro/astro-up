@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
-import { useSoftwareList, useScanInstalled, useUpdateAll, useActivity } from "../composables/useInvoke";
+import { useSoftwareList, useScanInstalled, useUpdateAll } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { logger } from "../utils/logger";
 import type { PackageWithStatus } from "../types/package";
@@ -15,7 +15,6 @@ const { data: installedSoftware } = useSoftwareList(() => "installed");
 const scanMutation = useScanInstalled();
 const updateAllMutation = useUpdateAll();
 const { isRunning, startOperation } = useOperations();
-const { data: activity } = useActivity(10);
 
 const showUpdateAllConfirm = ref(false);
 
@@ -43,49 +42,6 @@ function confirmUpdateAll() {
   updateAllMutation.mutate();
 }
 
-interface ActivityRecord {
-  id: number;
-  package_id: string;
-  operation_type: string;
-  from_version: string | null;
-  to_version: string | null;
-  status: string;
-  duration_ms: number;
-  error_message: string | null;
-  created_at: string;
-}
-
-const activityRecords = computed<ActivityRecord[]>(() =>
-  (activity.value ?? []) as ActivityRecord[],
-);
-
-function activityIcon(record: ActivityRecord): string {
-  if (record.status === "failed") return "pi-times-circle";
-  switch (record.operation_type) {
-    case "install": return "pi-download";
-    case "update": return "pi-arrow-up";
-    case "uninstall": return "pi-trash";
-    default: return "pi-info-circle";
-  }
-}
-
-function activityLabel(record: ActivityRecord): string {
-  const verb = record.operation_type === "install" ? "Installed"
-    : record.operation_type === "update" ? "Updated"
-    : record.operation_type === "uninstall" ? "Uninstalled"
-    : record.operation_type;
-  if (record.status === "failed") return `${verb} ${record.package_id} (failed)`;
-  return `${verb} ${record.package_id}`;
-}
-
-function activityDetail(record: ActivityRecord): string {
-  const parts: string[] = [];
-  if (record.to_version) parts.push(`v${record.to_version}`);
-  if (record.from_version && record.to_version) parts[0] = `${record.from_version} \u2192 ${record.to_version}`;
-  const date = new Date(record.created_at);
-  parts.push(date.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }));
-  return parts.join(" \u00B7 ");
-}
 
 </script>
 
@@ -216,66 +172,6 @@ function activityDetail(record: ActivityRecord): string {
         :disabled="isRunning"
         @click="showUpdateAllConfirm = true"
       />
-    </div>
-
-    <!-- Activity feed -->
-    <div class="section-title">
-      Recent Activity
-    </div>
-    <div class="card activity-card">
-      <template v-if="activityRecords.length > 0">
-        <div
-          v-for="record in activityRecords"
-          :key="record.id"
-          class="act-row"
-        >
-          <div
-            class="act-icon"
-            :class="record.status === 'failed' ? 'act-error' : 'act-ok'"
-          >
-            <i :class="'pi ' + activityIcon(record)" />
-          </div>
-          <div class="act-text">
-            <div class="act-name">
-              {{ activityLabel(record) }}
-            </div>
-            <div class="act-det">
-              {{ activityDetail(record) }}
-            </div>
-          </div>
-        </div>
-      </template>
-      <template v-else-if="hasScanned">
-        <div class="act-row">
-          <div class="act-icon act-scan">
-            <i class="pi pi-search" />
-          </div>
-          <div class="act-text">
-            <div class="act-name">
-              {{ installedCount }} packages detected
-            </div>
-            <div class="act-det">
-              {{ updateCount }} update{{ updateCount === 1 ? "" : "s" }} available
-            </div>
-          </div>
-        </div>
-      </template>
-      <div
-        v-else
-        class="act-row"
-      >
-        <div class="act-icon act-scan">
-          <i class="pi pi-info-circle" />
-        </div>
-        <div class="act-text">
-          <div class="act-name">
-            No activity yet
-          </div>
-          <div class="act-det">
-            Run a scan to detect installed software
-          </div>
-        </div>
-      </div>
     </div>
 
     <ConfirmDialog
@@ -415,68 +311,4 @@ function activityDetail(record: ActivityRecord): string {
   gap: 10px;
 }
 
-/* Activity card */
-.activity-card {
-  overflow: hidden;
-}
-
-.act-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 16px;
-  border-bottom: 1px solid var(--p-surface-700);
-}
-
-.act-row:last-child {
-  border-bottom: none;
-}
-
-.act-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.act-icon.act-install {
-  background: color-mix(in srgb, var(--p-green-500) 20%, transparent);
-  color: var(--p-green-400);
-}
-
-.act-icon.act-update {
-  background: color-mix(in srgb, var(--p-yellow-500) 15%, transparent);
-  color: var(--p-yellow-400);
-}
-
-.act-icon.act-scan {
-  background: color-mix(in srgb, var(--p-indigo-500) 20%, transparent);
-  color: var(--p-indigo-400);
-}
-
-.act-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.act-name {
-  font-size: 13px;
-  color: var(--p-surface-0);
-}
-
-.act-det {
-  font-size: 11px;
-  color: var(--p-surface-500);
-}
-
-.act-time {
-  font-size: 11px;
-  color: var(--p-surface-600);
-  flex-shrink: 0;
-  margin-left: auto;
-}
 </style>
