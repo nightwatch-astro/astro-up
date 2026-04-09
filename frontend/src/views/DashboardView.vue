@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { listen } from "@tauri-apps/api/event";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
@@ -19,7 +18,6 @@ const { isRunning, startOperation } = useOperations();
 const { data: activity } = useActivity(10);
 
 const showUpdateAllConfirm = ref(false);
-const lastScanTime = ref<Date | null>(null);
 
 const catalogCount = computed(() => software.value?.length ?? 0);
 
@@ -32,17 +30,7 @@ const updatablePackages = computed<PackageWithStatus[]>(() => {
 
 const updateCount = computed(() => updatablePackages.value.length);
 
-const lastScanLabel = computed(() => {
-  if (!lastScanTime.value) return "\u2014";
-  const now = new Date();
-  const diff = now.getTime() - lastScanTime.value.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return lastScanTime.value.toLocaleDateString();
-});
+const hasScanned = computed(() => installedCount.value > 0);
 
 function runScan() {
   if (!startOperation("scan", "Scanning installed software")) return;
@@ -99,14 +87,6 @@ function activityDetail(record: ActivityRecord): string {
   return parts.join(" \u00B7 ");
 }
 
-onMounted(async () => {
-  await listen("core-event", (event) => {
-    const payload = event.payload as { type?: string };
-    if (payload.type === "scan_complete") {
-      lastScanTime.value = new Date();
-    }
-  });
-});
 </script>
 
 <template>
@@ -148,7 +128,7 @@ onMounted(async () => {
           Last Scan
         </div>
         <div class="stat-value scan-val">
-          {{ lastScanLabel }}
+          {{ hasScanned ? installedCount + " found" : "\u2014" }}
         </div>
         <div class="stat-sub">
           {{ installedCount }} packages detected
@@ -265,17 +245,17 @@ onMounted(async () => {
           </div>
         </div>
       </template>
-      <template v-else-if="lastScanTime">
+      <template v-else-if="hasScanned">
         <div class="act-row">
           <div class="act-icon act-scan">
             <i class="pi pi-search" />
           </div>
           <div class="act-text">
             <div class="act-name">
-              Scan completed
+              {{ installedCount }} packages detected
             </div>
             <div class="act-det">
-              {{ installedCount }} packages detected &middot; {{ lastScanLabel }}
+              {{ updateCount }} update{{ updateCount === 1 ? "" : "s" }} available
             </div>
           </div>
         </div>
