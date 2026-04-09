@@ -323,3 +323,168 @@ fn list_all_with_detection_populates_config() {
     let switches = install.switches.as_ref().expect("switches should exist");
     assert!(!switches.silent.is_empty());
 }
+
+#[test]
+fn wmi_apps_detection_method_roundtrip() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("catalog.db");
+    let conn = Connection::open(&db_path).unwrap();
+
+    conn.execute_batch(
+        "
+        CREATE TABLE packages (
+            id TEXT PRIMARY KEY, manifest_version INTEGER NOT NULL,
+            name TEXT NOT NULL, description TEXT, publisher TEXT, homepage TEXT,
+            category TEXT NOT NULL, [type] TEXT NOT NULL, slug TEXT NOT NULL,
+            license TEXT, tags TEXT, aliases TEXT, dependencies TEXT, icon_base64 TEXT
+        );
+        CREATE TABLE versions (
+            package_id TEXT NOT NULL, version TEXT NOT NULL, url TEXT NOT NULL,
+            sha256 TEXT, discovered_at TEXT NOT NULL, release_notes_url TEXT,
+            pre_release INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (package_id, version)
+        );
+        CREATE TABLE detection (
+            package_id TEXT PRIMARY KEY, method TEXT NOT NULL, file_path TEXT,
+            registry_key TEXT, registry_value TEXT, version_regex TEXT,
+            product_code TEXT, upgrade_code TEXT, inf_provider TEXT,
+            device_class TEXT, inf_name TEXT, fallback_config TEXT
+        );
+        CREATE TABLE install (
+            package_id TEXT PRIMARY KEY, method TEXT NOT NULL,
+            scope TEXT, elevation INTEGER NOT NULL DEFAULT 0,
+            switches TEXT, exit_codes TEXT, success_codes TEXT
+        );
+        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE VIRTUAL TABLE packages_fts USING fts5(
+            name, description, tags, aliases, publisher,
+            content='packages', content_rowid='rowid'
+        );
+        ",
+    )
+    .unwrap();
+
+    // Insert ASI Studio-like package with wmi_apps primary + file_exists fallback
+    conn.execute(
+        "INSERT INTO packages VALUES (?1,1,'ZWO ASIStudio','ZWO imaging suite','ZWO','https://zwo.com','capture','application','zwo-asistudio','Proprietary',NULL,'[\"ASIStudio\"]',NULL,NULL)",
+        params!["zwo-asistudio"],
+    ).unwrap();
+    conn.execute_batch(
+        "INSERT INTO packages_fts(rowid, name, description, tags, aliases, publisher) SELECT rowid, name, description, tags, aliases, publisher FROM packages;",
+    ).unwrap();
+    conn.execute(
+        "INSERT INTO versions VALUES ('zwo-asistudio','1.8.0','https://example.com/asistudio.exe',NULL,'2026-01-01T00:00:00Z',NULL,0)",
+        [],
+    ).unwrap();
+
+    let fallback_json = serde_json::json!({
+        "method": "file_exists",
+        "file_path": "C:\\Program Files\\ASIStudio\\ASIStudio.exe"
+    });
+    conn.execute(
+        "INSERT INTO detection (package_id, method, fallback_config) VALUES ('zwo-asistudio','wmi_apps',?1)",
+        params![fallback_json.to_string()],
+    ).unwrap();
+    conn.execute("INSERT INTO meta VALUES ('schema_version','1')", [])
+        .unwrap();
+    conn.execute(
+        "INSERT INTO meta VALUES ('compiled_at','2026-03-30T12:00:00Z')",
+        [],
+    )
+    .unwrap();
+
+    let reader = SqliteCatalogReader::open(&db_path).unwrap();
+    let id: PackageId = "zwo-asistudio".parse().unwrap();
+    let config = reader.detection_config(&id).unwrap();
+    assert!(
+        config.is_some(),
+        "wmi_apps detection config should be parsed"
+    );
+
+    let config = config.unwrap();
+    assert_eq!(config.method, DetectionMethod::WmiApps);
+
+    // Verify fallback chain
+    let fallback = config.fallback.as_ref().expect("fallback should exist");
+    assert_eq!(fallback.method, DetectionMethod::FileExists);
+    assert_eq!(
+        fallback.file_path.as_deref(),
+        Some("C:\\Program Files\\ASIStudio\\ASIStudio.exe")
+    );
+}
+
+#[test]
+fn file_exists_detection_method_roundtrip() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("catalog.db");
+    let conn = Connection::open(&db_path).unwrap();
+
+    conn.execute_batch(
+        "
+        CREATE TABLE packages (
+            id TEXT PRIMARY KEY, manifest_version INTEGER NOT NULL,
+            name TEXT NOT NULL, description TEXT, publisher TEXT, homepage TEXT,
+            category TEXT NOT NULL, [type] TEXT NOT NULL, slug TEXT NOT NULL,
+            license TEXT, tags TEXT, aliases TEXT, dependencies TEXT, icon_base64 TEXT
+        );
+        CREATE TABLE versions (
+            package_id TEXT NOT NULL, version TEXT NOT NULL, url TEXT NOT NULL,
+            sha256 TEXT, discovered_at TEXT NOT NULL, release_notes_url TEXT,
+            pre_release INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (package_id, version)
+        );
+        CREATE TABLE detection (
+            package_id TEXT PRIMARY KEY, method TEXT NOT NULL, file_path TEXT,
+            registry_key TEXT, registry_value TEXT, version_regex TEXT,
+            product_code TEXT, upgrade_code TEXT, inf_provider TEXT,
+            device_class TEXT, inf_name TEXT, fallback_config TEXT
+        );
+        CREATE TABLE install (
+            package_id TEXT PRIMARY KEY, method TEXT NOT NULL,
+            scope TEXT, elevation INTEGER NOT NULL DEFAULT 0,
+            switches TEXT, exit_codes TEXT, success_codes TEXT
+        );
+        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE VIRTUAL TABLE packages_fts USING fts5(
+            name, description, tags, aliases, publisher,
+            content='packages', content_rowid='rowid'
+        );
+        ",
+    )
+    .unwrap();
+
+    // Insert ASTAP database-like package with file_exists detection
+    conn.execute(
+        "INSERT INTO packages VALUES (?1,1,'ASTAP D50 Star Database','Large star database','ASTAP','https://hnsky.org','platesolving','database','astap-d50','Freeware',NULL,NULL,NULL,NULL)",
+        params!["astap-d50"],
+    ).unwrap();
+    conn.execute_batch(
+        "INSERT INTO packages_fts(rowid, name, description, tags, aliases, publisher) SELECT rowid, name, description, tags, aliases, publisher FROM packages;",
+    ).unwrap();
+    conn.execute(
+        "INSERT INTO versions VALUES ('astap-d50','2024.01.01','https://example.com/d50.exe',NULL,'2026-01-01T00:00:00Z',NULL,0)",
+        [],
+    ).unwrap();
+    conn.execute(
+        "INSERT INTO detection (package_id, method, file_path) VALUES ('astap-d50','file_exists','{config_dir}/astap/d50')",
+        [],
+    ).unwrap();
+    conn.execute("INSERT INTO meta VALUES ('schema_version','1')", [])
+        .unwrap();
+    conn.execute(
+        "INSERT INTO meta VALUES ('compiled_at','2026-03-30T12:00:00Z')",
+        [],
+    )
+    .unwrap();
+
+    let reader = SqliteCatalogReader::open(&db_path).unwrap();
+    let id: PackageId = "astap-d50".parse().unwrap();
+    let config = reader.detection_config(&id).unwrap();
+    assert!(
+        config.is_some(),
+        "file_exists detection config should be parsed"
+    );
+
+    let config = config.unwrap();
+    assert_eq!(config.method, DetectionMethod::FileExists);
+    assert_eq!(config.file_path.as_deref(), Some("{config_dir}/astap/d50"));
+    assert!(config.fallback.is_none());
+}
