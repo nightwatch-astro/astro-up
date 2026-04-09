@@ -134,6 +134,7 @@ export function useInstallSoftware() {
     mutationFn: (id: string) => { logMutation("install_software", id); return invoke<OperationId>("install_software", { id }); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
     },
     onError,
   });
@@ -147,6 +148,7 @@ export function useUpdateSoftware() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
       queryClient.invalidateQueries({ queryKey: ["updates"] });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
     },
     onError,
   });
@@ -160,6 +162,7 @@ export function useUpdateAll() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
       queryClient.invalidateQueries({ queryKey: ["updates"] });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
     },
     onError,
   });
@@ -174,6 +177,13 @@ export function useScanInstalled() {
       queryClient.invalidateQueries({ queryKey: ["software"] });
     },
     onError,
+  });
+}
+
+export function useActivity(limit: number = 20) {
+  return useQuery({
+    queryKey: ["activity", limit],
+    queryFn: () => invoke<unknown[]>("get_activity", { limit }),
   });
 }
 

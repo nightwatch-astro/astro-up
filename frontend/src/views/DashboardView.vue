@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
-import { useSoftwareList, useUpdateCheck, useScanInstalled, useUpdateAll } from "../composables/useInvoke";
+import { useSoftwareList, useUpdateCheck, useScanInstalled, useUpdateAll, useActivity } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { logger } from "../utils/logger";
 import type { PackageWithStatus } from "../types/package";
@@ -16,6 +16,7 @@ const { data: updates } = useUpdateCheck();
 const scanMutation = useScanInstalled();
 const updateAllMutation = useUpdateAll();
 const { isRunning } = useOperations();
+const { data: activity } = useActivity(10);
 
 const showScanConfirm = ref(false);
 const showUpdateAllConfirm = ref(false);
@@ -41,7 +42,49 @@ function confirmUpdateAll() {
   updateAllMutation.mutate();
 }
 
+interface ActivityRecord {
+  id: number;
+  package_id: string;
+  operation_type: string;
+  from_version: string | null;
+  to_version: string | null;
+  status: string;
+  duration_ms: number;
+  error_message: string | null;
+  created_at: string;
+}
 
+const activityRecords = computed<ActivityRecord[]>(() =>
+  (activity.value ?? []) as ActivityRecord[],
+);
+
+function activityIcon(record: ActivityRecord): string {
+  if (record.status === "failed") return "pi-times-circle";
+  switch (record.operation_type) {
+    case "install": return "pi-download";
+    case "update": return "pi-arrow-up";
+    case "uninstall": return "pi-trash";
+    default: return "pi-info-circle";
+  }
+}
+
+function activityLabel(record: ActivityRecord): string {
+  const verb = record.operation_type === "install" ? "Installed"
+    : record.operation_type === "update" ? "Updated"
+    : record.operation_type === "uninstall" ? "Uninstalled"
+    : record.operation_type;
+  if (record.status === "failed") return `${verb} ${record.package_id} (failed)`;
+  return `${verb} ${record.package_id}`;
+}
+
+function activityDetail(record: ActivityRecord): string {
+  const parts: string[] = [];
+  if (record.to_version) parts.push(`v${record.to_version}`);
+  if (record.from_version && record.to_version) parts[0] = `${record.from_version} \u2192 ${record.to_version}`;
+  const date = new Date(record.created_at);
+  parts.push(date.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }));
+  return parts.join(" \u00B7 ");
+}
 </script>
 
 <template>
@@ -178,7 +221,32 @@ function confirmUpdateAll() {
       Recent Activity
     </div>
     <div class="card activity-card">
-      <div class="act-row">
+      <template v-if="activityRecords.length > 0">
+        <div
+          v-for="record in activityRecords"
+          :key="record.id"
+          class="act-row"
+        >
+          <div
+            class="act-icon"
+            :class="record.status === 'failed' ? 'act-error' : 'act-ok'"
+          >
+            <i :class="'pi ' + activityIcon(record)" />
+          </div>
+          <div class="act-text">
+            <div class="act-name">
+              {{ activityLabel(record) }}
+            </div>
+            <div class="act-det">
+              {{ activityDetail(record) }}
+            </div>
+          </div>
+        </div>
+      </template>
+      <div
+        v-else
+        class="act-row"
+      >
         <div class="act-icon act-scan">
           <i class="pi pi-info-circle" />
         </div>

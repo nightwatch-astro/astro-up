@@ -437,6 +437,31 @@ pub async fn scan_installed(
     Ok(value)
 }
 
+#[tauri::command]
+pub async fn get_activity(
+    state: State<'_, AppState>,
+    limit: Option<usize>,
+) -> Result<serde_json::Value, CoreError> {
+    tracing::debug!(command = "get_activity", ?limit, "Command invoked");
+
+    let db_path = state.db_path.clone();
+    let conn = rusqlite::Connection::open(&db_path).map_err(|e| CoreError::from(e.to_string()))?;
+
+    // Ensure operations table exists (graceful for fresh installs)
+    astro_up_core::engine::history::create_table(&conn)
+        .map_err(|e| CoreError::from(format!("create operations table: {e}")))?;
+
+    let filter = astro_up_core::engine::orchestrator::HistoryFilter {
+        limit: Some(limit.unwrap_or(20)),
+        ..Default::default()
+    };
+
+    let records = astro_up_core::engine::history::query_history(&conn, &filter)
+        .map_err(|e| CoreError::from(e.to_string()))?;
+
+    serde_json::to_value(&records).map_err(|e| CoreError::from(e.to_string()))
+}
+
 /// Shared helper: create an orchestrator, plan, and execute.
 /// Pass an empty slice for `ids` to plan all available updates.
 ///
