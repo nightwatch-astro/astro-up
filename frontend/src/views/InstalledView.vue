@@ -22,7 +22,6 @@ const { startOperation, isRunning } = useOperations();
 const searchFilter = ref("");
 const showUpdateConfirm = ref(false);
 const showUpdateAllConfirm = ref(false);
-const showScanConfirm = ref(false);
 const pendingUpdatePkg = ref<PackageWithStatus | null>(null);
 
 // Backend "installed" filter returns only packages with ledger entries (post-scan).
@@ -103,7 +102,7 @@ function handleBackup(pkg: PackageWithStatus) {
         outlined
         size="small"
         :disabled="isRunning"
-        @click="showScanConfirm = true"
+        @click="confirmScan"
       />
     </div>
 
@@ -112,7 +111,7 @@ function handleBackup(pkg: PackageWithStatus) {
       icon="pi-inbox"
       message="No installed software detected. Run a scan to detect installed packages."
       action-label="Scan Now"
-      @action="showScanConfirm = true"
+      @action="confirmScan"
     />
 
     <div
@@ -180,14 +179,6 @@ function handleBackup(pkg: PackageWithStatus) {
       </ul>
     </ConfirmDialog>
 
-    <ConfirmDialog
-      v-model:visible="showScanConfirm"
-      title="Re-scan"
-      message="Scan your system for installed astrophotography software? This may take a moment."
-      icon="pi-refresh"
-      confirm-label="Scan"
-      @confirm="confirmScan"
-    />
   </div>
 </template>
 

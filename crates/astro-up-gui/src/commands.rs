@@ -169,26 +169,35 @@ pub async fn list_software(
 }
 
 /// Try to open the catalog and run the list query.
+/// Returns enriched `PackageWithStatus` JSON: each package includes
+/// `installed_version`, `latest_version`, and `update_available` from the ledger.
 fn try_list_software(
     state: &AppState,
     filter: &str,
 ) -> Result<serde_json::Value, astro_up_core::error::CoreError> {
+    use astro_up_core::detect::scanner::LedgerStore;
+
     let reader = state.open_catalog_reader()?;
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+    let acknowledged = ledger
+        .list_acknowledged()
+        .map_err(|e| astro_up_core::error::CoreError::Database(e.to_string()))
+        .unwrap_or_default();
+
+    // Build lookup: package_id → installed version string
+    let installed_map: std::collections::HashMap<String, String> = acknowledged
+        .iter()
+        .map(|e| (e.package_id.clone(), e.version.to_string()))
+        .collect();
+
     let packages = match filter {
-        "all" => reader.list_all()?,
         "installed" => {
-            // Read ledger to find installed packages, then enrich with catalog data
-            use astro_up_core::detect::scanner::LedgerStore;
-            let ledger = SqliteLedgerStore::new(state.db_path.clone());
-            let entries = ledger
-                .list_acknowledged()
-                .map_err(|e| astro_up_core::error::CoreError::Database(e.to_string()))?;
-            if entries.is_empty() {
+            if acknowledged.is_empty() {
                 vec![]
             } else {
                 let all = reader.list_all()?;
                 let installed_ids: std::collections::HashSet<&str> =
-                    entries.iter().map(|e| e.package_id.as_str()).collect();
+                    acknowledged.iter().map(|e| e.package_id.as_str()).collect();
                 all.into_iter()
                     .filter(|p| installed_ids.contains(p.id.as_ref()))
                     .collect()
@@ -202,15 +211,54 @@ fn try_list_software(
             };
             reader.filter(&cat_filter)?
         }
+        // "all" and any other filter
         _ => reader.list_all()?,
     };
+
+    // Enrich each package with installed version, latest version, and update status
+    let enriched: Vec<serde_json::Value> = packages
+        .iter()
+        .map(|pkg| {
+            let mut val = serde_json::to_value(pkg).unwrap_or_default();
+            let obj = val.as_object_mut().unwrap();
+
+            let pkg_id = pkg.id.to_string();
+            let installed_version = installed_map.get(&pkg_id).cloned();
+            let latest_version = reader
+                .latest_version(&pkg.id)
+                .ok()
+                .flatten()
+                .map(|ve| ve.version);
+
+            let update_available = match (&installed_version, &latest_version) {
+                (Some(inst), Some(latest)) => {
+                    let iv = astro_up_core::types::Version::parse(inst);
+                    let lv = astro_up_core::types::Version::parse(latest);
+                    lv > iv
+                }
+                _ => false,
+            };
+
+            obj.insert(
+                "installed_version".into(),
+                serde_json::json!(installed_version),
+            );
+            obj.insert("latest_version".into(), serde_json::json!(latest_version));
+            obj.insert(
+                "update_available".into(),
+                serde_json::json!(update_available),
+            );
+
+            val
+        })
+        .collect();
+
     tracing::debug!(
         command = "list_software",
-        count = packages.len(),
+        count = enriched.len(),
         "Query OK"
     );
-    serde_json::to_value(&packages)
-        .map_err(|e| astro_up_core::error::CoreError::Database(format!("serialization error: {e}")))
+    Ok(serde_json::Value::Array(enriched))
 }
 
 #[tauri::command]
