@@ -203,6 +203,7 @@ impl InstallerService {
             &request.installer_path,
             request.install_dir.as_deref(),
             request.quiet,
+            &request.install_scope,
         );
 
         let exit_code = if matches!(config.method, InstallMethod::Burn) {
@@ -340,6 +341,7 @@ impl InstallerService {
                     &installer_path,
                     request.install_dir.as_deref(),
                     request.quiet,
+                    &request.install_scope,
                 );
                 let exit_code = process::spawn_simple(
                     &exe,

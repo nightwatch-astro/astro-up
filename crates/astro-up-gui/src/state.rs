@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use dashmap::DashMap;
@@ -48,6 +49,9 @@ pub struct AppState {
     /// Channel sender for the pending asset selection dialog.
     /// The orchestrator sets this before blocking; `resolve_asset_selection` reads it.
     pub pending_asset_tx: PendingAssetTx,
+    /// Set to `true` when the user explicitly requests quit (tray menu or dialog).
+    /// The run loop checks this before calling `prevent_exit()`.
+    pub quit_requested: AtomicBool,
 }
 
 impl AppState {
@@ -77,6 +81,7 @@ impl AppState {
             catalog_manager,
             backup_service,
             pending_asset_tx: Arc::new(Mutex::new(None)),
+            quit_requested: AtomicBool::new(false),
         })
     }
 

@@ -335,6 +335,8 @@ async fn single_package_happy_path_events_in_order() {
         items: vec![test_planned_update("nina-app")],
         skipped: vec![],
         warnings: vec![],
+        quiet: true,
+        install_scope: astro_up_core::config::InstallScope::default(),
     };
 
     let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -426,6 +428,8 @@ async fn process_blocking_emits_event_and_fails() {
         items: vec![test_planned_update_with_running_process("blocking-pkg")],
         skipped: vec![],
         warnings: vec![],
+        quiet: true,
+        install_scope: astro_up_core::config::InstallScope::default(),
     };
 
     let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -492,6 +496,8 @@ async fn cancellation_mid_pipeline() {
         ],
         skipped: vec![],
         warnings: vec![],
+        quiet: true,
+        install_scope: astro_up_core::config::InstallScope::default(),
     };
 
     let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -545,6 +551,8 @@ async fn failure_after_backup_includes_backup_path() {
         items: vec![test_planned_update_with_backup("backup-pkg")],
         skipped: vec![],
         warnings: vec![],
+        quiet: true,
+        install_scope: astro_up_core::config::InstallScope::default(),
     };
 
     let result = orch.execute(plan, on_event, None, cancel).await.unwrap();

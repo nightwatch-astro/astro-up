@@ -88,12 +88,16 @@ pub async fn handle_update(
     )
     .map_err(|e| eyre!("failed to create orchestrator: {e}"))?;
 
+    let quiet =
+        state.config.ui.default_install_method == astro_up_core::config::InstallMethod::Silent;
     let request = UpdateRequest {
         packages: pkg_ids,
         allow_major,
         allow_downgrade: false,
         dry_run,
         confirmed: yes,
+        quiet,
+        install_scope: state.config.ui.default_install_scope.clone(),
     };
 
     let plan = orchestrator

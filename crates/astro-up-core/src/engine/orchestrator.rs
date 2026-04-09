@@ -52,6 +52,17 @@ pub struct UpdateRequest {
     pub dry_run: bool,
     /// The user has reviewed and confirmed the plan.
     pub confirmed: bool,
+    /// Run installers silently (true) or show installer UI (false).
+    /// Defaults to true for backward compatibility.
+    #[serde(default = "default_quiet")]
+    pub quiet: bool,
+    /// Install scope: user or machine.
+    #[serde(default)]
+    pub install_scope: crate::config::InstallScope,
+}
+
+pub(crate) fn default_quiet() -> bool {
+    false
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +273,8 @@ where
         on_event: &EventCallback,
         asset_selector: &Option<AssetSelector>,
         cancel: &CancellationToken,
+        quiet: bool,
+        install_scope: &crate::config::InstallScope,
     ) -> PackageResult {
         use std::time::Instant;
 
@@ -503,7 +516,8 @@ where
             install_config,
             detection_config: planned.software.detection.clone(),
             timeout,
-            quiet: true,
+            quiet,
+            install_scope: install_scope.clone(),
             cancel_token: cancel.child_token(),
             event_tx: tokio::sync::broadcast::channel(16).0,
         };
@@ -778,11 +792,14 @@ where
             .with_allow_major(request.allow_major)
             .with_allow_downgrade(request.allow_downgrade);
 
-        if request.packages.is_empty() {
-            planner.plan_all()
+        let mut plan = if request.packages.is_empty() {
+            planner.plan_all()?
         } else {
-            planner.plan_specific(&request.packages)
-        }
+            planner.plan_specific(&request.packages)?
+        };
+        plan.quiet = request.quiet;
+        plan.install_scope = request.install_scope;
+        Ok(plan)
     }
 
     #[tracing::instrument(skip(self, plan, on_event, asset_selector, cancel), fields(operation_id = %generate_operation_id(), plan_items = plan.items.len()))]
@@ -839,7 +856,14 @@ where
             }
 
             let result = self
-                .execute_single(planned, &on_event, &asset_selector, &cancel)
+                .execute_single(
+                    planned,
+                    &on_event,
+                    &asset_selector,
+                    &cancel,
+                    plan.quiet,
+                    &plan.install_scope,
+                )
                 .await;
 
             match &result.status {
@@ -1232,6 +1256,8 @@ mod tests {
             allow_downgrade: false,
             dry_run: true,
             confirmed: false,
+            quiet: false,
+            install_scope: crate::config::InstallScope::default(),
         };
 
         let json = serde_json::to_string(&req).unwrap();
@@ -1287,7 +1313,14 @@ mod tests {
 
         let planned = test_planned_update("nina-app");
         let result = orch
-            .execute_single(&planned, &on_event, &None, &cancel)
+            .execute_single(
+                &planned,
+                &on_event,
+                &None,
+                &cancel,
+                true,
+                &crate::config::InstallScope::default(),
+            )
             .await;
 
         assert_eq!(
@@ -1323,7 +1356,14 @@ mod tests {
 
         let planned = test_planned_update("nina-app");
         let result = orch
-            .execute_single(&planned, &on_event, &None, &cancel)
+            .execute_single(
+                &planned,
+                &on_event,
+                &None,
+                &cancel,
+                true,
+                &crate::config::InstallScope::default(),
+            )
             .await;
 
         assert_eq!(
@@ -1373,6 +1413,8 @@ mod tests {
             ],
             skipped: vec![],
             warnings: vec![],
+            quiet: true,
+            install_scope: crate::config::InstallScope::default(),
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -1416,6 +1458,8 @@ mod tests {
             items: vec![],
             skipped: vec![],
             warnings: vec![],
+            quiet: true,
+            install_scope: crate::config::InstallScope::default(),
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -1457,6 +1501,8 @@ mod tests {
             items: vec![test_planned_update("pkg-a"), test_planned_update("pkg-b")],
             skipped: vec![],
             warnings: vec![],
+            quiet: true,
+            install_scope: crate::config::InstallScope::default(),
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();

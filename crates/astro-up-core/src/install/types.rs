@@ -44,6 +44,7 @@ pub struct InstallRequest {
     pub detection_config: Option<crate::types::DetectionConfig>,
     pub timeout: Duration,
     pub quiet: bool,
+    pub install_scope: crate::config::InstallScope,
     pub cancel_token: CancellationToken,
     pub event_tx: broadcast::Sender<Event>,
 }

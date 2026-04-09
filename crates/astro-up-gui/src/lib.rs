@@ -179,7 +179,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .manage({
-            let data_dir = directories::ProjectDirs::from("dev", "nightwatch", "astro-up").map_or_else(|| std::env::temp_dir().join("astro-up"), |d| d.data_dir().to_path_buf());
+            let data_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up").map_or_else(|| std::env::temp_dir().join("astro-up"), |d| d.data_dir().to_path_buf());
             std::fs::create_dir_all(&data_dir).expect("Failed to create data directory");
             AppState::new(&data_dir).expect("Failed to initialize app state")
         })
@@ -348,6 +348,9 @@ pub fn run() {
                                 state.cancel_operation(&key);
                             }
                             tracing::info!("All operations cancelled, exiting");
+                            state
+                                .quit_requested
+                                .store(true, std::sync::atomic::Ordering::Relaxed);
                             app_clone.exit(0);
                         }
                     });
@@ -359,10 +362,16 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app, event| {
+        .run(|app, event| {
             if let RunEvent::ExitRequested { api, .. } = &event {
-                // Keep running in tray when all windows are closed.
-                api.prevent_exit();
+                let state = app.state::<state::AppState>();
+                if !state
+                    .quit_requested
+                    .load(std::sync::atomic::Ordering::Relaxed)
+                {
+                    // Keep running in tray when all windows are closed.
+                    api.prevent_exit();
+                }
             }
         });
 }

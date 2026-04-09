@@ -121,12 +121,16 @@ pub async fn handle_install(
     .map_err(|e| eyre!("failed to create orchestrator: {e}"))?;
 
     let pkg_ids = vec![id];
+    let quiet =
+        state.config.ui.default_install_method == astro_up_core::config::InstallMethod::Silent;
     let request = UpdateRequest {
         packages: pkg_ids,
         allow_major: false,
         allow_downgrade: false,
         dry_run: false,
         confirmed: true,
+        quiet,
+        install_scope: state.config.ui.default_install_scope.clone(),
     };
 
     let orch_plan = orchestrator
