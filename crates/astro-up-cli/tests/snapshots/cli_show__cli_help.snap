@@ -18,6 +18,7 @@ Commands:
   search          Search the catalog
   backup          Create a backup
   restore         Restore from a backup
+  catalog         Manage the package catalog
   config          Manage configuration
   self-update     Update astro-up-cli itself
   lifecycle-test  Run lifecycle test for a package (download, install, detect, uninstall)
