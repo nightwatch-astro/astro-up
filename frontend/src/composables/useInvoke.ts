@@ -9,7 +9,11 @@ function useMutationErrorHandler(operation: string) {
   const toast = useToast();
   const { addEntry } = useErrorLog();
   return (err: unknown) => {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = err instanceof Error
+      ? err.message
+      : typeof err === "object" && err !== null && "message" in err
+        ? String((err as Record<string, unknown>).message)
+        : String(err);
     logger.error("useInvoke", `${operation} failed: ${message}`);
     addEntry("error", `${operation} failed`, message);
     toast.add({

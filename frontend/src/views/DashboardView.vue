@@ -5,7 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
-import { useSoftwareList, useUpdateCheck, useScanInstalled, useUpdateAll, useActivity } from "../composables/useInvoke";
+import { useSoftwareList, useScanInstalled, useUpdateAll, useActivity } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { logger } from "../utils/logger";
 import type { PackageWithStatus } from "../types/package";
@@ -13,7 +13,6 @@ import type { PackageWithStatus } from "../types/package";
 const router = useRouter();
 const { data: software } = useSoftwareList(() => "all");
 const { data: installedSoftware } = useSoftwareList(() => "installed");
-const { data: updates } = useUpdateCheck();
 const scanMutation = useScanInstalled();
 const updateAllMutation = useUpdateAll();
 const { isRunning, startOperation } = useOperations();
@@ -26,12 +25,12 @@ const catalogCount = computed(() => software.value?.length ?? 0);
 
 const installedCount = computed(() => installedSoftware.value?.length ?? 0);
 
-const updateCount = computed(() => updates.value?.length ?? 0);
-
 const updatablePackages = computed<PackageWithStatus[]>(() => {
   if (!software.value) return [];
   return (software.value as PackageWithStatus[]).filter((p) => p.update_available);
 });
+
+const updateCount = computed(() => updatablePackages.value.length);
 
 const lastScanLabel = computed(() => {
   if (!lastScanTime.value) return "\u2014";

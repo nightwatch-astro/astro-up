@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import Badge from "primevue/badge";
-import { useUpdateCheck } from "../../composables/useInvoke";
+import { useSoftwareList } from "../../composables/useInvoke";
+import type { PackageWithStatus } from "../../types/package";
 
 const version = __APP_VERSION__;
-const { data: updates } = useUpdateCheck();
+const { data: software } = useSoftwareList(() => "all");
+const updateCount = computed(() =>
+  ((software.value ?? []) as PackageWithStatus[]).filter((p) => p.update_available).length,
+);
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: "pi-home", exact: true },
@@ -32,8 +37,8 @@ const navItems = [
         <i :class="['pi', item.icon]" />
         {{ item.label }}
         <Badge
-          v-if="item.to === '/installed' && updates?.length"
-          :value="updates.length"
+          v-if="item.to === '/installed' && updateCount > 0"
+          :value="updateCount"
           severity="warn"
           class="ml-auto"
         />
