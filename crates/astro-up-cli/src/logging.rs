@@ -7,7 +7,12 @@ use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::Subs
 /// - file: JSON, daily rotation to `{log_dir}/` (best-effort — falls back to stderr-only)
 ///
 /// Returns the `WorkerGuard` which must be kept alive for the duration of the program.
-pub fn init(verbose: bool, quiet: bool, log_dir: &std::path::Path) -> Result<WorkerGuard> {
+pub fn init(
+    verbose: bool,
+    quiet: bool,
+    log_dir: &std::path::Path,
+    max_age_days: u32,
+) -> Result<WorkerGuard> {
     let stderr_filter = if quiet {
         EnvFilter::new("error")
     } else if verbose {
@@ -20,6 +25,9 @@ pub fn init(verbose: bool, quiet: bool, log_dir: &std::path::Path) -> Result<Wor
         .with_writer(std::io::stderr)
         .compact()
         .with_filter(stderr_filter);
+
+    // Prune old log files before creating new ones
+    astro_up_core::logging::prune_old_logs(log_dir, max_age_days);
 
     // Try to set up file logging — fall back to stderr-only if dir creation fails.
     let file_result = std::fs::create_dir_all(log_dir)

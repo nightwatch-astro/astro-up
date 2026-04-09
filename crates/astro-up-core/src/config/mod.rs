@@ -285,6 +285,11 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
                 .map_err(|_| parse_err("boolean (true/false)"))?;
         }
         "logging.log_file" => config.logging.log_file = PathBuf::from(value),
+        "logging.max_age_days" => {
+            config.logging.max_age_days = value
+                .parse::<u32>()
+                .map_err(|_| parse_err("number (days, 0 = never)"))?;
+        }
         "telemetry.enabled" => {
             config.telemetry.enabled = value
                 .parse::<bool>()
@@ -378,6 +383,7 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         "logging.level" => Some(config.logging.level.to_string()),
         "logging.log_to_file" => Some(config.logging.log_to_file.to_string()),
         "logging.log_file" => Some(config.logging.log_file.display().to_string()),
+        "logging.max_age_days" => Some(config.logging.max_age_days.to_string()),
         "telemetry.enabled" => Some(config.telemetry.enabled.to_string()),
         _ => None,
     }

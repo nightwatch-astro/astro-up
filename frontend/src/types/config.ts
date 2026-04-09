@@ -76,6 +76,7 @@ export interface LogConfig {
   level: "error" | "warn" | "info" | "debug" | "trace";
   log_to_file: boolean;
   log_file: string;
+  max_age_days: number;
 }
 
 export interface TelemetryConfig {

@@ -80,5 +80,5 @@ fn known_keys_discovers_all_fields() {
     assert!(keys.contains(&"network.timeout".to_string()));
     assert!(keys.contains(&"logging.level".to_string()));
     assert!(keys.contains(&"telemetry.enabled".to_string()));
-    assert_eq!(keys.len(), 41);
+    assert_eq!(keys.len(), 42);
 }
