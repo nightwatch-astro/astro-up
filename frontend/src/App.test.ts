@@ -73,7 +73,7 @@ describe("View smoke tests", () => {
     expect(wrapper.text()).toContain("Dashboard");
     expect(wrapper.text()).toContain("Installed");
     expect(wrapper.text()).toContain("Updates");
-    expect(wrapper.text()).toContain("Recent Activity");
+    expect(wrapper.text()).toContain("Scan Installed");
   });
 
   it("Catalog renders search and grid", async () => {
