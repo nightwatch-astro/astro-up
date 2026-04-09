@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { listen } from "@tauri-apps/api/event";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
@@ -15,11 +16,11 @@ const { data: installedSoftware } = useSoftwareList(() => "installed");
 const { data: updates } = useUpdateCheck();
 const scanMutation = useScanInstalled();
 const updateAllMutation = useUpdateAll();
-const { isRunning } = useOperations();
+const { isRunning, startOperation } = useOperations();
 const { data: activity } = useActivity(10);
 
-const showScanConfirm = ref(false);
 const showUpdateAllConfirm = ref(false);
+const lastScanTime = ref<Date | null>(null);
 
 const catalogCount = computed(() => software.value?.length ?? 0);
 
@@ -32,7 +33,20 @@ const updatablePackages = computed<PackageWithStatus[]>(() => {
   return (software.value as PackageWithStatus[]).filter((p) => p.update_available);
 });
 
-function confirmScan() {
+const lastScanLabel = computed(() => {
+  if (!lastScanTime.value) return "\u2014";
+  const now = new Date();
+  const diff = now.getTime() - lastScanTime.value.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return lastScanTime.value.toLocaleDateString();
+});
+
+function runScan() {
+  if (!startOperation("scan", "Scanning installed software")) return;
   logger.debug("DashboardView", "scan installed clicked");
   scanMutation.mutate();
 }
@@ -85,6 +99,15 @@ function activityDetail(record: ActivityRecord): string {
   parts.push(date.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }));
   return parts.join(" \u00B7 ");
 }
+
+onMounted(async () => {
+  await listen("core-event", (event) => {
+    const payload = event.payload as { type?: string };
+    if (payload.type === "scan_complete") {
+      lastScanTime.value = new Date();
+    }
+  });
+});
 </script>
 
 <template>
@@ -126,7 +149,7 @@ function activityDetail(record: ActivityRecord): string {
           Last Scan
         </div>
         <div class="stat-value scan-val">
-          &mdash;
+          {{ lastScanLabel }}
         </div>
         <div class="stat-sub">
           {{ installedCount }} packages detected
@@ -203,7 +226,7 @@ function activityDetail(record: ActivityRecord): string {
         label="Scan Installed"
         icon="pi pi-refresh"
         :disabled="isRunning"
-        @click="showScanConfirm = true"
+        @click="runScan"
       />
       <Button
         v-if="updateCount > 0"
@@ -243,6 +266,21 @@ function activityDetail(record: ActivityRecord): string {
           </div>
         </div>
       </template>
+      <template v-else-if="lastScanTime">
+        <div class="act-row">
+          <div class="act-icon act-scan">
+            <i class="pi pi-search" />
+          </div>
+          <div class="act-text">
+            <div class="act-name">
+              Scan completed
+            </div>
+            <div class="act-det">
+              {{ installedCount }} packages detected &middot; {{ lastScanLabel }}
+            </div>
+          </div>
+        </div>
+      </template>
       <div
         v-else
         class="act-row"
@@ -260,15 +298,6 @@ function activityDetail(record: ActivityRecord): string {
         </div>
       </div>
     </div>
-
-    <ConfirmDialog
-      v-model:visible="showScanConfirm"
-      title="Scan Installed Software"
-      message="Scan your system for installed astrophotography software? This may take a moment."
-      icon="pi-search"
-      confirm-label="Scan"
-      @confirm="confirmScan"
-    />
 
     <ConfirmDialog
       v-model:visible="showUpdateAllConfirm"

@@ -436,6 +436,7 @@ impl SqliteCatalogReader {
         for summary in summaries {
             let detection = self.detection_config(&summary.id)?;
             let install = self.install_config(&summary.id)?;
+            let backup = self.backup_config(&summary.id).unwrap_or(None);
             software.push(crate::types::Software {
                 id: summary.id,
                 slug: summary.slug,
@@ -461,12 +462,42 @@ impl SqliteCatalogReader {
                 checkver: None,
                 dependencies: None,
                 hardware: None,
-                backup: None,
+                backup,
                 versioning: None,
             });
         }
 
         Ok(software)
+    }
+
+    /// Read backup config for a package. Returns `None` if no backup table
+    /// or no entry for the package (graceful for old catalogs).
+    pub fn backup_config(
+        &self,
+        id: &PackageId,
+    ) -> Result<Option<crate::types::BackupConfig>, CoreError> {
+        let result = self.conn.query_row(
+            "SELECT config_paths FROM backup WHERE package_id = ?1",
+            params![id.as_ref()],
+            |row| row.get::<_, String>(0),
+        );
+
+        match result {
+            Ok(json_str) => {
+                let paths: Vec<String> = serde_json::from_str(&json_str).unwrap_or_default();
+                if paths.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(crate::types::BackupConfig {
+                        config_paths: paths,
+                    }))
+                }
+            }
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            // Table doesn't exist in old catalogs
+            Err(e) if e.to_string().contains("no such table") => Ok(None),
+            Err(e) => Err(CoreError::Database(format!("backup config query: {e}"))),
+        }
     }
 }
 
