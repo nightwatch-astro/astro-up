@@ -10,6 +10,7 @@ import type { BackupListEntry } from "../../types/backup";
 const props = defineProps<{
   packageId: string;
   configPaths?: string[];
+  actionsDisabled?: boolean;
 }>();
 
 defineEmits<{
@@ -145,6 +146,7 @@ function formatDate(iso: string): string {
           label="Backup Now"
           icon="pi pi-database"
           size="small"
+          :disabled="actionsDisabled"
           @click="$emit('backup')"
         />
       </div>

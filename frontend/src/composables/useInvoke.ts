@@ -189,6 +189,7 @@ export function useLastScan() {
   return useQuery({
     queryKey: ["last-scan"],
     queryFn: () => invoke<{ last_scan_at: string | null }>("get_last_scan"),
+    retry: false,
   });
 }
 

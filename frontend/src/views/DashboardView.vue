@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
-import { useSoftwareList, useScanInstalled, useUpdateSoftware } from "../composables/useInvoke";
+import { useSoftwareList, useScanInstalled, useUpdateSoftware, useLastScan } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { useUpdateQueue } from "../composables/useUpdateQueue";
 import { logger } from "../utils/logger";
@@ -17,6 +17,7 @@ const scanMutation = useScanInstalled();
 const updateMutation = useUpdateSoftware();
 const { isRunning, startOperation } = useOperations();
 const { enqueue, isActive: queueActive } = useUpdateQueue();
+const { data: lastScanData } = useLastScan();
 
 const showUpdateAllConfirm = ref(false);
 const showSingleUpdateConfirm = ref(false);
@@ -34,6 +35,13 @@ const updatablePackages = computed<PackageWithStatus[]>(() => {
 const updateCount = computed(() => updatablePackages.value.length);
 
 const hasScanned = computed(() => installedCount.value > 0);
+
+const lastScanLabel = computed(() => {
+  const ts = lastScanData.value?.last_scan_at;
+  if (!ts) return hasScanned.value ? `${installedCount.value} found` : "\u2014";
+  const date = new Date(ts + "Z");
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+});
 
 function runScan() {
   if (!startOperation("scan", "Scanning installed software")) return;
@@ -100,7 +108,7 @@ function confirmSingleUpdate() {
           Last Scan
         </div>
         <div class="stat-value scan-val">
-          {{ hasScanned ? installedCount + " found" : "\u2014" }}
+          {{ lastScanLabel }}
         </div>
         <div class="stat-sub">
           {{ installedCount }} packages detected

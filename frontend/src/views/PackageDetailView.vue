@@ -134,6 +134,7 @@ function confirmBackup() {
               <VersionsTab
                 :versions="(versions as VersionEntry[] | undefined) ?? []"
                 :installed-version="pkg.installed_version ?? null"
+                :actions-disabled="actionsDisabled"
                 @install="handleInstall"
               />
             </TabPanel>
@@ -141,6 +142,7 @@ function confirmBackup() {
               <BackupTab
                 :package-id="pkg.id"
                 :config-paths="pkg.backup?.config_paths"
+                :actions-disabled="actionsDisabled"
                 @backup="handleBackup"
               />
             </TabPanel>
