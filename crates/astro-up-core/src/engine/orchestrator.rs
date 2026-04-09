@@ -299,6 +299,7 @@ where
                         package_id: pkg_id.clone(),
                         status: "cancelled".into(),
                         error: None,
+                        download_path: None,
                     });
                     return PackageResult {
                         package_id: pkg_id.clone(),
@@ -358,6 +359,7 @@ where
                 package_id: pkg_id.clone(),
                 status: "failed".into(),
                 error: Some(format!("disk space check: {e}")),
+                download_path: None,
             });
             return PackageResult {
                 package_id: pkg_id.clone(),
@@ -390,6 +392,7 @@ where
                                 package_id: pkg_id.clone(),
                                 status: "failed".into(),
                                 error: Some(err_msg.clone()),
+                                download_path: None,
                             });
                             return PackageResult {
                                 package_id: pkg_id.clone(),
@@ -418,6 +421,7 @@ where
                 package_id: pkg_id.clone(),
                 status: "failed".into(),
                 error: Some(err_msg.clone()),
+                download_path: None,
             });
             return PackageResult {
                 package_id: pkg_id.clone(),
@@ -450,6 +454,7 @@ where
                     package_id: pkg_id.clone(),
                     status: "failed".into(),
                     error: Some(err_msg.clone()),
+                    download_path: None,
                 });
                 return PackageResult {
                     package_id: pkg_id.clone(),
@@ -530,6 +535,7 @@ where
                     package_id: pkg_id.clone(),
                     status: "failed".into(),
                     error: Some(err_msg.clone()),
+                    download_path: None,
                 });
                 return PackageResult {
                     package_id: pkg_id.clone(),
@@ -543,16 +549,17 @@ where
             }
         };
 
-        // Map install result to operation status
-        let install_status = match install_result {
-            crate::install::types::InstallResult::SuccessRebootRequired { .. } => {
-                super::history::OperationStatus::RebootPending
+        // Map install result to operation status and extract result path
+        let (install_status, result_path) = match install_result {
+            crate::install::types::InstallResult::SuccessRebootRequired { path } => {
+                (super::history::OperationStatus::RebootPending, path)
             }
             crate::install::types::InstallResult::Cancelled => {
                 on_event(Event::PackageComplete {
                     package_id: pkg_id.clone(),
                     status: "cancelled".into(),
                     error: None,
+                    download_path: None,
                 });
                 return PackageResult {
                     package_id: pkg_id.clone(),
@@ -564,9 +571,18 @@ where
                     backup_path,
                 };
             }
-            crate::install::types::InstallResult::Success { .. } => {
-                super::history::OperationStatus::Success
+            crate::install::types::InstallResult::Success { path } => {
+                (super::history::OperationStatus::Success, path)
             }
+        };
+
+        // For DownloadOnly packages, surface the download directory in the event
+        let download_path = if install_request.install_config.method
+            == crate::types::InstallMethod::DownloadOnly
+        {
+            result_path.map(|p| p.to_string_lossy().into_owned())
+        } else {
+            None
         };
 
         check_cancel!();
@@ -636,6 +652,7 @@ where
             package_id: pkg_id.clone(),
             status: status_str.into(),
             error: None,
+            download_path,
         });
 
         // 9. Record to operation history (best-effort — don't fail pipeline)

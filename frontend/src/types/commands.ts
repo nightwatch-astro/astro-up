@@ -41,7 +41,7 @@ export type CoreEvent =
     }
   | {
       type: "package_complete";
-      data: { package_id: string; status: string; error?: string };
+      data: { package_id: string; status: string; error?: string; download_path?: string };
     }
   | {
       type: "package_skipped";

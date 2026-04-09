@@ -388,16 +388,20 @@ impl InstallerService {
     /// Handles DownloadOnly packages: opens the containing folder on Windows.
     /// On non-Windows, returns `Success` without opening a folder (no desktop
     /// environment assumed in CI/cross-compile targets).
+    ///
+    /// Returns the parent directory of the installer so the UI can show the
+    /// download location to the user.
     #[allow(unused_variables)]
     async fn handle_download_only(
         &self,
         installer_path: &std::path::Path,
     ) -> Result<InstallResult, CoreError> {
+        let parent = installer_path.parent().map(std::path::Path::to_path_buf);
         #[cfg(windows)]
-        if let Some(parent) = installer_path.parent() {
-            std::process::Command::new("explorer").arg(parent).spawn()?;
+        if let Some(ref dir) = parent {
+            std::process::Command::new("explorer").arg(dir).spawn()?;
         }
-        Ok(InstallResult::Success { path: None })
+        Ok(InstallResult::Success { path: parent })
     }
 
     #[instrument(skip_all, fields(package = %request.package_id))]
