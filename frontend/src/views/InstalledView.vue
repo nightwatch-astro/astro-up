@@ -34,7 +34,10 @@ const filtered = computed(() => {
   const q = searchFilter.value.trim().toLowerCase();
   if (!q) return installed.value;
   return installed.value.filter(
-    (p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q),
+    (p) =>
+      p.id.toLowerCase().includes(q) ||
+      p.name.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q),
   );
 });
 
