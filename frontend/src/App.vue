@@ -116,6 +116,13 @@ useCoreEvents((event: CoreEvent) => {
     addStep("info", "Download started");
   } else if (event.type === "download_complete") {
     addStep("info", "Download complete");
+  } else if (event.type === "process_blocking") {
+    toast.add({
+      severity: "error",
+      summary: "Application is running",
+      detail: `Please close ${event.data.process_name} (PID ${event.data.pid}) before installing or updating ${event.data.package_id}.`,
+      life: 10000,
+    });
   } else if (event.type === "scan_started") {
     startOperation("scan", "Scanning installed software");
   } else if (event.type === "scan_complete") {
