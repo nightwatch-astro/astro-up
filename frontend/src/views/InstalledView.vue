@@ -10,6 +10,7 @@ import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
 import { useSoftwareList, useUpdateSoftware, useScanInstalled, useCreateBackup } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
+import { useUpdateQueue } from "../composables/useUpdateQueue";
 import type { PackageWithStatus } from "../types/package";
 
 const router = useRouter();
@@ -18,6 +19,7 @@ const updateMutation = useUpdateSoftware();
 const scanMutation = useScanInstalled();
 const backupMutation = useCreateBackup();
 const { startOperation, isRunning } = useOperations();
+const { enqueue, isActive: queueActive } = useUpdateQueue();
 
 const searchFilter = ref("");
 const showUpdateConfirm = ref(false);
@@ -57,10 +59,7 @@ function confirmUpdate() {
 }
 
 function confirmUpdateAll() {
-  if (!startOperation("update-all", "Updating all packages")) return;
-  for (const pkg of updatable.value) {
-    updateMutation.mutate(pkg.id);
-  }
+  enqueue(updatable.value.map((p) => ({ id: p.id, name: p.name })));
 }
 
 function confirmScan() {
@@ -95,7 +94,7 @@ function handleBackup(pkg: PackageWithStatus) {
         icon="pi pi-download"
         severity="warn"
         size="small"
-        :disabled="isRunning"
+        :disabled="isRunning || queueActive"
         @click="showUpdateAllConfirm = true"
       />
       <Button
@@ -104,7 +103,7 @@ function handleBackup(pkg: PackageWithStatus) {
         severity="secondary"
         outlined
         size="small"
-        :disabled="isRunning"
+        :disabled="isRunning || queueActive"
         @click="confirmScan"
       />
     </div>
@@ -131,6 +130,7 @@ function handleBackup(pkg: PackageWithStatus) {
           v-for="pkg in updatable"
           :key="pkg.id"
           :pkg="pkg"
+          :actions-disabled="isRunning || queueActive"
           @update="handleUpdate(pkg)"
           @backup="handleBackup(pkg)"
           @detail="router.push({ name: 'package-detail', params: { id: pkg.id } })"
@@ -147,6 +147,7 @@ function handleBackup(pkg: PackageWithStatus) {
           v-for="pkg in upToDate"
           :key="pkg.id"
           :pkg="pkg"
+          :actions-disabled="isRunning || queueActive"
           @backup="handleBackup(pkg)"
           @detail="router.push({ name: 'package-detail', params: { id: pkg.id } })"
         />

@@ -5,6 +5,7 @@ import type { PackageWithStatus } from "../../types/package";
 
 defineProps<{
   pkg: PackageWithStatus;
+  actionsDisabled?: boolean;
 }>();
 
 defineEmits<{
@@ -55,6 +56,7 @@ defineEmits<{
         size="small"
         severity="secondary"
         class="action-btn"
+        :disabled="actionsDisabled"
         @click="$emit('backup')"
       />
       <Button
@@ -63,6 +65,7 @@ defineEmits<{
         severity="warn"
         size="small"
         class="action-btn"
+        :disabled="actionsDisabled"
         @click="$emit('update')"
       />
     </div>

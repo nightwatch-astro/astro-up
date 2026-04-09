@@ -13,6 +13,7 @@ import AppStatusBar from "./components/layout/AppStatusBar.vue";
 import OperationsDock from "./components/layout/OperationsDock.vue";
 import LogPanel from "./components/layout/LogPanel.vue";
 import AssetSelectionDialog from "./components/shared/AssetSelectionDialog.vue";
+import { useUpdateQueue } from "./composables/useUpdateQueue";
 import type { CoreEvent } from "./types/commands";
 
 const toast = useToast();
@@ -46,6 +47,7 @@ onErrorCaptured((err, instance, info) => {
   return false; // prevent propagation
 });
 const { updateProgress, completeOperation, failOperation, addStep, startOperation, isRunning } = useOperations();
+const { isActive: queueActive, markCurrentComplete, markCurrentFailed, markCurrentBlocked, currentItem } = useUpdateQueue();
 const logVisible = ref(false);
 const logPanel = ref<InstanceType<typeof LogPanel> | null>(null);
 
@@ -110,19 +112,35 @@ useCoreEvents((event: CoreEvent) => {
     const pct = Math.round((event.data.files_processed / event.data.total_files) * 100);
     updateProgress(pct, `Backing up: ${event.data.files_processed}/${event.data.total_files}`);
   } else if (event.type === "package_started") {
-    startOperation(event.data.package_id, `Installing ${event.data.package_id}`);
+    if (queueActive.value) {
+      const item = currentItem.value;
+      const label = item ? `Updating ${item.packageName}` : `Updating ${event.data.package_id}`;
+      startOperation(event.data.package_id, label);
+    } else {
+      startOperation(event.data.package_id, `Installing ${event.data.package_id}`);
+    }
   } else if (event.type === "download_started") {
     if (!isRunning.value) startOperation(event.data.id, `Downloading ${event.data.id}`);
     addStep("info", "Download started");
   } else if (event.type === "download_complete") {
     addStep("info", "Download complete");
   } else if (event.type === "process_blocking") {
-    toast.add({
-      severity: "error",
-      summary: "Application is running",
-      detail: `Please close ${event.data.process_name} (PID ${event.data.pid}) before installing or updating ${event.data.package_id}.`,
-      life: 10000,
-    });
+    if (queueActive.value) {
+      markCurrentBlocked(event.data.process_name, event.data.pid);
+      toast.add({
+        severity: "warn",
+        summary: `Skipped ${event.data.package_id}`,
+        detail: `${event.data.process_name} is running (PID ${event.data.pid})`,
+        life: 5000,
+      });
+    } else {
+      toast.add({
+        severity: "error",
+        summary: "Application is running",
+        detail: `Please close ${event.data.process_name} (PID ${event.data.pid}) before installing or updating ${event.data.package_id}.`,
+        life: 10000,
+      });
+    }
   } else if (event.type === "scan_started") {
     startOperation("scan", "Scanning installed software");
   } else if (event.type === "scan_complete") {
@@ -134,14 +152,15 @@ useCoreEvents((event: CoreEvent) => {
   } else if (event.type === "package_complete") {
     if (event.data.status === "failed") {
       const reason = event.data.error ?? "unknown error";
+      if (queueActive.value) markCurrentFailed(reason);
       failOperation(`${event.data.package_id}: ${reason}`);
     } else {
+      if (queueActive.value) markCurrentComplete();
       completeOperation();
     }
   } else if (event.type === "orchestration_complete") {
-    addStep("info", `Done: ${event.data.succeeded} succeeded, ${event.data.failed} failed`);
-    if (!isRunning.value) {
-      // Single-package orchestration already handled by package_complete
+    if (!queueActive.value) {
+      addStep("info", `Done: ${event.data.succeeded} succeeded, ${event.data.failed} failed`);
     }
   }
 
