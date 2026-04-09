@@ -298,6 +298,20 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            fn cancel_all_and_exit(app: &AppHandle) {
+                let state = app.state::<AppState>();
+                let keys: Vec<String> =
+                    state.operations.iter().map(|r| r.key().clone()).collect();
+                for key in keys {
+                    state.cancel_operation(&key);
+                }
+                tracing::info!("All operations cancelled, exiting");
+                state
+                    .quit_requested
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+                app.exit(0);
+            }
+
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let app = window.app_handle();
                 let state = app.state::<AppState>();
@@ -310,53 +324,58 @@ pub fn run() {
                     .startup
                     .minimize_to_tray_on_close;
 
-                if !minimize_to_tray && !state.has_active_operations() {
-                    // Quit path: let the close proceed
-                    return;
-                }
-
-                // Prevent close — we'll handle it
+                // Prevent close — we'll handle it in all cases
                 api.prevent_close();
 
                 if state.has_active_operations() {
-                    // T017: Prompt user when operations are active
                     let app_clone = app.clone();
                     let window_clone = window.clone();
+                    let tray = minimize_to_tray;
                     tauri::async_runtime::spawn(async move {
-                        let answer = app_clone
-                            .dialog()
-                            .message("Operations are still running. Cancel them and quit, or continue in the background?")
-                            .title("Active Operations")
-                            .buttons(MessageDialogButtons::OkCancelCustom(
-                                "Continue in Background".into(),
-                                "Cancel & Quit".into(),
-                            ))
-                            .blocking_show();
+                        if tray {
+                            // Minimize-to-tray ON: offer background or cancel
+                            let answer = app_clone
+                                .dialog()
+                                .message("Operations are still running. Cancel them and quit, or continue in the background?")
+                                .title("Active Operations")
+                                .buttons(MessageDialogButtons::OkCancelCustom(
+                                    "Continue in Background".into(),
+                                    "Cancel & Quit".into(),
+                                ))
+                                .blocking_show();
 
-                        if answer {
-                            // Continue in background — hide window
-                            let _ = window_clone.hide();
-                        } else {
-                            // Cancel all operations and quit
-                            let state = app_clone.state::<AppState>();
-                            let keys: Vec<String> = state
-                                .operations
-                                .iter()
-                                .map(|r| r.key().clone())
-                                .collect();
-                            for key in keys {
-                                state.cancel_operation(&key);
+                            if answer {
+                                let _ = window_clone.hide();
+                            } else {
+                                cancel_all_and_exit(&app_clone);
                             }
-                            tracing::info!("All operations cancelled, exiting");
-                            state
-                                .quit_requested
-                                .store(true, std::sync::atomic::Ordering::Relaxed);
-                            app_clone.exit(0);
+                        } else {
+                            // Minimize-to-tray OFF: confirm quit (no background option)
+                            let answer = app_clone
+                                .dialog()
+                                .message("Operations are still running. Cancel them and quit?")
+                                .title("Active Operations")
+                                .buttons(MessageDialogButtons::OkCancelCustom(
+                                    "Wait".into(),
+                                    "Cancel & Quit".into(),
+                                ))
+                                .blocking_show();
+
+                            if !answer {
+                                cancel_all_and_exit(&app_clone);
+                            }
+                            // "Wait" — do nothing, window stays open
                         }
                     });
-                } else {
-                    // No active operations — minimize to tray (default behavior)
+                } else if minimize_to_tray {
+                    // No active operations — minimize to tray
                     let _ = window.hide();
+                } else {
+                    // No active operations, no tray — quit entirely
+                    state
+                        .quit_requested
+                        .store(true, std::sync::atomic::Ordering::Relaxed);
+                    app.exit(0);
                 }
             }
         })
