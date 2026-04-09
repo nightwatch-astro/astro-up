@@ -63,6 +63,7 @@ async fn main() -> ExitCode {
         astro_up_cli::Commands::Search { .. } => "search",
         astro_up_cli::Commands::Backup { .. } => "backup",
         astro_up_cli::Commands::Restore { .. } => "restore",
+        astro_up_cli::Commands::Catalog { .. } => "catalog",
         astro_up_cli::Commands::Config { .. } => "config",
         astro_up_cli::Commands::SelfUpdate { .. } => "self-update",
         astro_up_cli::Commands::LifecycleTest { .. } => "lifecycle-test",

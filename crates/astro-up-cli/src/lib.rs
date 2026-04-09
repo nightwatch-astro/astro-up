@@ -92,6 +92,12 @@ pub enum Commands {
         yes: bool,
     },
 
+    /// Manage the package catalog
+    Catalog {
+        #[command(subcommand)]
+        action: CatalogAction,
+    },
+
     /// Manage configuration
     Config {
         #[command(subcommand)]
@@ -139,6 +145,14 @@ pub enum ShowFilter {
     Outdated,
     /// Show backups
     Backups { package: Option<String> },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CatalogAction {
+    /// Sync catalog (download if stale or missing)
+    Sync,
+    /// Force re-download the catalog regardless of TTL
+    Refresh,
 }
 
 #[derive(Subcommand)]
@@ -203,6 +217,9 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
             )
             .await
         }
+        Commands::Catalog { action } => {
+            commands::catalog::handle_catalog(&state, action, &mode).await
+        }
         Commands::Scan => commands::scan::handle_scan(&state, &mode).await,
         Commands::Search { ref query } => {
             commands::search::handle_search(&state, query, &mode).await
@@ -236,7 +253,7 @@ pub async fn run(cli: Cli, cancel: CancellationToken) -> Result<()> {
             )
             .await
         }
-        // Already handled above
+        // Already handled above (Config + SelfUpdate run without shared state)
         Commands::Config { .. } | Commands::SelfUpdate { .. } => unreachable!(),
     };
     tracing::debug!(ok = result.is_ok(), "command dispatch complete");
