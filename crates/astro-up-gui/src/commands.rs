@@ -1047,8 +1047,8 @@ pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<
 pub async fn check_survey_eligible(state: State<'_, AppState>) -> Result<bool, CoreError> {
     tracing::debug!(command = "check_survey_eligible", "Command invoked");
     let config = state.config.lock().unwrap().ui.clone();
-    let conn = rusqlite::Connection::open(&state.db_path)
-        .map_err(|e| CoreError::from(e.to_string()))?;
+    let conn =
+        rusqlite::Connection::open(&state.db_path).map_err(|e| CoreError::from(e.to_string()))?;
     astro_up_core::engine::history::create_table(&conn)
         .map_err(|e| CoreError::from(format!("failed to ensure operations table: {e}")))?;
     let eligible = astro_up_core::config::check_survey_eligible(&conn, &config)?;
@@ -1057,7 +1057,10 @@ pub async fn check_survey_eligible(state: State<'_, AppState>) -> Result<bool, C
 
 #[tauri::command]
 pub async fn dismiss_survey(state: State<'_, AppState>) -> Result<(), CoreError> {
-    tracing::info!(command = "dismiss_survey", "Survey dismissed (snooze 30 days)");
+    tracing::info!(
+        command = "dismiss_survey",
+        "Survey dismissed (snooze 30 days)"
+    );
     let now = chrono::Utc::now().to_rfc3339();
     let store = state.open_config_store()?;
     store.set("ui.survey_dismissed_at", &now)?;
@@ -1067,7 +1070,10 @@ pub async fn dismiss_survey(state: State<'_, AppState>) -> Result<(), CoreError>
 
 #[tauri::command]
 pub async fn complete_survey(state: State<'_, AppState>) -> Result<(), CoreError> {
-    tracing::info!(command = "complete_survey", "Survey completed (permanent opt-out)");
+    tracing::info!(
+        command = "complete_survey",
+        "Survey completed (permanent opt-out)"
+    );
     let now = chrono::Utc::now().to_rfc3339();
     let store = state.open_config_store()?;
     store.set("ui.survey_completed_at", &now)?;

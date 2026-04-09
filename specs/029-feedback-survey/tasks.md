@@ -67,7 +67,7 @@
 
 **Purpose**: Cross-cutting verification
 
-- [ ] T012 Run `just check` to verify all quality checks pass (clippy, fmt, eslint, vue-tsc)
+- [x] T012 Run `just check` to verify all quality checks pass (clippy, fmt, eslint, vue-tsc)
 - [ ] T013 Run quickstart.md validation — insert test operations, navigate to Dashboard, verify full flow
 
 ---

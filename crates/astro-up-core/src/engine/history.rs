@@ -328,7 +328,11 @@ mod tests {
             ("nina", OperationType::Install, OperationStatus::Success),
             ("phd2", OperationType::Update, OperationStatus::Success),
             ("sharpcap", OperationType::Install, OperationStatus::Failed),
-            ("stellarium", OperationType::Uninstall, OperationStatus::Success),
+            (
+                "stellarium",
+                OperationType::Uninstall,
+                OperationStatus::Success,
+            ),
             ("ascom", OperationType::Update, OperationStatus::Cancelled),
         ];
 

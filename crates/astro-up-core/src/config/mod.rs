@@ -375,7 +375,12 @@ pub fn check_survey_eligible(
     // Check operation count
     let count = crate::engine::history::count_successful_operations(conn)?;
     let eligible = count >= u64::from(config.survey_threshold);
-    debug!(count, threshold = config.survey_threshold, eligible, "survey eligibility check");
+    debug!(
+        count,
+        threshold = config.survey_threshold,
+        eligible,
+        "survey eligibility check"
+    );
     Ok(eligible)
 }
 
