@@ -63,8 +63,7 @@ async function browseLogFile() {
         v-model="config.max_age_days"
         :min="0"
         :max="9999"
-        suffix=" days"
-        placeholder="365"
+        :use-grouping="false"
       />
       <small class="hint">0 = never delete old logs</small>
     </div>
