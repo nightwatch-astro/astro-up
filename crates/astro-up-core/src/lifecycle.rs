@@ -601,7 +601,7 @@ impl LifecycleRunner {
 
         // Run detection with the discovered config
         let resolver = PathResolver::new();
-        let result = crate::detect::run_chain(config, &resolver, None).await;
+        let result = crate::detect::run_chain(config, &resolver, None, None).await;
 
         let (status, logs) = match &result {
             crate::detect::DetectionResult::Installed { version, .. } => {

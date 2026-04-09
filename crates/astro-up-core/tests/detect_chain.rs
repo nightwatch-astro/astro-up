@@ -46,7 +46,7 @@ async fn chain_pe_fallback_on_non_windows() {
     };
 
     let resolver = PathResolver::new();
-    let result = detect::run_chain(&config, &resolver, None).await;
+    let result = detect::run_chain(&config, &resolver, None, None).await;
 
     // On non-Windows: registry returns Unavailable (not on Windows), so chain continues to PE
     // PE should find version 3.2.1
@@ -69,7 +69,7 @@ async fn chain_stops_at_pe_success() {
     // PE succeeds on first try — no fallback needed
     let config = pe_config("tests/fixtures/test.exe");
     let resolver = PathResolver::new();
-    let result = detect::run_chain(&config, &resolver, None).await;
+    let result = detect::run_chain(&config, &resolver, None, None).await;
 
     match result {
         DetectionResult::Installed {
@@ -87,7 +87,7 @@ async fn chain_exhausted_returns_not_installed() {
     // PE with nonexistent file, no fallback
     let config = pe_config("tests/fixtures/nonexistent.exe");
     let resolver = PathResolver::new();
-    let result = detect::run_chain(&config, &resolver, None).await;
+    let result = detect::run_chain(&config, &resolver, None, None).await;
 
     assert!(matches!(result, DetectionResult::NotInstalled));
 }
@@ -97,7 +97,7 @@ async fn registry_rejects_relative_key() {
     // registry_key without HKEY_ prefix should return Unavailable, not silently fail
     let config = registry_config("PHD 2_is1");
     let resolver = PathResolver::new();
-    let result = detect::run_chain(&config, &resolver, None).await;
+    let result = detect::run_chain(&config, &resolver, None, None).await;
 
     match result {
         DetectionResult::Unavailable { reason } => {
@@ -119,7 +119,7 @@ async fn registry_rejects_relative_key_falls_through_to_pe() {
     };
 
     let resolver = PathResolver::new();
-    let result = detect::run_chain(&config, &resolver, None).await;
+    let result = detect::run_chain(&config, &resolver, None, None).await;
 
     // On non-Windows: registry returns Unavailable (bad key), chain falls to PE
     if cfg!(not(windows)) {
@@ -142,14 +142,14 @@ async fn chain_pe_uses_ledger_path_fallback() {
     let resolver = PathResolver::new();
 
     // Without ledger path: should return Unavailable (can't resolve template)
-    let result = detect::run_chain(&config, &resolver, None).await;
+    let result = detect::run_chain(&config, &resolver, None, None).await;
     assert!(
         matches!(result, DetectionResult::Unavailable { .. }),
         "expected Unavailable without ledger path, got {result:?}"
     );
 
     // With ledger path pointing to real fixture: should find version
-    let result = detect::run_chain(&config, &resolver, Some("tests/fixtures/test.exe")).await;
+    let result = detect::run_chain(&config, &resolver, Some("tests/fixtures/test.exe"), None).await;
     match result {
         DetectionResult::Installed {
             version, method, ..

@@ -171,7 +171,18 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
             // (e.g., PHD2 reports 0.6.4 via WMI but 2.6.14 via registry DisplayVersion).
             let result = if let Some(ref detection_config) = pkg.detection {
                 let ledger_path = ledger_paths.get(&id).map(String::as_str);
-                let chain_result = run_chain(detection_config, &self.resolver, ledger_path).await;
+                let wmi_ctx = crate::detect::WmiContext {
+                    package_name: &pkg.name,
+                    aliases: &pkg.aliases,
+                    programs: &wmi_programs,
+                };
+                let chain_result = run_chain(
+                    detection_config,
+                    &self.resolver,
+                    ledger_path,
+                    Some(&wmi_ctx),
+                )
+                .await;
 
                 match &chain_result {
                     DetectionResult::Installed { .. }

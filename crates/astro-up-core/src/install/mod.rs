@@ -441,7 +441,7 @@ impl InstallerService {
             return None;
         };
         let resolver = crate::detect::PathResolver::new();
-        let result = crate::detect::run_chain(config, &resolver, None).await;
+        let result = crate::detect::run_chain(config, &resolver, None, None).await;
         match result {
             crate::detect::DetectionResult::Installed { install_path, .. }
             | crate::detect::DetectionResult::InstalledUnknownVersion { install_path, .. } => {

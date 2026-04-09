@@ -12,6 +12,9 @@ pub enum DetectionMethod {
     AscomProfile,
     FileExists,
     ConfigFile,
+    /// Match against WMI Win32_InstalledWin32Program by package name/aliases.
+    /// Used when no registry key or PE version is available.
+    WmiApps,
     /// Package is tracked by the ledger only (e.g., firmware flashed to hardware).
     /// No auto-detection possible — version is recorded when Astro-Up handles the download.
     Ledger,
