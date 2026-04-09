@@ -516,35 +516,43 @@ mod tests {
     #[test]
     fn survey_not_eligible_when_completed() {
         let conn = setup_db_with_ops(5);
-        let mut config = UiConfig::default();
-        config.survey_completed_at = Some(Utc::now().to_rfc3339());
+        let config = UiConfig {
+            survey_completed_at: Some(Utc::now().to_rfc3339()),
+            ..UiConfig::default()
+        };
         assert!(!check_survey_eligible(&conn, &config).unwrap());
     }
 
     #[test]
     fn survey_not_eligible_when_snoozed_recently() {
         let conn = setup_db_with_ops(5);
-        let mut config = UiConfig::default();
         let dismissed = Utc::now() - ChronoDuration::days(10);
-        config.survey_dismissed_at = Some(dismissed.to_rfc3339());
+        let config = UiConfig {
+            survey_dismissed_at: Some(dismissed.to_rfc3339()),
+            ..UiConfig::default()
+        };
         assert!(!check_survey_eligible(&conn, &config).unwrap());
     }
 
     #[test]
     fn survey_eligible_when_snooze_expired() {
         let conn = setup_db_with_ops(5);
-        let mut config = UiConfig::default();
         let dismissed = Utc::now() - ChronoDuration::days(31);
-        config.survey_dismissed_at = Some(dismissed.to_rfc3339());
+        let config = UiConfig {
+            survey_dismissed_at: Some(dismissed.to_rfc3339()),
+            ..UiConfig::default()
+        };
         assert!(check_survey_eligible(&conn, &config).unwrap());
     }
 
     #[test]
     fn survey_not_eligible_at_snooze_boundary() {
         let conn = setup_db_with_ops(5);
-        let mut config = UiConfig::default();
         let dismissed = Utc::now() - ChronoDuration::days(29);
-        config.survey_dismissed_at = Some(dismissed.to_rfc3339());
+        let config = UiConfig {
+            survey_dismissed_at: Some(dismissed.to_rfc3339()),
+            ..UiConfig::default()
+        };
         assert!(!check_survey_eligible(&conn, &config).unwrap());
     }
 }
