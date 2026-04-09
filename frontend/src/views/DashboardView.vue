@@ -211,6 +211,10 @@ function confirmSingleUpdate() {
       />
     </div>
 
+    <SurveyDialog
+      v-model:visible="showSurvey"
+    />
+
     <ConfirmDialog
       v-model:visible="showUpdateAllConfirm"
       title="Update All"

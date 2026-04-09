@@ -12,11 +12,11 @@
 
 **Purpose**: Add survey config fields and operation count query — required by all user stories
 
-- [ ] T001 [P] Add `survey_threshold`, `survey_dismissed_at`, `survey_completed_at` fields to `UiConfig` in `crates/astro-up-core/src/config/model.rs`
-- [ ] T002 [P] Add `count_successful_operations()` function to `crates/astro-up-core/src/engine/history.rs` — SQL `COUNT(*)` on operations table filtered by `status = 'success'` AND `operation_type IN ('install', 'update')`
-- [ ] T003 Add `set_field`/`get_field_value` match arms for `ui.survey_threshold`, `ui.survey_dismissed_at`, `ui.survey_completed_at` in `crates/astro-up-core/src/config/mod.rs`
-- [ ] T004 Add `check_survey_eligible()` function in `crates/astro-up-core/src/config/mod.rs` — combines count >= threshold AND completed_at is None AND (dismissed_at is None OR now - dismissed_at > 30 days)
-- [ ] T005 Unit tests for eligibility logic (threshold met, below threshold, snoozed within 30 days, snoozed >30 days ago, completed) and integration test for `count_successful_operations` in `crates/astro-up-core/src/engine/history.rs` and `crates/astro-up-core/src/config/mod.rs`
+- [x] T001 [P] Add `survey_threshold`, `survey_dismissed_at`, `survey_completed_at` fields to `UiConfig` in `crates/astro-up-core/src/config/model.rs`
+- [x] T002 [P] Add `count_successful_operations()` function to `crates/astro-up-core/src/engine/history.rs` — SQL `COUNT(*)` on operations table filtered by `status = 'success'` AND `operation_type IN ('install', 'update')`
+- [x] T003 Add `set_field`/`get_field_value` match arms for `ui.survey_threshold`, `ui.survey_dismissed_at`, `ui.survey_completed_at` in `crates/astro-up-core/src/config/mod.rs`
+- [x] T004 Add `check_survey_eligible()` function in `crates/astro-up-core/src/config/mod.rs` — combines count >= threshold AND completed_at is None AND (dismissed_at is None OR now - dismissed_at > 30 days)
+- [x] T005 Unit tests for eligibility logic (threshold met, below threshold, snoozed within 30 days, snoozed >30 days ago, completed) and integration test for `count_successful_operations` in `crates/astro-up-core/src/engine/history.rs` and `crates/astro-up-core/src/config/mod.rs`
 
 **Checkpoint**: Core eligibility logic complete and tested
 
@@ -30,10 +30,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [P] [US1] Add `check_survey_eligible`, `dismiss_survey`, `complete_survey` Tauri commands in `crates/astro-up-gui/src/commands.rs`
-- [ ] T007 [US1] Register 3 new commands in `invoke_handler` in `crates/astro-up-gui/src/lib.rs`
-- [ ] T008 [US1] Create `SurveyDialog.vue` component in `frontend/src/components/shared/SurveyDialog.vue` — PrimeVue Dialog (modal, 480px), icon + "How's Astro-Up working for you?" message, 3 buttons: "Leave feedback" (primary), "Not now" (text/secondary), "Don't ask again" (text/secondary). On close without button click (Escape/click outside): invoke `dismiss_survey`. On "Leave feedback": invoke `complete_survey` then `openUrl('https://tally.so/r/lb7dd5')`. On "Not now": invoke `dismiss_survey`. On "Don't ask again": invoke `complete_survey`.
-- [ ] T009 [US1] Integrate `SurveyDialog` into `frontend/src/views/DashboardView.vue` — invoke `check_survey_eligible` on `onMounted`, bind `showSurvey` reactive ref to dialog visibility
+- [x] T006 [P] [US1] Add `check_survey_eligible`, `dismiss_survey`, `complete_survey` Tauri commands in `crates/astro-up-gui/src/commands.rs`
+- [x] T007 [US1] Register 3 new commands in `invoke_handler` in `crates/astro-up-gui/src/lib.rs`
+- [x] T008 [US1] Create `SurveyDialog.vue` component in `frontend/src/components/shared/SurveyDialog.vue` — PrimeVue Dialog (modal, 480px), icon + "How's Astro-Up working for you?" message, 3 buttons: "Leave feedback" (primary), "Not now" (text/secondary), "Don't ask again" (text/secondary). On close without button click (Escape/click outside): invoke `dismiss_survey`. On "Leave feedback": invoke `complete_survey` then `openUrl('https://tally.so/r/lb7dd5')`. On "Not now": invoke `dismiss_survey`. On "Don't ask again": invoke `complete_survey`.
+- [x] T009 [US1] Integrate `SurveyDialog` into `frontend/src/views/DashboardView.vue` — invoke `check_survey_eligible` on `onMounted`, bind `showSurvey` reactive ref to dialog visibility
 
 **Checkpoint**: User Story 1 complete — dialog appears after 3 operations, all 3 actions work
 
@@ -57,7 +57,7 @@
 
 **Independent Test**: Set `survey_dismissed_at` to >30 days ago in config, navigate to Dashboard, verify dialog reappears
 
-- [ ] T011 [US3] Add integration test verifying snooze expiry triggers re-eligibility — set `ui.survey_dismissed_at` to 31 days ago, assert `check_survey_eligible` returns true; set to 29 days ago, assert returns false. In `crates/astro-up-core/src/config/mod.rs` tests
+- [x] T011 [US3] Add integration test verifying snooze expiry triggers re-eligibility — set `ui.survey_dismissed_at` to 31 days ago, assert `check_survey_eligible` returns true; set to 29 days ago, assert returns false. In `crates/astro-up-core/src/config/mod.rs` tests
 
 **Checkpoint**: Snooze re-prompt verified
 
