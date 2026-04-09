@@ -72,7 +72,7 @@ defineEmits<{
         @click="$emit('install')"
       />
       <Button
-        v-if="pkg.installed_version"
+        v-if="pkg.backup?.config_paths?.length"
         label="Backup Now"
         icon="pi pi-database"
         severity="secondary"

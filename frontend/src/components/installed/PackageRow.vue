@@ -48,7 +48,7 @@ defineEmits<{
       @click.stop
     >
       <Button
-        v-if="pkg.installed_version"
+        v-if="pkg.backup?.config_paths?.length"
         icon="pi pi-database"
         label="Backup Now"
         text
