@@ -96,23 +96,32 @@ pub enum DetectionError {
 
 use crate::types::DetectionConfig;
 
+/// Context for WMI app detection within the detection chain.
+pub struct WmiContext<'a> {
+    pub package_name: &'a str,
+    pub aliases: &'a [String],
+    pub programs: &'a [wmi_apps::InstalledProgram],
+}
+
 /// Execute a detection chain, stopping at the first successful result.
 ///
 /// `ledger_path` is the install ledger's recorded executable path for the package,
 /// used as a fallback by PE detection when the manifest path template cannot be resolved.
+/// `wmi_ctx` provides WMI app data for `WmiApps` detection method.
 pub async fn run_chain(
     config: &DetectionConfig,
     resolver: &PathResolver,
     ledger_path: Option<&str>,
+    wmi_ctx: Option<&WmiContext<'_>>,
 ) -> DetectionResult {
-    let result = run_single_method(config, resolver, ledger_path).await;
+    let result = run_single_method(config, resolver, ledger_path, wmi_ctx).await;
 
     match &result {
         DetectionResult::Installed { .. } | DetectionResult::InstalledUnknownVersion { .. } => {
             result
         }
         _ => match &config.fallback {
-            Some(next) => Box::pin(run_chain(next, resolver, ledger_path)).await,
+            Some(next) => Box::pin(run_chain(next, resolver, ledger_path, wmi_ctx)).await,
             None => result,
         },
     }
@@ -122,17 +131,41 @@ async fn run_single_method(
     config: &DetectionConfig,
     resolver: &PathResolver,
     ledger_path: Option<&str>,
+    wmi_ctx: Option<&WmiContext<'_>>,
 ) -> DetectionResult {
     match config.method {
         DetectionMethod::Registry => registry::detect(config).await,
         DetectionMethod::PeFile => pe::detect(config, resolver, ledger_path).await,
         DetectionMethod::Wmi | DetectionMethod::DriverStore => wmi_driver::detect(config).await,
+        DetectionMethod::WmiApps => {
+            if let Some(ctx) = wmi_ctx {
+                let matched =
+                    wmi_apps::match_package(ctx.package_name, ctx.aliases, None, ctx.programs);
+                if let Some(m) = matched {
+                    if let Some(version) = m.version() {
+                        DetectionResult::Installed {
+                            version,
+                            method: DetectionMethod::WmiApps,
+                            install_path: None,
+                        }
+                    } else {
+                        DetectionResult::InstalledUnknownVersion {
+                            method: DetectionMethod::WmiApps,
+                            install_path: None,
+                        }
+                    }
+                } else {
+                    DetectionResult::NotInstalled
+                }
+            } else {
+                DetectionResult::Unavailable {
+                    reason: "WMI app data not available".into(),
+                }
+            }
+        }
         DetectionMethod::AscomProfile => ascom::detect(config).await,
         DetectionMethod::FileExists => file::detect_exists(config, resolver).await,
         DetectionMethod::ConfigFile => file::detect_config(config, resolver).await,
-        // Ledger-only packages (e.g., firmware) have no auto-detection — the version
-        // is recorded when Astro-Up handles the download. Detection always reports
-        // Unavailable so the scanner falls through to ledger lookup.
         DetectionMethod::Ledger => DetectionResult::Unavailable {
             reason: "ledger-only detection — version tracked via download ledger".into(),
         },
