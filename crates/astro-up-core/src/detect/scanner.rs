@@ -57,6 +57,45 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
         }
     }
 
+    /// Try to match a package against WMI results. Returns `NotInstalled` if no match.
+    fn wmi_fallback(
+        id: &str,
+        name: &str,
+        aliases: &[String],
+        wmi_programs: &[wmi_apps::InstalledProgram],
+    ) -> DetectionResult {
+        let wmi_result = wmi_apps::match_package(name, aliases, None, wmi_programs);
+
+        if let Some(matched) = wmi_result {
+            if let Some(version) = matched.version() {
+                debug!(
+                    package = %id,
+                    wmi_name = matched.program.name,
+                    version = %version,
+                    strategy = ?matched.strategy,
+                    "detected via WMI (fallback)"
+                );
+                DetectionResult::Installed {
+                    version,
+                    method: DetectionMethod::Wmi,
+                    install_path: None,
+                }
+            } else {
+                debug!(
+                    package = %id,
+                    wmi_name = matched.program.name,
+                    "WMI matched but no version (fallback)"
+                );
+                DetectionResult::InstalledUnknownVersion {
+                    method: DetectionMethod::Wmi,
+                    install_path: None,
+                }
+            }
+        } else {
+            DetectionResult::NotInstalled
+        }
+    }
+
     /// Run a full scan across all catalog packages.
     ///
     /// Detection strategy:
@@ -125,57 +164,41 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
                 continue;
             }
 
-            // Step 2: Try WMI matching (primary detection for all packages)
-            let wmi_result = wmi_apps::match_package(
-                &pkg.name,
-                &pkg.aliases,
-                None, // program_id — will come from manifest later
-                &wmi_programs,
-            );
-
-            let result = if let Some(matched) = wmi_result {
-                // WMI matched — use its version
-                if let Some(version) = matched.version() {
-                    debug!(
-                        package = %id,
-                        wmi_name = matched.program.name,
-                        version = %version,
-                        strategy = ?matched.strategy,
-                        "detected via WMI"
-                    );
-                    DetectionResult::Installed {
-                        version,
-                        method: DetectionMethod::Registry, // WMI reads from registry
-                        install_path: None,
-                    }
-                } else {
-                    debug!(
-                        package = %id,
-                        wmi_name = matched.program.name,
-                        "WMI matched but no version"
-                    );
-                    DetectionResult::InstalledUnknownVersion {
-                        method: DetectionMethod::Registry,
-                        install_path: None,
-                    }
-                }
-            } else if let Some(ref detection_config) = pkg.detection {
-                // Step 3: Legacy detection chain fallback
+            // Step 2: Detection chain first (when config exists), WMI as fallback.
+            // The detection chain uses manifest-defined methods (registry, PE, etc.)
+            // which return accurate versions. WMI's Win32_InstalledWin32Program can
+            // report internal/MSI versions that differ from the user-visible version
+            // (e.g., PHD2 reports 0.6.4 via WMI but 2.6.14 via registry DisplayVersion).
+            let result = if let Some(ref detection_config) = pkg.detection {
                 let ledger_path = ledger_paths.get(&id).map(String::as_str);
-                let legacy_result = run_chain(detection_config, &self.resolver, ledger_path).await;
+                let chain_result = run_chain(detection_config, &self.resolver, ledger_path).await;
 
-                if let DetectionResult::Unavailable { ref reason } = legacy_result {
-                    errors.push(crate::detect::ScanError {
-                        package_id: id.clone(),
-                        method: detection_config.method.clone(),
-                        error: reason.clone(),
-                    });
+                match &chain_result {
+                    DetectionResult::Installed { .. }
+                    | DetectionResult::InstalledUnknownVersion { .. } => chain_result,
+                    DetectionResult::Unavailable { reason } => {
+                        errors.push(crate::detect::ScanError {
+                            package_id: id.clone(),
+                            method: detection_config.method.clone(),
+                            error: reason.clone(),
+                        });
+                        // Detection chain failed — fall back to WMI
+                        Self::wmi_fallback(&id, &pkg.name, &pkg.aliases, &wmi_programs)
+                    }
+                    DetectionResult::NotInstalled => {
+                        // Detection chain says not installed — try WMI as second opinion
+                        Self::wmi_fallback(&id, &pkg.name, &pkg.aliases, &wmi_programs)
+                    }
                 }
-
-                legacy_result
             } else {
-                debug!(package = %id, "no WMI match and no detection config");
-                continue;
+                // No detection config — WMI is the only option
+                let wmi_result = Self::wmi_fallback(&id, &pkg.name, &pkg.aliases, &wmi_programs);
+                if wmi_result.is_installed() {
+                    wmi_result
+                } else {
+                    debug!(package = %id, "no detection config and no WMI match");
+                    continue;
+                }
             };
 
             // Cache the result
