@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
-import { useSoftwareList, useScanInstalled, useUpdateAll, useActivity } from "../composables/useInvoke";
+import { useSoftwareList, useScanInstalled, useUpdateAll, useUpdateSoftware, useActivity } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { logger } from "../utils/logger";
 import type { PackageWithStatus } from "../types/package";
@@ -14,10 +14,13 @@ const { data: software } = useSoftwareList(() => "all");
 const { data: installedSoftware } = useSoftwareList(() => "installed");
 const scanMutation = useScanInstalled();
 const updateAllMutation = useUpdateAll();
+const updateMutation = useUpdateSoftware();
 const { isRunning, startOperation } = useOperations();
 const { data: activity } = useActivity(10);
 
 const showUpdateAllConfirm = ref(false);
+const showSingleUpdateConfirm = ref(false);
+const pendingUpdatePkg = ref<PackageWithStatus | null>(null);
 
 const catalogCount = computed(() => software.value?.length ?? 0);
 
@@ -41,6 +44,19 @@ function runScan() {
 function confirmUpdateAll() {
   logger.debug("DashboardView", "update all clicked");
   updateAllMutation.mutate();
+}
+
+function handleSingleUpdate(pkg: PackageWithStatus) {
+  pendingUpdatePkg.value = pkg;
+  showSingleUpdateConfirm.value = true;
+}
+
+function confirmSingleUpdate() {
+  const pkg = pendingUpdatePkg.value;
+  if (!pkg || !startOperation(pkg.id, `Updating ${pkg.name}`)) return;
+  logger.debug("DashboardView", `update clicked: ${pkg.id}`);
+  updateMutation.mutate(pkg.id);
+  pendingUpdatePkg.value = null;
 }
 
 interface ActivityRecord {
@@ -183,7 +199,8 @@ function activityDetail(record: ActivityRecord): string {
             label="Update"
             severity="warn"
             size="small"
-            @click.stop="showUpdateAllConfirm = true"
+            :disabled="isRunning"
+            @click.stop="handleSingleUpdate(pkg)"
           />
         </div>
         <div class="upd-footer">
@@ -286,6 +303,16 @@ function activityDetail(record: ActivityRecord): string {
       confirm-label="Update All"
       severity="warn"
       @confirm="confirmUpdateAll"
+    />
+
+    <ConfirmDialog
+      v-model:visible="showSingleUpdateConfirm"
+      title="Update Package"
+      :message="`Update ${pendingUpdatePkg?.name} to ${pendingUpdatePkg?.latest_version}?`"
+      icon="pi-arrow-up"
+      confirm-label="Update"
+      severity="warn"
+      @confirm="confirmSingleUpdate"
     />
   </div>
 </template>
