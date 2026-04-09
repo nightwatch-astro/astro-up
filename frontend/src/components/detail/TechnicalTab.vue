@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PackageWithStatus } from "../../types/package";
+import type { PackageWithStatus, InstallMethod, InstallScope, InstallElevation } from "../../types/package";
 
 defineProps<{
   pkg: PackageWithStatus;
@@ -18,6 +18,30 @@ function detectionDetails(pkg: PackageWithStatus): Record<string, string> {
       return { Status: "Unavailable", Reason: pkg.detection.reason };
   }
 }
+
+const methodLabels: Record<InstallMethod, string> = {
+  exe: "Exe",
+  msi: "MSI",
+  inno_setup: "InnoSetup",
+  nsis: "NSIS",
+  wix: "WiX",
+  burn: "Burn",
+  zip: "Zip",
+  portable: "Portable",
+  download_only: "Download Only",
+};
+
+const scopeLabels: Record<InstallScope, string> = {
+  machine: "Machine",
+  user: "User",
+  either: "Either",
+};
+
+const elevationLabels: Record<InstallElevation, string> = {
+  required: "Required",
+  prohibited: "Prohibited",
+  self: "Self",
+};
 </script>
 
 <template>
@@ -38,9 +62,45 @@ function detectionDetails(pkg: PackageWithStatus): Record<string, string> {
       </div>
     </section>
 
+    <section
+      v-if="pkg.install"
+      class="tech-section"
+    >
+      <h3 class="section-title">
+        Install Method
+      </h3>
+      <div class="tech-grid">
+        <div class="tech-item">
+          <span class="tech-label">Method</span>
+          <span class="tech-value">{{ methodLabels[pkg.install.method] ?? pkg.install.method }}</span>
+        </div>
+        <div
+          v-if="pkg.install.scope"
+          class="tech-item"
+        >
+          <span class="tech-label">Scope</span>
+          <span class="tech-value">{{ scopeLabels[pkg.install.scope] ?? pkg.install.scope }}</span>
+        </div>
+        <div
+          v-if="pkg.install.elevation"
+          class="tech-item"
+        >
+          <span class="tech-label">Elevation</span>
+          <span class="tech-value">{{ elevationLabels[pkg.install.elevation] ?? pkg.install.elevation }}</span>
+        </div>
+        <div
+          v-if="pkg.install.zip_wrapped"
+          class="tech-item"
+        >
+          <span class="tech-label">Zip Wrapped</span>
+          <span class="tech-value">Yes</span>
+        </div>
+      </div>
+    </section>
+
     <section class="tech-section">
       <h3 class="section-title">
-        Installation
+        Package Info
       </h3>
       <div class="tech-grid">
         <div class="tech-item">
