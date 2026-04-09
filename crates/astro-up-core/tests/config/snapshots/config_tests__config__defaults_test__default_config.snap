@@ -17,7 +17,8 @@ expression: value
   "logging": {
     "level": "info",
     "log_file": "[platform_path]",
-    "log_to_file": false
+    "log_to_file": false,
+    "max_age_days": 365
   },
   "network": {
     "connect_timeout": "10s",

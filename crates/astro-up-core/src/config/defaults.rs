@@ -98,6 +98,7 @@ impl Default for LogConfig {
             level: LogLevel::Info,
             log_to_file: false,
             log_file: PathBuf::default(),
+            max_age_days: 365,
         }
     }
 }

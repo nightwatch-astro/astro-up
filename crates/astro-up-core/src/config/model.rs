@@ -196,6 +196,13 @@ pub struct LogConfig {
     pub level: LogLevel,
     pub log_to_file: bool,
     pub log_file: PathBuf,
+    /// Delete log files older than this many days. 0 = never prune.
+    #[serde(default = "default_log_max_age_days")]
+    pub max_age_days: u32,
+}
+
+fn default_log_max_age_days() -> u32 {
+    365
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]

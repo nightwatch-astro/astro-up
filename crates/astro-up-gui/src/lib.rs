@@ -136,12 +136,39 @@ fn spawn_backup_scheduler(app: &AppHandle) {
 }
 
 pub fn run() {
-    // Init tracing: stderr (info) + frontend forwarding (debug+)
-    // Global filter allows debug through so the frontend log panel can show it.
-    // The fmt (stderr) layer has its own filter to keep terminal output at info.
+    // Resolve data dir early for file logging
+    let data_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up").map_or_else(
+        || std::env::temp_dir().join("astro-up"),
+        |d| d.data_dir().to_path_buf(),
+    );
+    let log_dir = data_dir.join("logs");
+    let _ = std::fs::create_dir_all(&log_dir);
+
+    // Load config for log settings (best-effort — defaults if DB doesn't exist yet)
+    let log_config = {
+        let db_path = data_dir.join("astro-up.db");
+        let paths = astro_up_core::config::PathsConfig {
+            data_dir,
+            ..astro_up_core::config::PathsConfig::default()
+        };
+        astro_up_core::config::load_config(&db_path, paths, log_dir.join("astro-up.log"), &[])
+            .map(|c| c.logging)
+            .unwrap_or_default()
+    };
+
+    // Prune old log files before creating new ones
+    astro_up_core::logging::prune_old_logs(&log_dir, log_config.max_age_days);
+
+    // Init tracing: stderr (info) + file (debug, daily rotation) + frontend forwarding (debug+)
     let global_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("debug,hyper=info,reqwest=info,rustls=info"));
     let stderr_filter = EnvFilter::new("info,hyper=warn,reqwest=warn,rustls=warn");
+
+    // File logging layer (daily rotation)
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "astro-up-gui.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    // Leak the guard so it lives for the entire process
+    std::mem::forget(_guard);
 
     tracing_subscriber::registry()
         .with(global_filter)
@@ -149,6 +176,12 @@ pub fn run() {
             tracing_subscriber::fmt::layer()
                 .with_target(true)
                 .with_filter(stderr_filter),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .json()
+                .with_writer(non_blocking)
+                .with_filter(EnvFilter::new("debug,hyper=info,reqwest=info,rustls=info")),
         )
         .with(log_layer::FrontendLogLayer)
         .init();

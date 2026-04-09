@@ -26,18 +26,32 @@ async fn main() -> ExitCode {
 
     let cli = astro_up_cli::Cli::parse();
 
-    let log_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up").map_or_else(
+    let data_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up").map_or_else(
         || std::path::PathBuf::from("."),
-        |dirs| dirs.data_dir().join("logs"),
+        |dirs| dirs.data_dir().to_path_buf(),
     );
+    let log_dir = data_dir.join("logs");
 
-    let _log_guard = match astro_up_cli::logging::init(cli.verbose, cli.quiet, &log_dir) {
-        Ok(guard) => guard,
-        Err(e) => {
-            eprintln!("error: failed to initialize logging: {e}");
-            return ExitCode::from(1);
-        }
+    // Load log config early for max_age_days (best-effort)
+    let max_age_days = {
+        let db_path = data_dir.join("astro-up.db");
+        let paths = astro_up_core::config::PathsConfig {
+            data_dir: data_dir.clone(),
+            ..astro_up_core::config::PathsConfig::default()
+        };
+        astro_up_core::config::load_config(&db_path, paths, log_dir.join("astro-up.log"), &[])
+            .map(|c| c.logging.max_age_days)
+            .unwrap_or(365)
     };
+
+    let _log_guard =
+        match astro_up_cli::logging::init(cli.verbose, cli.quiet, &log_dir, max_age_days) {
+            Ok(guard) => guard,
+            Err(e) => {
+                eprintln!("error: failed to initialize logging: {e}");
+                return ExitCode::from(1);
+            }
+        };
 
     tracing::info!(version = astro_up_core::version(), "starting astro-up");
 

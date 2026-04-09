@@ -2,6 +2,7 @@
 import Select from "primevue/select";
 import ToggleSwitch from "primevue/toggleswitch";
 import Button from "primevue/button";
+import InputNumber from "primevue/inputnumber";
 import type { LogConfig } from "../../types/config";
 import { useFilePicker } from "../../composables/useFilePicker";
 
@@ -56,6 +57,17 @@ async function browseLogFile() {
         />
       </div>
     </div>
+    <div class="field">
+      <label>Delete logs older than (days)</label>
+      <InputNumber
+        v-model="config.max_age_days"
+        :min="0"
+        :max="9999"
+        suffix=" days"
+        placeholder="365"
+      />
+      <small class="hint">0 = never delete old logs</small>
+    </div>
   </div>
 </template>
 
@@ -66,6 +78,7 @@ async function browseLogFile() {
 .field-toggle { display: flex; align-items: center; gap: 10px; }
 .field-toggle label { font-size: 13px; color: var(--p-surface-300); }
 .path-row { display: flex; align-items: center; gap: 8px; }
+.hint { font-size: 11px; color: var(--p-surface-500); }
 .path-display {
   flex: 1;
   font-size: 12px;
