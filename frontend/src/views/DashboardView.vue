@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { invoke } from "@tauri-apps/api/core";
 import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
+import SurveyDialog from "../components/shared/SurveyDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
 import { useSoftwareList, useScanInstalled, useUpdateSoftware, useLastScan } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
@@ -21,6 +23,16 @@ const { data: lastScanData } = useLastScan();
 
 const showUpdateAllConfirm = ref(false);
 const showSingleUpdateConfirm = ref(false);
+const showSurvey = ref(false);
+
+onMounted(async () => {
+  try {
+    const eligible = await invoke<boolean>("check_survey_eligible");
+    if (eligible) showSurvey.value = true;
+  } catch (e) {
+    logger.debug("DashboardView", `survey eligibility check failed: ${e}`);
+  }
+});
 const pendingUpdatePkg = ref<PackageWithStatus | null>(null);
 
 const catalogCount = computed(() => software.value?.length ?? 0);
@@ -217,6 +229,10 @@ function confirmSingleUpdate() {
       confirm-label="Update"
       severity="warn"
       @confirm="confirmSingleUpdate"
+    />
+
+    <SurveyDialog
+      v-model:visible="showSurvey"
     />
   </div>
 </template>

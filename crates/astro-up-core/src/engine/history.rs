@@ -161,6 +161,21 @@ pub fn query_history(
     Ok(results)
 }
 
+/// Count successful install and update operations.
+///
+/// Used by the feedback survey to determine if the user has enough experience
+/// with the app to be prompted for feedback.
+pub fn count_successful_operations(conn: &Connection) -> Result<u64, crate::error::CoreError> {
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM operations WHERE status = 'success' AND operation_type IN ('install', 'update')",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| crate::error::CoreError::Database(e.to_string()))?;
+    Ok(count as u64)
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
@@ -295,5 +310,44 @@ mod tests {
         };
         let results = query_history(&conn, &filter).unwrap();
         assert!(results.is_empty());
+    }
+
+    #[test]
+    fn count_successful_operations_empty() {
+        let conn = Connection::open_in_memory().unwrap();
+        create_table(&conn).unwrap();
+        assert_eq!(count_successful_operations(&conn).unwrap(), 0);
+    }
+
+    #[test]
+    fn count_successful_operations_filters_correctly() {
+        let conn = Connection::open_in_memory().unwrap();
+        create_table(&conn).unwrap();
+
+        let ops = vec![
+            ("nina", OperationType::Install, OperationStatus::Success),
+            ("phd2", OperationType::Update, OperationStatus::Success),
+            ("sharpcap", OperationType::Install, OperationStatus::Failed),
+            ("stellarium", OperationType::Uninstall, OperationStatus::Success),
+            ("ascom", OperationType::Update, OperationStatus::Cancelled),
+        ];
+
+        for (pkg, op_type, status) in ops {
+            let record = OperationRecord {
+                id: 0,
+                package_id: pkg.into(),
+                operation_type: op_type,
+                from_version: None,
+                to_version: Some("1.0.0".into()),
+                status,
+                duration_ms: 1000,
+                error_message: None,
+                created_at: Utc::now(),
+            };
+            record_operation(&conn, &record).unwrap();
+        }
+
+        // Only successful install + update = 2 (nina install, phd2 update)
+        assert_eq!(count_successful_operations(&conn).unwrap(), 2);
     }
 }

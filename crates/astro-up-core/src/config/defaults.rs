@@ -20,6 +20,9 @@ impl Default for UiConfig {
             check_interval: Duration::from_secs(86400), // 24h
             auto_notify_updates: true,
             auto_install_updates: false,
+            survey_threshold: 3,
+            survey_dismissed_at: None,
+            survey_completed_at: None,
         }
     }
 }

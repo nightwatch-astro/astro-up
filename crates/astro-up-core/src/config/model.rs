@@ -130,6 +130,19 @@ pub struct UiConfig {
     pub check_interval: Duration,
     pub auto_notify_updates: bool,
     pub auto_install_updates: bool,
+    /// Number of successful operations before showing the feedback survey.
+    #[serde(default = "default_survey_threshold")]
+    pub survey_threshold: u32,
+    /// When the user last dismissed the survey with "Not now" (ISO 8601).
+    #[serde(default)]
+    pub survey_dismissed_at: Option<String>,
+    /// When the user completed or permanently opted out of the survey (ISO 8601).
+    #[serde(default)]
+    pub survey_completed_at: Option<String>,
+}
+
+fn default_survey_threshold() -> u32 {
+    3
 }
 
 /// Startup and window behavior.
