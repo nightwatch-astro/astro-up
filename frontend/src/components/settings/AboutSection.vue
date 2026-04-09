@@ -72,12 +72,35 @@ async function installUpdate() {
       @click="checkForUpdates"
     />
 
+    <div class="about-meta">
+      <div class="about-meta-row">
+        <span class="about-meta-label">Author</span>
+        <span>Sjors Robroek</span>
+      </div>
+      <div class="about-meta-row">
+        <span class="about-meta-label">License</span>
+        <span>Apache-2.0</span>
+      </div>
+    </div>
+
     <div class="about-links">
       <button
         class="about-link"
         @click="openUrl('https://github.com/nightwatch-astro/astro-up')"
       >
-        <i class="pi pi-github" /> GitHub
+        <i class="pi pi-github" /> Source Code
+      </button>
+      <button
+        class="about-link"
+        @click="openUrl('https://github.com/nightwatch-astro/astro-up/issues/new?labels=type%3Abug')"
+      >
+        <i class="pi pi-flag" /> Report a Bug
+      </button>
+      <button
+        class="about-link"
+        @click="openUrl('https://github.com/nightwatch-astro/astro-up-manifests/issues/new?labels=new-software&title=Software+request:+')"
+      >
+        <i class="pi pi-plus" /> Request Software
       </button>
     </div>
 
@@ -117,7 +140,10 @@ async function installUpdate() {
 .about-info { display: flex; flex-direction: column; gap: 2px; }
 .about-name { margin: 0; font-size: 18px; font-weight: 700; color: var(--p-surface-0); }
 .about-version { font-size: 13px; color: var(--p-surface-400); }
-.about-links { display: flex; gap: 16px; }
+.about-meta { display: flex; flex-direction: column; gap: 6px; }
+.about-meta-row { display: flex; gap: 8px; font-size: 13px; }
+.about-meta-label { color: var(--p-surface-400); min-width: 60px; }
+.about-links { display: flex; gap: 16px; flex-wrap: wrap; }
 .about-link {
   font-size: 13px;
   color: var(--p-primary-400);
