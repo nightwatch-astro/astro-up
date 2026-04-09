@@ -63,8 +63,9 @@ function handleBackup() {
 
 function confirmBackup() {
   if (!pkg.value) return;
-  logger.debug("PackageDetailView", `backup confirmed: ${pkg.value.id}`);
-  backupMutation.mutate([]);
+  const paths = pkg.value.backup?.config_paths ?? [];
+  logger.debug("PackageDetailView", `backup confirmed: ${pkg.value.id}, paths: ${paths.join(", ")}`);
+  backupMutation.mutate(paths);
 }
 </script>
 
@@ -111,7 +112,7 @@ function confirmBackup() {
               Versions
             </Tab>
             <Tab
-              v-if="pkg.installed_version"
+              v-if="pkg.backup?.config_paths?.length"
               value="2"
             >
               Backup
@@ -134,6 +135,7 @@ function confirmBackup() {
             <TabPanel value="2">
               <BackupTab
                 :package-id="pkg.id"
+                :config-paths="pkg.backup?.config_paths"
                 @backup="handleBackup"
               />
             </TabPanel>

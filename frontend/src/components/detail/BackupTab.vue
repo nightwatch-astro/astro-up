@@ -9,6 +9,7 @@ import type { BackupListEntry } from "../../types/backup";
 
 const props = defineProps<{
   packageId: string;
+  configPaths?: string[];
 }>();
 
 defineEmits<{
@@ -21,11 +22,7 @@ const backups = computed<BackupListEntry[]>(() =>
   mockBackups.filter((b) => b.package_id === props.packageId),
 );
 
-// Mock manifest paths (would come from backend package definition)
-const manifestPaths = computed(() => [
-  "%APPDATA%/N.I.N.A/Profiles",
-  "%APPDATA%/N.I.N.A/Settings",
-]);
+const manifestPaths = computed(() => props.configPaths ?? []);
 
 const customPaths = ref<string[]>([]);
 const newPath = ref("");

@@ -56,9 +56,14 @@ export type DetectionResult =
   | { type: "NotInstalled" }
   | { type: "Unavailable"; reason: string };
 
+export interface BackupConfig {
+  config_paths: string[];
+}
+
 export interface PackageWithStatus extends PackageSummary {
   installed_version?: string | null;
   latest_version?: string;
   update_available?: boolean;
   detection?: DetectionResult;
+  backup?: BackupConfig | null;
 }
