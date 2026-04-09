@@ -3,8 +3,8 @@ use std::time::Duration;
 
 use super::model::{
     BackupPolicyConfig, BackupSchedule, CatalogConfig, FontSize, InstallMethod, InstallScope,
-    LogConfig, LogLevel, NetworkConfig, NotificationsConfig, PathsConfig, ThemeMode, UiConfig,
-    UpdateConfig,
+    LogConfig, LogLevel, NetworkConfig, NotificationsConfig, PathsConfig, ScanInterval, ThemeMode,
+    UiConfig, UpdateConfig,
 };
 
 impl Default for UiConfig {
@@ -13,6 +13,7 @@ impl Default for UiConfig {
             theme: ThemeMode::default(),
             font_size: FontSize::default(),
             auto_scan_on_launch: false,
+            scan_interval: ScanInterval::default(),
             default_install_scope: InstallScope::default(),
             default_install_method: InstallMethod::default(),
             auto_check_updates: true,

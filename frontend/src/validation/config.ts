@@ -4,6 +4,7 @@ export const UiSchema = v.object({
   theme: v.picklist(["dark", "light", "system"]),
   font_size: v.picklist(["small", "medium", "large"]),
   auto_scan_on_launch: v.boolean(),
+  scan_interval: v.picklist(["manual", "on_startup", "hourly", "daily", "weekly"]),
   default_install_scope: v.picklist(["user", "machine"]),
   default_install_method: v.picklist(["silent", "interactive"]),
   auto_check_updates: v.boolean(),

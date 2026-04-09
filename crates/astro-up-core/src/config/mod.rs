@@ -16,7 +16,7 @@ pub use api::{config_get, config_list, config_reset, config_set};
 pub use model::{
     AppConfig, BackupPolicyConfig, BackupSchedule, CatalogConfig, FontSize, InstallMethod,
     InstallScope, LogConfig, LogLevel, NetworkConfig, NotificationsConfig, PathsConfig,
-    StartupConfig, TelemetryConfig, ThemeMode, UiConfig, UpdateConfig,
+    ScanInterval, StartupConfig, TelemetryConfig, ThemeMode, UiConfig, UpdateConfig,
 };
 pub use store::ConfigStore;
 
@@ -126,6 +126,10 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
             config.ui.auto_scan_on_launch = value
                 .parse::<bool>()
                 .map_err(|_| parse_err("boolean (true/false)"))?;
+        }
+        "ui.scan_interval" => {
+            config.ui.scan_interval = model::ScanInterval::from_str(value)
+                .map_err(|_| parse_err("scan interval (manual/on_startup/hourly/daily/weekly)"))?;
         }
         "ui.default_install_scope" => {
             config.ui.default_install_scope = model::InstallScope::from_str(value)
@@ -316,6 +320,7 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         "ui.theme" => Some(config.ui.theme.to_string()),
         "ui.font_size" => Some(config.ui.font_size.to_string()),
         "ui.auto_scan_on_launch" => Some(config.ui.auto_scan_on_launch.to_string()),
+        "ui.scan_interval" => Some(config.ui.scan_interval.to_string()),
         "ui.default_install_scope" => Some(config.ui.default_install_scope.to_string()),
         "ui.default_install_method" => Some(config.ui.default_install_method.to_string()),
         "ui.auto_check_updates" => Some(config.ui.auto_check_updates.to_string()),

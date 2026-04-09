@@ -47,6 +47,24 @@ pub enum InstallMethod {
     Interactive,
 }
 
+/// How often to automatically scan for installed software.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum ScanInterval {
+    /// Never auto-scan — only when the user clicks "Scan"
+    Manual,
+    /// Scan once when the app starts (if stale)
+    #[default]
+    OnStartup,
+    /// Scan every hour
+    Hourly,
+    /// Scan once per day
+    Daily,
+    /// Scan once per week
+    Weekly,
+}
+
 /// Backup schedule frequency.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
@@ -103,6 +121,7 @@ pub struct UiConfig {
     pub theme: ThemeMode,
     pub font_size: FontSize,
     pub auto_scan_on_launch: bool,
+    pub scan_interval: ScanInterval,
     pub default_install_scope: InstallScope,
     pub default_install_method: InstallMethod,
     pub auto_check_updates: bool,

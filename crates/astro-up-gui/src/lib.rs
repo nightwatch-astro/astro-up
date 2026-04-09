@@ -238,6 +238,7 @@ pub fn run() {
             commands::clear_directory,
             commands::resolve_asset_selection,
             commands::get_activity,
+            commands::get_last_scan,
         ])
         .setup(|app| {
             let start = std::time::Instant::now();
