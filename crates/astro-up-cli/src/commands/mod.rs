@@ -1,4 +1,5 @@
 pub mod backup;
+pub mod catalog;
 pub mod config;
 pub mod install;
 pub mod lifecycle_test;
