@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useSoftwareList, useUpdateCheck } from "../../composables/useInvoke";
+import { useSoftwareList, useUpdateCheck, useCancelOperation } from "../../composables/useInvoke";
 import { useOperations } from "../../composables/useOperations";
 
 defineEmits<{
@@ -10,7 +10,16 @@ defineEmits<{
 
 const { data: software } = useSoftwareList(() => "all");
 const { data: updates } = useUpdateCheck();
-const { operation, isRunning } = useOperations();
+const { operation, isRunning, cancelOperation } = useOperations();
+const cancelMutation = useCancelOperation();
+
+function handleCancel() {
+  if (operation.value) {
+    cancelMutation.mutate(operation.value.id, {
+      onSuccess: () => cancelOperation(),
+    });
+  }
+}
 
 const catalogCount = computed(() => software.value?.length ?? 0);
 const installedCount = computed(() => {
@@ -84,6 +93,13 @@ const lastSync = computed(() => {
         <span class="status-item has-op">
           <i class="pi pi-spinner pi-spin" />
           {{ operation?.label }}
+          <button
+            class="cancel-btn"
+            title="Cancel operation"
+            @click="handleCancel"
+          >
+            <i class="pi pi-times" />
+          </button>
         </span>
       </template>
     </div>
@@ -137,6 +153,31 @@ const lastSync = computed(() => {
 
 .status-item.has-op {
   color: var(--p-blue-400);
+}
+
+.cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--p-surface-400);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.cancel-btn:hover {
+  background: var(--p-surface-700);
+  color: var(--p-red-400);
+}
+
+.cancel-btn i {
+  font-size: 10px;
 }
 
 .status-separator {
