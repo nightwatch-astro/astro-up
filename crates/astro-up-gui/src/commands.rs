@@ -1063,7 +1063,9 @@ pub async fn dismiss_survey(state: State<'_, AppState>) -> Result<(), CoreError>
     );
     let now = chrono::Utc::now().to_rfc3339();
     let store = state.open_config_store()?;
-    store.set("ui.survey_dismissed_at", &now)?;
+    store
+        .set("ui.survey_dismissed_at", &now)
+        .map_err(|e| CoreError::from(e.to_string()))?;
     state.config.lock().unwrap().ui.survey_dismissed_at = Some(now);
     Ok(())
 }
@@ -1076,7 +1078,9 @@ pub async fn complete_survey(state: State<'_, AppState>) -> Result<(), CoreError
     );
     let now = chrono::Utc::now().to_rfc3339();
     let store = state.open_config_store()?;
-    store.set("ui.survey_completed_at", &now)?;
+    store
+        .set("ui.survey_completed_at", &now)
+        .map_err(|e| CoreError::from(e.to_string()))?;
     state.config.lock().unwrap().ui.survey_completed_at = Some(now);
     Ok(())
 }
