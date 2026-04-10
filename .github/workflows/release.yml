@@ -111,7 +111,7 @@ jobs:
           releaseBody: ${{ needs.release-please.outputs.release_notes }}
           releaseDraft: true
           prerelease: false
-          includeUpdaterJson: true
+          uploadUpdaterJson: true
           updaterJsonPreferNsis: true
 
   publish-release:
