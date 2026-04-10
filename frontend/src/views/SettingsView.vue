@@ -13,6 +13,7 @@ import NetworkSection from "../components/settings/NetworkSection.vue";
 import PathsSection from "../components/settings/PathsSection.vue";
 import LoggingSection from "../components/settings/LoggingSection.vue";
 import AboutSection from "../components/settings/AboutSection.vue";
+import { FEATURE_BACKUP } from "../features";
 import { useConfig, useSaveConfig } from "../composables/useInvoke";
 import { logger } from "../utils/logger";
 import type { AppConfig } from "../types/config";
@@ -25,17 +26,18 @@ const activeSection = ref("general");
 const showResetConfirm = ref(false);
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-const sections = [
+const allSections = [
   { id: "general", label: "General", icon: "pi-cog" },
   { id: "startup", label: "Startup", icon: "pi-power-off" },
   { id: "notifications", label: "Notifications", icon: "pi-bell" },
-  { id: "backup", label: "Backup", icon: "pi-database" },
+  { id: "backup", label: "Backup", icon: "pi-database", feature: FEATURE_BACKUP },
   { id: "catalog", label: "Catalog", icon: "pi-th-large" },
   { id: "network", label: "Network", icon: "pi-globe" },
   { id: "paths", label: "Paths", icon: "pi-folder" },
   { id: "logging", label: "Logging", icon: "pi-list" },
   { id: "about", label: "About", icon: "pi-info-circle" },
 ];
+const sections = allSections.filter((s) => s.feature !== false);
 
 const defaultConfig: AppConfig = {
   ui: {

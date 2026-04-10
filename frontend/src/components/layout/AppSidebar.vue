@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import Badge from "primevue/badge";
+import { FEATURE_BACKUP } from "../../features";
 import { useSoftwareList } from "../../composables/useInvoke";
 import type { PackageWithStatus } from "../../types/package";
 
@@ -10,13 +11,14 @@ const updateCount = computed(() =>
   ((software.value ?? []) as PackageWithStatus[]).filter((p) => p.update_available).length,
 );
 
-const navItems = [
+const allNavItems = [
   { to: "/", label: "Dashboard", icon: "pi-home", exact: true },
   { to: "/catalog", label: "Catalog", icon: "pi-th-large" },
   { to: "/installed", label: "Installed", icon: "pi-check-circle" },
-  { to: "/backup", label: "Backup", icon: "pi-database" },
+  { to: "/backup", label: "Backup", icon: "pi-database", feature: FEATURE_BACKUP },
   { to: "/settings", label: "Settings", icon: "pi-cog" },
 ];
+const navItems = allNavItems.filter((item) => item.feature !== false);
 </script>
 
 <template>

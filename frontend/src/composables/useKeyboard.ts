@@ -11,12 +11,11 @@ export function useKeyboard(options: {
   const router = useRouter();
   const keys = useMagicKeys();
 
-  // Ctrl+1-5: Navigate to pages
+  // Ctrl+1-4: Navigate to pages
   whenever(keys["ctrl+1"]!, () => router.push("/"));
   whenever(keys["ctrl+2"]!, () => router.push("/catalog"));
   whenever(keys["ctrl+3"]!, () => router.push("/installed"));
-  whenever(keys["ctrl+4"]!, () => router.push("/backup"));
-  whenever(keys["ctrl+5"]!, () => router.push("/settings"));
+  whenever(keys["ctrl+4"]!, () => router.push("/settings"));
 
   // Ctrl+F: Focus search
   function handleKeydown(e: KeyboardEvent) {

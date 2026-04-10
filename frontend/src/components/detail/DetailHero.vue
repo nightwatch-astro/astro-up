@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Button from "primevue/button";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
+import { FEATURE_BACKUP } from "../../features";
 import PackageIcon from "../shared/PackageIcon.vue";
 import type { PackageWithStatus } from "../../types/package";
 
@@ -75,7 +76,7 @@ defineEmits<{
         @click="$emit('install')"
       />
       <Button
-        v-if="pkg.backup?.config_paths?.length"
+        v-if="FEATURE_BACKUP && pkg.backup?.config_paths?.length"
         label="Backup Now"
         icon="pi pi-database"
         severity="secondary"

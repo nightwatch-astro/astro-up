@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from "primevue/button";
+import { FEATURE_BACKUP } from "../../features";
 import PackageIcon from "../shared/PackageIcon.vue";
 import type { PackageWithStatus } from "../../types/package";
 
@@ -49,7 +50,7 @@ defineEmits<{
       @click.stop
     >
       <Button
-        v-if="pkg.backup?.config_paths?.length"
+        v-if="FEATURE_BACKUP && pkg.backup?.config_paths?.length"
         icon="pi pi-database"
         label="Backup Now"
         text

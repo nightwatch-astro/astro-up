@@ -6,6 +6,7 @@ import Button from "primevue/button";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import SurveyDialog from "../components/shared/SurveyDialog.vue";
 import PackageIcon from "../components/shared/PackageIcon.vue";
+import { FEATURE_BACKUP } from "../features";
 import { useSoftwareList, useScanInstalled, useUpdateSoftware, useLastScan } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { useUpdateQueue } from "../composables/useUpdateQueue";
@@ -127,6 +128,7 @@ function confirmSingleUpdate() {
         </div>
       </div>
       <div
+        v-if="FEATURE_BACKUP"
         class="stat-card card clickable"
         @click="router.push('/backup')"
       >

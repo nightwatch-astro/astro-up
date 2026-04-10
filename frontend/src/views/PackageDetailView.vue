@@ -6,6 +6,7 @@ import TabList from "primevue/tablist";
 import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
+import { FEATURE_BACKUP } from "../features";
 import DetailHero from "../components/detail/DetailHero.vue";
 import OverviewTab from "../components/detail/OverviewTab.vue";
 import VersionsTab from "../components/detail/VersionsTab.vue";
@@ -117,7 +118,7 @@ function confirmBackup() {
               Versions
             </Tab>
             <Tab
-              v-if="pkg.backup?.config_paths?.length"
+              v-if="FEATURE_BACKUP && pkg.backup?.config_paths?.length"
               value="2"
             >
               Backup
@@ -155,6 +156,7 @@ function confirmBackup() {
     </template>
 
     <ConfirmDialog
+      v-if="FEATURE_BACKUP"
       v-model:visible="showBackupConfirm"
       title="Backup Now"
       :message="`Create a backup of ${pkg?.name ?? 'this package'}?`"
