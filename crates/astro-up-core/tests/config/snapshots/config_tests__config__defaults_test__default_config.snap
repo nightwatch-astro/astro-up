@@ -1,5 +1,6 @@
 ---
 source: crates/astro-up-core/tests/config/defaults_test.rs
+assertion_line: 53
 expression: value
 ---
 {
@@ -60,6 +61,9 @@ expression: value
     "default_install_scope": "user",
     "font_size": "medium",
     "scan_interval": "on_startup",
+    "survey_completed_at": null,
+    "survey_dismissed_at": null,
+    "survey_threshold": 3,
     "theme": "system"
   },
   "updates": {

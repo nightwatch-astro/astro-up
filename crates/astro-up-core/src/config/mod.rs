@@ -173,6 +173,25 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
                 .parse::<bool>()
                 .map_err(|_| parse_err("boolean (true/false)"))?;
         }
+        "ui.survey_threshold" => {
+            config.ui.survey_threshold = value
+                .parse::<u32>()
+                .map_err(|_| parse_err("integer (minimum operations before survey)"))?;
+        }
+        "ui.survey_dismissed_at" => {
+            config.ui.survey_dismissed_at = if value.is_empty() || value == "none" {
+                None
+            } else {
+                Some(value.to_string())
+            };
+        }
+        "ui.survey_completed_at" => {
+            config.ui.survey_completed_at = if value.is_empty() || value == "none" {
+                None
+            } else {
+                Some(value.to_string())
+            };
+        }
         // startup section
         "startup.start_at_login" => {
             config.startup.start_at_login = value
@@ -324,6 +343,47 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
     Ok(())
 }
 
+/// Check if the user is eligible for the feedback survey.
+///
+/// Eligible when:
+/// - Successful operation count >= threshold
+/// - Survey was never completed (completed_at is None)
+/// - Survey was never dismissed, or dismissal was >30 days ago
+pub fn check_survey_eligible(
+    conn: &rusqlite::Connection,
+    config: &UiConfig,
+) -> Result<bool, CoreError> {
+    use chrono::{DateTime, Utc};
+
+    // Already completed — never show again
+    if config.survey_completed_at.is_some() {
+        debug!("survey already completed, not eligible");
+        return Ok(false);
+    }
+
+    // Dismissed within the last 30 days — snooze
+    if let Some(ref dismissed_str) = config.survey_dismissed_at {
+        if let Ok(dismissed) = DateTime::parse_from_rfc3339(dismissed_str) {
+            let days_since = (Utc::now() - dismissed.with_timezone(&Utc)).num_days();
+            if days_since <= 30 {
+                debug!(days_since, "survey snoozed, not eligible");
+                return Ok(false);
+            }
+        }
+    }
+
+    // Check operation count
+    let count = crate::engine::history::count_successful_operations(conn)?;
+    let eligible = count >= u64::from(config.survey_threshold);
+    debug!(
+        count,
+        threshold = config.survey_threshold,
+        eligible,
+        "survey eligibility check"
+    );
+    Ok(eligible)
+}
+
 fn parse_duration(s: &str) -> Result<Duration, humantime::DurationError> {
     humantime::parse_duration(s)
 }
@@ -344,6 +404,9 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         }
         "ui.auto_notify_updates" => Some(config.ui.auto_notify_updates.to_string()),
         "ui.auto_install_updates" => Some(config.ui.auto_install_updates.to_string()),
+        "ui.survey_threshold" => Some(config.ui.survey_threshold.to_string()),
+        "ui.survey_dismissed_at" => config.ui.survey_dismissed_at.clone(),
+        "ui.survey_completed_at" => config.ui.survey_completed_at.clone(),
         // startup section
         "startup.start_at_login" => Some(config.startup.start_at_login.to_string()),
         "startup.start_minimized" => Some(config.startup.start_minimized.to_string()),
@@ -406,5 +469,90 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         "logging.max_age_days" => Some(config.logging.max_age_days.to_string()),
         "telemetry.enabled" => Some(config.telemetry.enabled.to_string()),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use chrono::{Duration as ChronoDuration, Utc};
+
+    fn setup_db_with_ops(count: usize) -> rusqlite::Connection {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        crate::engine::history::create_table(&conn).unwrap();
+
+        for i in 0..count {
+            let record = crate::engine::history::OperationRecord {
+                id: 0,
+                package_id: format!("pkg-{i}"),
+                operation_type: crate::engine::history::OperationType::Install,
+                from_version: None,
+                to_version: Some("1.0.0".into()),
+                status: crate::engine::history::OperationStatus::Success,
+                duration_ms: 1000,
+                error_message: None,
+                created_at: Utc::now(),
+            };
+            crate::engine::history::record_operation(&conn, &record).unwrap();
+        }
+        conn
+    }
+
+    #[test]
+    fn survey_eligible_when_threshold_met() {
+        let conn = setup_db_with_ops(3);
+        let config = UiConfig::default();
+        assert!(check_survey_eligible(&conn, &config).unwrap());
+    }
+
+    #[test]
+    fn survey_not_eligible_below_threshold() {
+        let conn = setup_db_with_ops(2);
+        let config = UiConfig::default();
+        assert!(!check_survey_eligible(&conn, &config).unwrap());
+    }
+
+    #[test]
+    fn survey_not_eligible_when_completed() {
+        let conn = setup_db_with_ops(5);
+        let config = UiConfig {
+            survey_completed_at: Some(Utc::now().to_rfc3339()),
+            ..UiConfig::default()
+        };
+        assert!(!check_survey_eligible(&conn, &config).unwrap());
+    }
+
+    #[test]
+    fn survey_not_eligible_when_snoozed_recently() {
+        let conn = setup_db_with_ops(5);
+        let dismissed = Utc::now() - ChronoDuration::days(10);
+        let config = UiConfig {
+            survey_dismissed_at: Some(dismissed.to_rfc3339()),
+            ..UiConfig::default()
+        };
+        assert!(!check_survey_eligible(&conn, &config).unwrap());
+    }
+
+    #[test]
+    fn survey_eligible_when_snooze_expired() {
+        let conn = setup_db_with_ops(5);
+        let dismissed = Utc::now() - ChronoDuration::days(31);
+        let config = UiConfig {
+            survey_dismissed_at: Some(dismissed.to_rfc3339()),
+            ..UiConfig::default()
+        };
+        assert!(check_survey_eligible(&conn, &config).unwrap());
+    }
+
+    #[test]
+    fn survey_not_eligible_at_snooze_boundary() {
+        let conn = setup_db_with_ops(5);
+        let dismissed = Utc::now() - ChronoDuration::days(29);
+        let config = UiConfig {
+            survey_dismissed_at: Some(dismissed.to_rfc3339()),
+            ..UiConfig::default()
+        };
+        assert!(!check_survey_eligible(&conn, &config).unwrap());
     }
 }

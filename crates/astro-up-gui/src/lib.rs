@@ -239,6 +239,9 @@ pub fn run() {
             commands::resolve_asset_selection,
             commands::get_activity,
             commands::get_last_scan,
+            commands::check_survey_eligible,
+            commands::dismiss_survey,
+            commands::complete_survey,
         ])
         .setup(|app| {
             let start = std::time::Instant::now();
