@@ -286,7 +286,6 @@ watch(
   flex-shrink: 0;
 }
 
-<<<<<<< HEAD
 .ops-queue-bar {
   display: flex;
   align-items: center;

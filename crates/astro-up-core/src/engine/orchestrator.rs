@@ -577,13 +577,12 @@ where
         };
 
         // For DownloadOnly packages, surface the download directory in the event
-        let download_path = if install_request.install_config.method
-            == crate::types::InstallMethod::DownloadOnly
-        {
-            result_path.map(|p| p.to_string_lossy().into_owned())
-        } else {
-            None
-        };
+        let download_path =
+            if install_request.install_config.method == crate::types::InstallMethod::DownloadOnly {
+                result_path.map(|p| p.to_string_lossy().into_owned())
+            } else {
+                None
+            };
 
         check_cancel!();
 
