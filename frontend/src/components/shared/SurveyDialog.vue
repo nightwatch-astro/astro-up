@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
+import { useToast } from "primevue/usetoast";
+import { logger } from "../../utils/logger";
 
 defineProps<{
   visible: boolean;
@@ -12,26 +14,44 @@ const emit = defineEmits<{
   "update:visible": [value: boolean];
 }>();
 
+const toast = useToast();
+
 async function handleFeedback() {
-  await invoke("complete_survey");
-  await openUrl("https://tally.so/r/lb7dd5");
+  try {
+    await invoke("complete_survey");
+    await openUrl("https://tally.so/r/lb7dd5");
+  } catch (e) {
+    logger.error("survey", `Failed to complete survey: ${e}`);
+    toast.add({ severity: "error", summary: "Error", detail: "Could not record survey response", life: 3000 });
+  }
   emit("update:visible", false);
 }
 
 async function handleNotNow() {
-  await invoke("dismiss_survey");
+  try {
+    await invoke("dismiss_survey");
+  } catch (e) {
+    logger.error("survey", `Failed to dismiss survey: ${e}`);
+  }
   emit("update:visible", false);
 }
 
 async function handleDontAskAgain() {
-  await invoke("complete_survey");
+  try {
+    await invoke("complete_survey");
+  } catch (e) {
+    logger.error("survey", `Failed to complete survey: ${e}`);
+  }
   emit("update:visible", false);
 }
 
 async function handleClose(value: boolean) {
   if (!value) {
-    // Escape or click outside — treat as "Not now"
-    await invoke("dismiss_survey");
+    try {
+      await invoke("dismiss_survey");
+    } catch (e) {
+      logger.error("survey", `Failed to dismiss survey: ${e}`);
+    }
   }
   emit("update:visible", value);
 }
