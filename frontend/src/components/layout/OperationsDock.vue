@@ -6,6 +6,24 @@ import { useOperations } from "../../composables/useOperations";
 import { useUpdateQueue } from "../../composables/useUpdateQueue";
 import { useCancelOperation } from "../../composables/useInvoke";
 
+const DOWNLOAD_PATH_PREFIX = "Downloaded to: ";
+
+function extractDownloadPath(message: string): string | null {
+  if (message.startsWith(DOWNLOAD_PATH_PREFIX)) {
+    return message.slice(DOWNLOAD_PATH_PREFIX.length);
+  }
+  return null;
+}
+
+async function openDownloadFolder(path: string) {
+  try {
+    const { open: openPath } = await import("@tauri-apps/plugin-shell");
+    await openPath(path);
+  } catch {
+    // Not running inside Tauri or path invalid
+  }
+}
+
 const { operation, dismissOperation, cancelOperation } = useOperations();
 const { isActive: queueActive, progress: queueProgress, queueLabel, summary: queueSummary, items: queueItems, cancelQueue, clearQueue } = useUpdateQueue();
 const cancelMutation = useCancelOperation();
@@ -165,7 +183,18 @@ watch(
           :class="step.level"
         >
           <span class="step-time">{{ step.timestamp.slice(11, 19) }}</span>
-          <span class="step-message">{{ step.message }}</span>
+          <span
+            v-if="extractDownloadPath(step.message)"
+            class="step-message step-link"
+            title="Open folder"
+            @click.stop="openDownloadFolder(extractDownloadPath(step.message)!)"
+          >
+            <i class="pi pi-folder-open" /> {{ step.message }}
+          </span>
+          <span
+            v-else
+            class="step-message"
+          >{{ step.message }}</span>
         </div>
       </div>
     </template>
@@ -276,5 +305,21 @@ watch(
 .ops-queue-summary {
   color: var(--p-surface-300);
   background: transparent;
+}
+
+.step-link {
+  cursor: pointer;
+  color: var(--p-primary-400);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.step-link:hover {
+  color: var(--p-primary-300);
+}
+
+.step-link .pi {
+  font-size: 10px;
+  margin-right: 2px;
 }
 </style>

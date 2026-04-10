@@ -156,6 +156,9 @@ useCoreEvents((event: CoreEvent) => {
       failOperation(`${event.data.package_id}: ${reason}`);
     } else {
       if (queueActive.value) markCurrentComplete();
+      if (event.data.download_path) {
+        addStep("info", `Downloaded to: ${event.data.download_path}`);
+      }
       completeOperation();
     }
   } else if (event.type === "orchestration_complete") {

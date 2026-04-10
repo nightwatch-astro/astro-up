@@ -104,6 +104,9 @@ pub enum Event {
         /// Error details when status is "failed".
         #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<String>,
+        /// Directory where the installer was downloaded (DownloadOnly packages).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        download_path: Option<String>,
     },
     /// Package skipped due to policy or dependency failure.
     PackageSkipped {
@@ -219,6 +222,7 @@ mod tests {
                 package_id: PackageId::new("nina-app").unwrap(),
                 status: "succeeded".into(),
                 error: None,
+                download_path: None,
             },
             Event::PackageSkipped {
                 package_id: PackageId::new("phd2").unwrap(),
