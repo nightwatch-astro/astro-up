@@ -179,8 +179,16 @@ export function useScanInstalled() {
     mutationFn: () => { logMutation("scan_installed"); return invoke<unknown>("scan_installed"); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["software"] });
+      queryClient.invalidateQueries({ queryKey: ["last-scan"] });
     },
     onError,
+  });
+}
+
+export function useLastScan() {
+  return useQuery({
+    queryKey: ["last-scan"],
+    queryFn: () => invoke<{ last_scan_at: string | null }>("get_last_scan"),
   });
 }
 

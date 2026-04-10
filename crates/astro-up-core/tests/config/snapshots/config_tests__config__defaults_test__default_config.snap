@@ -59,6 +59,7 @@ expression: value
     "default_install_method": "interactive",
     "default_install_scope": "user",
     "font_size": "medium",
+    "scan_interval": "on_startup",
     "theme": "system"
   },
   "updates": {

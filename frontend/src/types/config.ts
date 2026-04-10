@@ -11,10 +11,13 @@ export interface AppConfig {
   telemetry: TelemetryConfig;
 }
 
+export type ScanInterval = "manual" | "on_startup" | "hourly" | "daily" | "weekly";
+
 export interface UiConfig {
   theme: "dark" | "light" | "system";
   font_size: "small" | "medium" | "large";
   auto_scan_on_launch: boolean;
+  scan_interval: ScanInterval;
   default_install_scope: "user" | "machine";
   default_install_method: "silent" | "interactive";
   auto_check_updates: boolean;

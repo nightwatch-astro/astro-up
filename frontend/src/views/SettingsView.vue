@@ -40,6 +40,7 @@ const sections = [
 const defaultConfig: AppConfig = {
   ui: {
     theme: "system", font_size: "medium", auto_scan_on_launch: true,
+    scan_interval: "on_startup",
     default_install_scope: "user", default_install_method: "silent",
     auto_check_updates: true, check_interval: "1day",
     auto_notify_updates: true, auto_install_updates: false,

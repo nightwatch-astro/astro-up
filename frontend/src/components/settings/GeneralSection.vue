@@ -21,6 +21,14 @@ const methodOptions = [
   { label: "Interactive", value: "interactive" },
 ];
 
+const scanIntervalOptions = [
+  { label: "Manual only", value: "manual" },
+  { label: "On startup", value: "on_startup" },
+  { label: "Every hour", value: "hourly" },
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
+];
+
 // Values must match humantime_serde output format
 const intervalOptions = [
   { label: "1 hour", value: "1h" },
@@ -46,6 +54,15 @@ const intervalOptions = [
     <div class="field-toggle">
       <ToggleSwitch v-model="config.auto_scan_on_launch" />
       <label>Auto-scan on launch</label>
+    </div>
+    <div class="field">
+      <label>Scan Interval</label>
+      <Select
+        v-model="config.scan_interval"
+        :options="scanIntervalOptions"
+        option-label="label"
+        option-value="value"
+      />
     </div>
     <div class="field">
       <label>Default Install Scope</label>

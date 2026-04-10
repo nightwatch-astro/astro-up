@@ -11,7 +11,7 @@ use astro_up_core::detect::scanner::Scanner;
 use astro_up_core::events::Event;
 
 use crate::state::{AppState, OperationId};
-use astro_up_core::adapters::{CatalogPackageSource, SqliteLedgerStore};
+use astro_up_core::adapters::{CatalogPackageSource, DetectionStore, SqliteLedgerStore};
 
 /// Payload emitted to the frontend when the orchestrator needs asset selection.
 #[derive(Debug, Clone, Serialize)]
@@ -190,6 +190,15 @@ fn try_list_software(
         .map(|e| (e.package_id.clone(), e.version.to_string()))
         .collect();
 
+    // Load persisted detection results
+    let detection_store = DetectionStore::new(state.db_path.clone());
+    let detection_results = detection_store.load_results().unwrap_or_default();
+    let detection_map: std::collections::HashMap<String, astro_up_core::detect::DetectionResult> =
+        detection_results
+            .into_iter()
+            .map(|pd| (pd.package_id, pd.result))
+            .collect();
+
     let packages = match filter {
         "installed" => {
             if acknowledged.is_empty() {
@@ -248,6 +257,14 @@ fn try_list_software(
                 "update_available".into(),
                 serde_json::json!(update_available),
             );
+
+            // Include cached detection result if available
+            if let Some(detection) = detection_map.get(&pkg_id) {
+                obj.insert(
+                    "detection".into(),
+                    serde_json::to_value(detection).unwrap_or_default(),
+                );
+            }
 
             val
         })
@@ -458,6 +475,12 @@ pub async fn scan_installed(
         code: "scan_error".into(),
     })?;
 
+    // Persist detection results to DB
+    let detection_store = DetectionStore::new(state.db_path.clone());
+    if let Err(e) = detection_store.save_results(&scan_result.results) {
+        tracing::warn!(error = %e, "failed to persist detection results");
+    }
+
     let total_found = scan_result
         .results
         .iter()
@@ -508,6 +531,15 @@ pub async fn get_activity(
         .map_err(|e| CoreError::from(e.to_string()))?;
 
     serde_json::to_value(&records).map_err(|e| CoreError::from(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn get_last_scan(state: State<'_, AppState>) -> Result<serde_json::Value, CoreError> {
+    let detection_store = DetectionStore::new(state.db_path.clone());
+    let last_scan = detection_store
+        .last_scan_at()
+        .map_err(|e| CoreError::from(e.to_string()))?;
+    Ok(serde_json::json!({ "last_scan_at": last_scan }))
 }
 
 /// Shared helper: create an orchestrator, plan, and execute.
