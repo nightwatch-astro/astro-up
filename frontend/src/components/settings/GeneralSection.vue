@@ -102,10 +102,6 @@ const intervalOptions = [
       <ToggleSwitch v-model="config.auto_notify_updates" />
       <label>Notify on updates</label>
     </div>
-    <div class="field-toggle">
-      <ToggleSwitch v-model="config.auto_install_updates" />
-      <label>Auto-install updates</label>
-    </div>
   </div>
 </template>
 

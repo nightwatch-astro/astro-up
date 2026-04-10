@@ -55,9 +55,9 @@ pub enum ScanInterval {
     /// Never auto-scan — only when the user clicks "Scan"
     Manual,
     /// Scan once when the app starts (if stale)
-    #[default]
     OnStartup,
     /// Scan every hour
+    #[default]
     Hourly,
     /// Scan once per day
     Daily,

@@ -15,10 +15,11 @@ export function useOperations() {
       activeOperation.value = null;
     }
 
-    // Safety valve: force-clear stale running operations (>60s)
+    // Safety valve: force-clear stale running operations (>10min)
     if (activeOperation.value && activeOperation.value.status === "running") {
       const started = activeOperation.value.steps[0]?.timestamp;
-      if (started && Date.now() - new Date(started).getTime() > 60_000) {
+      if (started && Date.now() - new Date(started).getTime() > 600_000) {
+        logger.debug("useOperations", `force-clearing stale operation: ${activeOperation.value.id}`);
         activeOperation.value = null;
       }
     }
