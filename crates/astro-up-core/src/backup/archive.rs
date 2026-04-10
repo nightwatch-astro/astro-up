@@ -287,13 +287,14 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
         .map(|(name, path)| (name.as_str(), path.as_path()))
         .collect();
 
-    // Check if path_filter matches anything
+    // Check if path_filter matches anything (component-based matching)
     if let Some(filter) = path_filter {
+        let filter_path = Path::new(filter);
         let has_match = (0..archive.len()).any(|i| {
             archive
                 .by_index(i)
                 .ok()
-                .is_some_and(|e| e.name().starts_with(filter))
+                .is_some_and(|e| Path::new(e.name()).starts_with(filter_path))
         });
         if !has_match {
             let available: Vec<String> = dir_names.clone();
@@ -317,18 +318,32 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
             continue;
         }
 
-        // Apply path filter
+        // Apply path filter (component-based matching, not string prefix)
         if let Some(filter) = path_filter {
-            if !name.starts_with(filter) {
+            if !Path::new(&name).starts_with(Path::new(filter)) {
                 continue;
             }
         }
 
-        // Resolve target path: find which dir prefix matches, map to original path
-        let target = resolve_restore_target(&name, &dir_to_path);
-        let Some(target) = target else {
-            warn!(entry = %name, "skipping archive entry: cannot resolve restore target");
+        // Reject symlinks (Unix symlink mode or zip-reported symlink)
+        let is_symlink =
+            entry.is_symlink() || entry.unix_mode().is_some_and(|m| m & 0xF000 == 0xA000);
+        if is_symlink {
+            warn!(entry = %name, "skipping symlink archive entry");
             continue;
+        }
+
+        // Resolve target path: validate entry safety and map to original path
+        let target = match resolve_restore_target(&name, &dir_to_path) {
+            Ok(Some(t)) => t,
+            Ok(None) => {
+                warn!(entry = %name, "skipping archive entry: cannot resolve restore target");
+                continue;
+            }
+            Err(e) => {
+                warn!(entry = %name, error = %e, "skipping unsafe archive entry");
+                continue;
+            }
         };
 
         if entry.is_dir() {
@@ -348,19 +363,32 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
 }
 
 /// Maps an archive entry name back to its original filesystem path.
-fn resolve_restore_target(entry_name: &str, dir_to_path: &HashMap<&str, &Path>) -> Option<PathBuf> {
+///
+/// Validates the relative path portion against directory traversal and
+/// absolute path attacks before resolving within the original directory.
+fn resolve_restore_target(
+    entry_name: &str,
+    dir_to_path: &HashMap<&str, &Path>,
+) -> Result<Option<PathBuf>, CoreError> {
     // entry_name is like "Profiles/subdir/file.txt"
     // First component is the dir name, rest is relative path
-    let slash_pos = entry_name.find('/')?;
+    let Some(slash_pos) = entry_name.find('/') else {
+        return Ok(None);
+    };
     let dir_name = &entry_name[..slash_pos];
     let relative = &entry_name[slash_pos + 1..];
 
     if relative.is_empty() {
-        return None; // Directory entry itself
+        return Ok(None); // Directory entry itself
     }
 
-    let original_path = dir_to_path.get(dir_name)?;
-    Some(original_path.join(relative))
+    let Some(original_path) = dir_to_path.get(dir_name) else {
+        return Ok(None);
+    };
+
+    // Validate the relative path portion for traversal attacks.
+    // Symlinks are already rejected by the caller before we get here.
+    crate::validation::validate_zip_entry(relative, 0, original_path).map(Some)
 }
 
 /// Checks if an I/O error indicates a locked/sharing violation file.

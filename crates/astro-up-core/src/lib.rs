@@ -17,6 +17,7 @@ pub mod metrics;
 pub mod release;
 pub mod traits;
 pub mod types;
+pub mod validation;
 
 // Re-export rusqlite for consumers that need direct Connection access (orchestrator).
 pub use rusqlite;

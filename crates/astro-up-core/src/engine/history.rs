@@ -123,7 +123,8 @@ pub fn query_history(
     sql.push_str(" ORDER BY created_at DESC");
 
     if let Some(limit) = filter.limit {
-        let _ = write!(sql, " LIMIT {limit}");
+        let _ = write!(sql, " LIMIT ?{}", param_values.len() + 1);
+        param_values.push(Box::new(limit as i64));
     }
 
     #[allow(clippy::redundant_closure_for_method_calls)]

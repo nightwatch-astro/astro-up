@@ -172,7 +172,7 @@ A developer building the project benefits from faster compile times and smaller 
 - **FR-006**: System MUST validate `delete_backup` paths are within the designated backup directory
 - **FR-007**: System MUST use path component matching (not string prefix) for backup restore path filters
 - **FR-008**: System MUST parameterize all SQL query values including LIMIT clauses
-- **FR-009**: System MUST enforce a maximum download file size (2 GB). When `Content-Length` is present, reject before downloading. When `Content-Length` is absent, stream with a running byte counter and abort when the limit is exceeded
+- **FR-009**: ~~Removed~~ — No artificial download size limit. Star database downloads (ASTAP W08) can exceed 20 GB. The existing disk space check (require 2x available) is sufficient protection.
 - **FR-010**: System MUST validate configuration file size at load time before deserialization
 
 **Phase B: Mutex Poisoning & Concurrency (HIGH)**
