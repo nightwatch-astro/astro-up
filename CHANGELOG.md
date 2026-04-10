@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.20](https://github.com/nightwatch-astro/astro-up/compare/v0.1.19...v0.1.20) (2026-04-10)
+
+
+### Bug Fixes
+
+* add createUpdaterArtifacts to enable Tauri updater JSON upload ([#968](https://github.com/nightwatch-astro/astro-up/issues/968)) ([b8cfa06](https://github.com/nightwatch-astro/astro-up/commit/b8cfa065b0f26da980e4908d8827e7c28fe98f21))
+
 ## [0.1.19](https://github.com/nightwatch-astro/astro-up/compare/v0.1.18...v0.1.19) (2026-04-10)
 
 
