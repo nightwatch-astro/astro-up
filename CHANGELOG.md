@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.1.16](https://github.com/nightwatch-astro/astro-up/compare/v0.1.15...v0.1.16) (2026-04-10)
+
+
+### Features
+
+* add author, license, bug report and software request links to About section ([#926](https://github.com/nightwatch-astro/astro-up/issues/926)) ([18d2428](https://github.com/nightwatch-astro/astro-up/commit/18d24286750a83edf32593c136f097486bdb7962))
+* add WmiApps detection method for packages without registry/PE ([#935](https://github.com/nightwatch-astro/astro-up/issues/935)) ([69209b9](https://github.com/nightwatch-astro/astro-up/commit/69209b9b118fa5ba158ad1085d8a4fcc3b33cd62))
+* auto-scan scheduler with configurable interval ([#960](https://github.com/nightwatch-astro/astro-up/issues/960)) ([d96b2d9](https://github.com/nightwatch-astro/astro-up/commit/d96b2d913d9b723c2b492c74d1f4617d913ca641))
+* **cli:** add catalog sync/refresh commands ([#922](https://github.com/nightwatch-astro/astro-up/issues/922)) ([dbf16f9](https://github.com/nightwatch-astro/astro-up/commit/dbf16f9184ef2982f45d9700c76a0537433ddb52))
+* frontend update queue with per-package progress and button disabling ([#939](https://github.com/nightwatch-astro/astro-up/issues/939)) ([08df05c](https://github.com/nightwatch-astro/astro-up/commit/08df05cebdfb4187ee9576cb3e1a53865067e242))
+* in-app feedback survey via Tally.so ([#957](https://github.com/nightwatch-astro/astro-up/issues/957)) ([28b1855](https://github.com/nightwatch-astro/astro-up/commit/28b1855b2ff40fbac59b14f483877a1262488a27))
+* log rotation setting, GUI file logging, prune old logs ([#927](https://github.com/nightwatch-astro/astro-up/issues/927)) ([348fe33](https://github.com/nightwatch-astro/astro-up/commit/348fe3391187d42c98df6d6739a514275eea1750))
+* persist scan results to DB, add scan interval config ([#943](https://github.com/nightwatch-astro/astro-up/issues/943)) ([bcba5e8](https://github.com/nightwatch-astro/astro-up/commit/bcba5e8962ab2b5f791c035f9f067a7b3c59c4e6))
+* process blocking toast, backup config in GUI detail view ([#929](https://github.com/nightwatch-astro/astro-up/issues/929)) ([3812fc4](https://github.com/nightwatch-astro/astro-up/commit/3812fc4f20ef56c46464f399f33f73e15f63cd71))
+* recent activity feed from operations history ([#928](https://github.com/nightwatch-astro/astro-up/issues/928)) ([4a14b51](https://github.com/nightwatch-astro/astro-up/commit/4a14b51f828cad6224f968568fd1b94e41d98db0))
+* show download path in operations dock for DownloadOnly packages ([#941](https://github.com/nightwatch-astro/astro-up/issues/941)) ([4deb120](https://github.com/nightwatch-astro/astro-up/commit/4deb1202e4d4fa7cef0ba4fb1488e44b875e098d))
+* show install method and config in Technical tab ([#940](https://github.com/nightwatch-astro/astro-up/issues/940)) ([151d7af](https://github.com/nightwatch-astro/astro-up/commit/151d7afcaed0964c36a0ed852ddb58c18b739493))
+
+
+### Bug Fixes
+
+* activity persists across tab switches, remove ephemeral scan timestamp ([#934](https://github.com/nightwatch-astro/astro-up/issues/934)) ([95cd01e](https://github.com/nightwatch-astro/astro-up/commit/95cd01e18fe9affa9dc35979ea86c1430c9a79fe))
+* add json feature to tracing-subscriber for GUI file logging ([#930](https://github.com/nightwatch-astro/astro-up/issues/930)) ([4074a1e](https://github.com/nightwatch-astro/astro-up/commit/4074a1e155dc2b521a8a5ebfd7dc1ea6c8c02a47))
+* app issues from Windows testing ([#921](https://github.com/nightwatch-astro/astro-up/issues/921)) ([c96d368](https://github.com/nightwatch-astro/astro-up/commit/c96d368d74bd3e21d37083d7d4eed848bbb12b6d))
+* backup error shows message instead of [Object Object], unify update count ([#933](https://github.com/nightwatch-astro/astro-up/issues/933)) ([9ddf2d9](https://github.com/nightwatch-astro/astro-up/commit/9ddf2d986f355e632678f5ef313d4ef3ee94fb74))
+* catalog reader drops wmi_apps detection configs ([#942](https://github.com/nightwatch-astro/astro-up/issues/942)) ([27ead4e](https://github.com/nightwatch-astro/astro-up/commit/27ead4eedebcac86cb7d915d3e39aea1275cfc99))
+* close behavior respects minimize-to-tray setting ([#923](https://github.com/nightwatch-astro/astro-up/issues/923)) ([9e5d5ec](https://github.com/nightwatch-astro/astro-up/commit/9e5d5ec7f45ae2fe2c246d4181b1ee15d880d894))
+* config DB with unknown keys no longer crashes on load ([#959](https://github.com/nightwatch-astro/astro-up/issues/959)) ([95c4dd4](https://github.com/nightwatch-astro/astro-up/commit/95c4dd43f41173f85a4e31dc2169609de2900156))
+* embed version from Cargo.toml at build time, clean up log rotation field ([#931](https://github.com/nightwatch-astro/astro-up/issues/931)) ([5ef9c97](https://github.com/nightwatch-astro/astro-up/commit/5ef9c97a7e2855f165e7da1dc282ab8e73df2755))
+* enrich list_software with installed/update status, scan UX, backup reader ([#924](https://github.com/nightwatch-astro/astro-up/issues/924)) ([f656561](https://github.com/nightwatch-astro/astro-up/commit/f656561d6b9d4161fd917f2235a474d5daca2eb1))
+* only show Backup button for packages with backup config ([#932](https://github.com/nightwatch-astro/astro-up/issues/932)) ([bc169f5](https://github.com/nightwatch-astro/astro-up/commit/bc169f5f271f3d5e19d119bc1c5cc8a0e3f79614))
+* prefer detection chain over WMI, report actual detection source ([#925](https://github.com/nightwatch-astro/astro-up/issues/925)) ([228f808](https://github.com/nightwatch-astro/astro-up/commit/228f80898c1cac3edfb1ccfeff9f527280677ba0))
+* record installation to ledger after successful install ([#958](https://github.com/nightwatch-astro/astro-up/issues/958)) ([f206d12](https://github.com/nightwatch-astro/astro-up/commit/f206d129058492e889c8f04aae3c5e6d8c71fdb4))
+* search filter matches package ID in addition to name and category ([#938](https://github.com/nightwatch-astro/astro-up/issues/938)) ([0c6944d](https://github.com/nightwatch-astro/astro-up/commit/0c6944dfb164c90794b0d675902bfb1df00c45c1))
+
 ## [0.1.15](https://github.com/nightwatch-astro/astro-up/compare/v0.1.14...v0.1.15) (2026-04-08)
 
 
