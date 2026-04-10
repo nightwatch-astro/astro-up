@@ -1,5 +1,5 @@
-// Tauri state management uses Mutex::lock().unwrap() pervasively —
-// poisoned mutexes indicate unrecoverable state, so unwrap is intentional.
+// parking_lot::Mutex — no poisoning, lock() returns guard directly.
+// Remaining unwrap/expect usages are for compile-time constants or test code.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 mod commands;
@@ -62,7 +62,7 @@ pub(crate) async fn check_for_app_update(app: &AppHandle) {
 fn spawn_background_update_timer(app: &AppHandle) {
     let handle = app.clone();
     let state = app.state::<state::AppState>();
-    let config = state.config.lock().unwrap();
+    let config = state.config.lock();
     let interval = if config.ui.auto_check_updates {
         config.ui.check_interval
     } else {
@@ -102,7 +102,7 @@ fn spawn_backup_scheduler(app: &AppHandle) {
             ticker.tick().await;
 
             let state = handle.state::<state::AppState>();
-            let policy = state.config.lock().unwrap().backup_policy.clone();
+            let policy = state.config.lock().backup_policy.clone();
 
             if !policy.scheduled_enabled {
                 continue;
@@ -147,7 +147,7 @@ fn spawn_scan_scheduler(app: &AppHandle) {
 
         // Read config
         let (auto_scan_on_launch, scan_interval) = {
-            let config = state.config.lock().unwrap();
+            let config = state.config.lock();
             (
                 config.ui.auto_scan_on_launch,
                 config.ui.scan_interval.clone(),
@@ -405,7 +405,7 @@ pub fn run() {
                 use tauri_plugin_autostart::ManagerExt;
                 let autostart = app.autolaunch();
                 let state = app.state::<AppState>();
-                let want_autostart = state.config.lock().unwrap().startup.start_at_login;
+                let want_autostart = state.config.lock().startup.start_at_login;
                 let is_enabled = autostart.is_enabled().unwrap_or(false);
 
                 if want_autostart && !is_enabled {
@@ -487,7 +487,6 @@ pub fn run() {
                 let minimize_to_tray = state
                     .config
                     .lock()
-                    .unwrap()
                     .startup
                     .minimize_to_tray_on_close;
 

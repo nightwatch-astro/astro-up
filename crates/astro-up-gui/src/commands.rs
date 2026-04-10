@@ -393,7 +393,7 @@ pub async fn get_config(state: State<'_, AppState>) -> Result<serde_json::Value,
     let start = std::time::Instant::now();
     tracing::debug!(command = "get_config", "Command invoked");
 
-    let config = state.config.lock().unwrap().clone();
+    let config = state.config.lock().clone();
     let value = serde_json::to_value(&config).map_err(|e| CoreError::from(e.to_string()))?;
 
     tracing::debug!(
@@ -416,7 +416,7 @@ pub async fn save_config(
 
     // Extract key-value pairs from the JSON and write to config store
     let store = state.open_config_store()?;
-    let current = state.config.lock().unwrap().clone();
+    let current = state.config.lock().clone();
 
     if let Some(obj) = config.as_object() {
         for (section, values) in obj {
@@ -451,7 +451,7 @@ pub async fn save_config(
     let paths = current.paths.clone();
     let log_file = current.logging.log_file;
     let new_config = config::load_config(&state.db_path, paths, log_file, &[])?;
-    *state.config.lock().unwrap() = new_config;
+    *state.config.lock() = new_config;
 
     tracing::debug!(
         command = "save_config",
@@ -575,7 +575,7 @@ async fn run_orchestrated_operation(
 
     let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
     let db_path = state.db_path.clone();
-    let config = state.config.lock().unwrap().clone();
+    let config = state.config.lock().clone();
     let backup_dir = state
         .db_path
         .parent()
@@ -668,7 +668,7 @@ async fn run_orchestrated_operation(
                     let (tx, rx) = std::sync::mpsc::channel();
 
                     // Store the sender so resolve_asset_selection can find it
-                    *pending_tx.lock().unwrap() = Some(tx);
+                    *pending_tx.lock() = Some(tx);
 
                     // Emit event to frontend with asset options
                     let request = AssetSelectionRequest {
@@ -707,7 +707,7 @@ async fn run_orchestrated_operation(
                     };
 
                     // Clear the pending sender
-                    *pending_tx.lock().unwrap() = None;
+                    *pending_tx.lock() = None;
                     result
                 });
 
@@ -727,7 +727,7 @@ pub async fn resolve_asset_selection(
     state: State<'_, AppState>,
     response: AssetSelectionResponse,
 ) -> Result<(), CoreError> {
-    let tx = state.pending_asset_tx.lock().unwrap().take();
+    let tx = state.pending_asset_tx.lock().take();
     if let Some(tx) = tx {
         let _ = tx.send(response.index);
         tracing::info!(index = ?response.index, "asset selection resolved");
@@ -1053,7 +1053,7 @@ pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<
 #[tauri::command]
 pub async fn check_survey_eligible(state: State<'_, AppState>) -> Result<bool, CoreError> {
     tracing::debug!(command = "check_survey_eligible", "Command invoked");
-    let config = state.config.lock().unwrap().ui.clone();
+    let config = state.config.lock().ui.clone();
     let conn =
         rusqlite::Connection::open(&state.db_path).map_err(|e| CoreError::from(e.to_string()))?;
     astro_up_core::engine::history::create_table(&conn)
@@ -1073,7 +1073,7 @@ pub async fn dismiss_survey(state: State<'_, AppState>) -> Result<(), CoreError>
     store
         .set("ui.survey_dismissed_at", &now)
         .map_err(|e| CoreError::from(e.to_string()))?;
-    state.config.lock().unwrap().ui.survey_dismissed_at = Some(now);
+    state.config.lock().ui.survey_dismissed_at = Some(now);
     Ok(())
 }
 
@@ -1088,6 +1088,6 @@ pub async fn complete_survey(state: State<'_, AppState>) -> Result<(), CoreError
     store
         .set("ui.survey_completed_at", &now)
         .map_err(|e| CoreError::from(e.to_string()))?;
-    state.config.lock().unwrap().ui.survey_completed_at = Some(now);
+    state.config.lock().ui.survey_completed_at = Some(now);
     Ok(())
 }
