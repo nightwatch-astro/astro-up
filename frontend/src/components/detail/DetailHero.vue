@@ -6,6 +6,7 @@ import type { PackageWithStatus } from "../../types/package";
 
 defineProps<{
   pkg: PackageWithStatus;
+  actionsDisabled?: boolean;
 }>();
 
 defineEmits<{
@@ -55,6 +56,7 @@ defineEmits<{
         label="Update"
         icon="pi pi-arrow-up"
         severity="warn"
+        :disabled="actionsDisabled"
         @click="$emit('update')"
       />
       <Button
@@ -69,6 +71,7 @@ defineEmits<{
         v-else
         label="Install"
         icon="pi pi-download"
+        :disabled="actionsDisabled"
         @click="$emit('install')"
       />
       <Button
@@ -77,6 +80,7 @@ defineEmits<{
         icon="pi pi-database"
         severity="secondary"
         outlined
+        :disabled="actionsDisabled"
         @click="$emit('backup')"
       />
       <Button

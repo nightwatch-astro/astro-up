@@ -14,8 +14,9 @@ import TechnicalTab from "../components/detail/TechnicalTab.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
 import { useSoftwareList, useVersions, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
+import { useOperations } from "../composables/useOperations";
+import { useUpdateQueue } from "../composables/useUpdateQueue";
 import { logger } from "../utils/logger";
-// useOperations not needed here — core events handle operation lifecycle
 import type { PackageWithStatus, VersionEntry } from "../types/package";
 
 const props = defineProps<{
@@ -28,6 +29,9 @@ const { data: versions } = useVersions(() => props.id);
 const installMutation = useInstallSoftware();
 const updateMutation = useUpdateSoftware();
 const backupMutation = useCreateBackup();
+const { isRunning } = useOperations();
+const { isActive: queueActive } = useUpdateQueue();
+const actionsDisabled = computed(() => isRunning.value || queueActive.value);
 
 const showBackupConfirm = ref(false);
 const tabsReady = ref(false);
@@ -94,6 +98,7 @@ function confirmBackup() {
     <template v-else-if="pkg">
       <DetailHero
         :pkg="pkg"
+        :actions-disabled="actionsDisabled"
         @install="handleInstall"
         @update="handleUpdate"
         @backup="handleBackup"
@@ -129,6 +134,7 @@ function confirmBackup() {
               <VersionsTab
                 :versions="(versions as VersionEntry[] | undefined) ?? []"
                 :installed-version="pkg.installed_version ?? null"
+                :actions-disabled="actionsDisabled"
                 @install="handleInstall"
               />
             </TabPanel>
@@ -136,6 +142,7 @@ function confirmBackup() {
               <BackupTab
                 :package-id="pkg.id"
                 :config-paths="pkg.backup?.config_paths"
+                :actions-disabled="actionsDisabled"
                 @backup="handleBackup"
               />
             </TabPanel>

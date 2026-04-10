@@ -8,6 +8,7 @@ import type { VersionEntry } from "../../types/package";
 defineProps<{
   versions: VersionEntry[];
   installedVersion: string | null;
+  actionsDisabled?: boolean;
 }>();
 
 defineEmits<{
@@ -70,6 +71,7 @@ function formatDate(iso: string): string {
           label="Install"
           size="small"
           outlined
+          :disabled="actionsDisabled"
           @click="$emit('install', (data as VersionEntry).version)"
         />
       </template>

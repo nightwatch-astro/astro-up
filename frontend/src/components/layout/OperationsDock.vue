@@ -3,23 +3,33 @@ import { ref, watch } from "vue";
 import ProgressBar from "primevue/progressbar";
 import Button from "primevue/button";
 import { useOperations } from "../../composables/useOperations";
+import { useUpdateQueue } from "../../composables/useUpdateQueue";
 import { useCancelOperation } from "../../composables/useInvoke";
 
 const { operation, dismissOperation, cancelOperation } = useOperations();
+const { isActive: queueActive, progress: queueProgress, queueLabel, summary: queueSummary, items: queueItems, cancelQueue, clearQueue } = useUpdateQueue();
 const cancelMutation = useCancelOperation();
 
 const expanded = ref(false);
 let autoDismissTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleCancel() {
-  if (operation.value) {
+  if (queueActive.value) {
+    cancelQueue();
+  } else if (operation.value) {
     cancelMutation.mutate(operation.value.id, {
       onSuccess: () => cancelOperation(),
     });
   }
 }
 
-// Auto-dismiss 3s after complete
+function handleDismiss() {
+  if (queueItems.value.length > 0) clearQueue();
+  dismissOperation();
+  expanded.value = false;
+}
+
+// Auto-dismiss 3s after complete (suppress during queue — queue manages lifecycle)
 watch(
   () => operation.value?.status,
   (status) => {
@@ -28,7 +38,7 @@ watch(
       autoDismissTimer = null;
     }
 
-    if (status === "complete") {
+    if (status === "complete" && !queueActive.value) {
       autoDismissTimer = setTimeout(() => {
         dismissOperation();
         expanded.value = false;
@@ -40,11 +50,40 @@ watch(
 
 <template>
   <div
-    v-if="operation"
+    v-if="operation || (!queueActive && queueItems.length > 0)"
     class="ops-dock"
     :class="{ expanded }"
   >
+    <!-- Queue progress header -->
     <div
+      v-if="queueActive"
+      class="ops-queue-bar"
+    >
+      <i class="pi pi-list" />
+      <span>{{ queueLabel }}</span>
+      <span class="ops-queue-counter">{{ queueProgress.current }}/{{ queueProgress.total }}</span>
+    </div>
+
+    <!-- Queue summary (shown after queue completes) -->
+    <div
+      v-else-if="queueItems.length > 0"
+      class="ops-queue-bar ops-queue-summary"
+    >
+      <i class="pi pi-check-circle" />
+      <span>{{ queueSummary.succeeded }} succeeded, {{ queueSummary.failed }} failed</span>
+      <Button
+        icon="pi pi-times"
+        text
+        rounded
+        size="small"
+        severity="secondary"
+        title="Dismiss"
+        @click.stop="handleDismiss"
+      />
+    </div>
+
+    <div
+      v-if="operation"
       class="ops-header"
       @click="expanded = !expanded"
     >
@@ -95,39 +134,41 @@ watch(
           @click.stop="expanded = !expanded"
         />
         <Button
-          v-if="operation.status !== 'running'"
+          v-if="operation.status !== 'running' && !queueActive"
           icon="pi pi-times"
           text
           rounded
           size="small"
           severity="secondary"
           title="Dismiss"
-          @click.stop="dismissOperation()"
+          @click.stop="handleDismiss"
         />
       </div>
     </div>
 
-    <ProgressBar
-      v-if="operation.status === 'running'"
-      :value="operation.progress"
-      :show-value="false"
-      class="ops-progress"
-    />
+    <template v-if="operation">
+      <ProgressBar
+        v-if="operation.status === 'running'"
+        :value="operation.progress"
+        :show-value="false"
+        class="ops-progress"
+      />
 
-    <div
-      v-if="expanded && operation.steps.length > 0"
-      class="ops-steps"
-    >
       <div
-        v-for="(step, i) in operation.steps"
-        :key="i"
-        class="ops-step"
-        :class="step.level"
+        v-if="expanded && operation.steps.length > 0"
+        class="ops-steps"
       >
-        <span class="step-time">{{ step.timestamp.slice(11, 19) }}</span>
-        <span class="step-message">{{ step.message }}</span>
+        <div
+          v-for="(step, i) in operation.steps"
+          :key="i"
+          class="ops-step"
+          :class="step.level"
+        >
+          <span class="step-time">{{ step.timestamp.slice(11, 19) }}</span>
+          <span class="step-message">{{ step.message }}</span>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -214,5 +255,26 @@ watch(
 .step-time {
   color: var(--p-surface-500);
   flex-shrink: 0;
+}
+
+.ops-queue-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--p-primary-400);
+  background: color-mix(in srgb, var(--p-primary-500) 8%, transparent);
+  border-bottom: 1px solid var(--p-surface-700);
+}
+
+.ops-queue-counter {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.ops-queue-summary {
+  color: var(--p-surface-300);
+  background: transparent;
 }
 </style>
