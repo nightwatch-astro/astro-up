@@ -40,7 +40,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "W50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcwRkMwN0U3OURGODJBOUYKUldTZkt2aWQ1d2Y4Y09WeFJac0tBRGdWWHg3UVQ3djYveFQ1UVF1TTNWNkVrTUo0QUJQNWhmYUMK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBNUVEODY0MUUyNEUwRDQKUldUVTRDUWVaTmhlV29JTGhOcFZiT3FjQTVJcFhsbTZUNzFRc1hhZm9DNmRWeHVsd2xvV1lNa2wK",
       "endpoints": [
         "https://github.com/nightwatch-astro/astro-up/releases/latest/download/latest.json"
       ]
