@@ -875,10 +875,21 @@ pub async fn create_backup(
     let (tx, rx) = broadcast::channel::<Event>(64);
     forward_events(app, rx);
 
+    let source_paths: Vec<std::path::PathBuf> =
+        paths.into_iter().map(std::path::PathBuf::from).collect();
+
+    // Validate backup source paths: exist, not symlinks, aggregate < 1 GB
+    astro_up_core::validation::validate_backup_sources(&source_paths, None).map_err(|e| {
+        CoreError {
+            message: format!("Backup source validation failed: {e}"),
+            code: "validation_error".into(),
+        }
+    })?;
+
     let request = astro_up_core::backup::types::BackupRequest {
         package_id: "manual".into(),
         version: astro_up_core::types::Version::parse("0.0.0"),
-        config_paths: paths.into_iter().map(std::path::PathBuf::from).collect(),
+        config_paths: source_paths,
         event_tx: tx,
     };
 
@@ -997,9 +1008,20 @@ pub async fn backup_preview(
 }
 
 #[tauri::command]
-pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
+pub async fn delete_backup(state: State<'_, AppState>, archive: String) -> Result<(), CoreError> {
     tracing::info!(command = "delete_backup", archive, "Deleting backup...");
-    tokio::fs::remove_file(&archive)
+
+    // Validate archive path is within the backup directory
+    let archive_path = std::path::PathBuf::from(&archive);
+    let backup_dir = state.backup_service.backup_dir().to_path_buf();
+    astro_up_core::validation::validate_within_allowlist(&archive_path, &[backup_dir]).map_err(
+        |e| CoreError {
+            message: format!("Path validation failed: {e}"),
+            code: "validation_error".into(),
+        },
+    )?;
+
+    tokio::fs::remove_file(&archive_path)
         .await
         .map_err(|e| CoreError {
             message: format!("Failed to delete backup: {e}"),
@@ -1011,7 +1033,6 @@ pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
 
 #[tauri::command]
 pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<(), CoreError> {
-    let _state = &state; // keep State in scope for future config-based path resolution
     let path = if dir.is_empty() {
         return Err(CoreError {
             message: "No directory specified".into(),
@@ -1020,6 +1041,20 @@ pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<
     } else {
         std::path::PathBuf::from(&dir)
     };
+
+    // Validate path against allowlist: backup dir, cache dir, download dir
+    let config = state.config.lock().clone();
+    let allowed_dirs = vec![
+        state.backup_service.backup_dir().to_path_buf(),
+        config.paths.cache_dir.clone(),
+        config.paths.download_dir.clone(),
+    ];
+    astro_up_core::validation::validate_within_allowlist(&path, &allowed_dirs).map_err(|e| {
+        CoreError {
+            message: format!("Path validation failed: {e}"),
+            code: "validation_error".into(),
+        }
+    })?;
 
     tracing::info!(command = "clear_directory", path = %path.display(), "Clearing directory...");
 
