@@ -273,6 +273,13 @@ fn try_list_software(
                 }
             }
 
+            // Include backup config (config_paths for backup-eligible packages)
+            if let Ok(Some(backup)) = reader.backup_config(&pkg.id) {
+                if let Ok(backup_val) = serde_json::to_value(&backup) {
+                    obj.insert("backup".into(), backup_val);
+                }
+            }
+
             val
         })
         .collect();

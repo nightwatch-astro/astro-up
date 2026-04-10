@@ -164,6 +164,14 @@ useCoreEvents((event: CoreEvent) => {
   } else if (event.type === "orchestration_complete") {
     if (!queueActive.value) {
       addStep("info", `Done: ${event.data.succeeded} succeeded, ${event.data.failed} failed`);
+      // Safety: ensure operation is marked complete even if package_complete was missed
+      if (isRunning.value) {
+        if (event.data.failed > 0) {
+          failOperation(`${event.data.failed} package(s) failed`);
+        } else {
+          completeOperation();
+        }
+      }
     }
   }
 
