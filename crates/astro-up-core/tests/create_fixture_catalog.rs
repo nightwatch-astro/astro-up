@@ -279,6 +279,20 @@ fn create_fixture_catalog() {
             None,
             None,
         ),
+        (
+            "astap",
+            "registry",
+            None,
+            Some("AppName=ASTAP, the Astrometric STAcking Program,~D52A8A79_is1"),
+            Some("DisplayVersion"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(r#"{"method":"pe_file","file_path":"C:\\Program Files\\astap\\astap.exe"}"#),
+        ),
     ];
 
     for (

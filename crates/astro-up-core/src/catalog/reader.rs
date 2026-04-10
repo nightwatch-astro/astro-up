@@ -510,6 +510,7 @@ fn parse_detection_method(method_str: &str) -> Option<crate::types::DetectionMet
         "registry" => Some(crate::types::DetectionMethod::Registry),
         "file" | "pe_file" => Some(crate::types::DetectionMethod::PeFile),
         "wmi" => Some(crate::types::DetectionMethod::Wmi),
+        "wmi_apps" => Some(crate::types::DetectionMethod::WmiApps),
         "driver_store" => Some(crate::types::DetectionMethod::DriverStore),
         "ascom_profile" => Some(crate::types::DetectionMethod::AscomProfile),
         "file_exists" => Some(crate::types::DetectionMethod::FileExists),
