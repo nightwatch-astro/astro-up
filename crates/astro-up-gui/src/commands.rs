@@ -224,7 +224,7 @@ fn try_list_software(
         _ => reader.list_all()?,
     };
 
-    // Enrich each package with installed version, latest version, and update status
+    // Enrich each package with installed version, latest version, update status, and install config
     let enriched: Vec<serde_json::Value> = packages
         .iter()
         .map(|pkg| {
@@ -264,6 +264,13 @@ fn try_list_software(
                     "detection".into(),
                     serde_json::to_value(detection).unwrap_or_default(),
                 );
+            }
+
+            // Include install config from the catalog (method, scope, elevation, etc.)
+            if let Ok(Some(install)) = reader.install_config(&pkg.id) {
+                if let Ok(install_val) = serde_json::to_value(&install) {
+                    obj.insert("install".into(), install_val);
+                }
             }
 
             val
