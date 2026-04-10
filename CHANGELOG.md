@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.17](https://github.com/nightwatch-astro/astro-up/compare/v0.1.16...v0.1.17) (2026-04-10)
+
+
+### Bug Fixes
+
+* stale operation blocking, missing backup data, UI cleanup ([#962](https://github.com/nightwatch-astro/astro-up/issues/962)) ([00aad8a](https://github.com/nightwatch-astro/astro-up/commit/00aad8a4d34b110ecc1815cb8679020c736ce832))
+
 ## [0.1.16](https://github.com/nightwatch-astro/astro-up/compare/v0.1.15...v0.1.16) (2026-04-10)
 
 
