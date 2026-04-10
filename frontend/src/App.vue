@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onErrorCaptured, onMounted, onUnmounted, ref } from "vue";
-import { onLog } from "./utils/logger";
+import { logger, onLog } from "./utils/logger";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -27,6 +27,7 @@ onErrorCaptured((err, instance, info) => {
   const message = err instanceof Error ? err.message : String(err);
   const component = instance?.$options?.name ?? "unknown";
   addEntry("error", `Component error in ${component}`, `${message} (${info})`);
+  logger.error("vue:error-boundary", `${component}: ${message} (${info})`);
 
   errorToastCount++;
   if (errorToastCount <= 3) {

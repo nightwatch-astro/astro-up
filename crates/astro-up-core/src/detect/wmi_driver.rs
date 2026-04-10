@@ -9,6 +9,7 @@ use crate::types::{DetectionMethod, Version};
 ///
 /// Filters by DriverProviderName, DeviceClass, and InfName (AND logic).
 /// 10-second timeout enforced via tokio::time::timeout.
+#[tracing::instrument(skip_all)]
 pub async fn detect(config: &DetectionConfig) -> DetectionResult {
     debug!(
         method = "wmi",

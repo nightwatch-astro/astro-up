@@ -11,6 +11,7 @@ use crate::types::{DetectionConfig, DetectionMethod, Version};
 /// 1. Windows Search index (instant, covers any install location)
 /// 2. Path template expansion (both Program Files dirs)
 /// 3. Ledger path fallback (install ledger's recorded executable path)
+#[tracing::instrument(skip_all)]
 pub async fn detect(
     config: &DetectionConfig,
     resolver: &PathResolver,

@@ -17,6 +17,7 @@ use crate::events::Event;
 /// Walks each config_path, hashes files with SHA-256, writes to ZIP with relative paths.
 /// Skips locked/inaccessible files with a warning. Writes `metadata.json` into the archive.
 /// Emits `BackupProgress` events during archiving.
+#[tracing::instrument(skip_all, fields(package))]
 pub async fn create_backup(
     request: &BackupRequest,
     backup_dir: &Path,
@@ -248,6 +249,7 @@ pub(crate) fn read_metadata_sync(archive_path: &Path) -> Result<BackupMetadata, 
 }
 
 /// Reads metadata.json from a backup archive without extracting.
+#[tracing::instrument(skip_all)]
 pub async fn read_metadata(archive_path: &Path) -> Result<BackupMetadata, CoreError> {
     let archive_path = archive_path.to_path_buf();
     tokio::task::spawn_blocking(move || read_metadata_sync(&archive_path))
@@ -256,6 +258,7 @@ pub async fn read_metadata(archive_path: &Path) -> Result<BackupMetadata, CoreEr
 }
 
 /// Extracts a backup archive to the original paths stored in metadata.
+#[tracing::instrument(skip_all)]
 pub async fn restore(archive_path: &Path, path_filter: Option<&str>) -> Result<(), CoreError> {
     let archive_path = archive_path.to_path_buf();
     let filter = path_filter.map(ToString::to_string);

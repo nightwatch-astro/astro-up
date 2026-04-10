@@ -38,6 +38,7 @@ fn which_sudo() -> Option<std::path::PathBuf> {
 /// 1. If `sudo.exe` is on PATH (Windows 11 24H2+), use it for inline elevation.
 /// 2. Otherwise, use `ShellExecuteExW` with the `runas` verb (opens new window).
 #[cfg(windows)]
+#[tracing::instrument(skip_all)]
 pub async fn elevate_and_reexec(args: &[String]) -> Result<(), CoreError> {
     let current_exe = std::env::current_exe()?;
     tracing::info!(exe = %current_exe.display(), args_count = args.len(), "re-executing with elevated privileges");

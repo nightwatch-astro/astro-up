@@ -13,6 +13,7 @@ use crate::error::CoreError;
 ///
 /// Reads file_hashes from the archive's metadata.json, hashes the on-disk files,
 /// and compares to determine which files would be overwritten, unchanged, or new.
+#[tracing::instrument(skip_all)]
 pub async fn restore_preview(archive_path: &Path) -> Result<FileChangeSummary, CoreError> {
     let archive_path = archive_path.to_path_buf();
 

@@ -12,6 +12,7 @@ use crate::types::{DetectionMethod, Version};
 /// registry flags handle 32/64-bit redirection transparently.
 ///
 /// Reads the value named in `config.registry_value` (default: `DisplayVersion`).
+#[tracing::instrument(skip_all)]
 pub async fn detect(config: &DetectionConfig) -> DetectionResult {
     trace!(method = "registry", registry_key = ?config.registry_key, "detect_registry entry");
     #[cfg(windows)]
