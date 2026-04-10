@@ -75,7 +75,7 @@ fn spawn_background_update_timer(app: &AppHandle) {
 
         loop {
             ticker.tick().await;
-            tracing::debug!("Background update check triggered");
+            tracing::info!("Background update check triggered");
             check_for_app_update(&handle).await;
 
             // Update tray badge with available update count

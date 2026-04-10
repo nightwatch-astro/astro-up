@@ -76,8 +76,18 @@ pub fn emit_event(app: &AppHandle, event: &Event) {
 /// Spawn a task that forwards events from a broadcast channel to the frontend.
 fn forward_events(app: AppHandle, mut rx: broadcast::Receiver<Event>) {
     tauri::async_runtime::spawn(async move {
-        while let Ok(event) = rx.recv().await {
-            emit_event(&app, &event);
+        let task = std::panic::AssertUnwindSafe(async {
+            while let Ok(event) = rx.recv().await {
+                emit_event(&app, &event);
+            }
+        });
+        if let Err(panic_val) = futures::FutureExt::catch_unwind(task).await {
+            let msg: &str = panic_val
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| panic_val.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown");
+            tracing::error!(task = "forward_events", panic = msg, "task panicked");
         }
     });
 }

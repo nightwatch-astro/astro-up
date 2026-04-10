@@ -110,18 +110,14 @@
 
 ---
 
-## Phase 8: US5 - Simplified Codebase (Priority: P3)
+## Phase 8: US5 - Simplified Codebase (Priority: P3) — DEFERRED
 
-**Goal**: Large files decomposed, duplicates consolidated, over-abstraction removed.
+**Deferred to spec 031 (multi-crate refactoring)**. Module-level splitting is superseded by a full crate extraction that will decompose `astro-up-core` into domain-specific crates. Doing module splits now would be throwaway work.
 
-**Independent Test**: No source file exceeds 500 lines; duplicate handlers consolidated; orchestrator trait simplified.
-
-- [ ] T029 [US5] Consolidate `install_software()`, `update_software()`, `update_all()` into `run_operation(OperationType, ...)` in `crates/astro-up-gui/src/commands.rs` — create `OperationType` enum, extract shared boilerplate (~60 lines) into single function, keep original functions as thin wrappers
-- [ ] T030 [US5] Decompose `crates/astro-up-gui/src/commands.rs` into submodules — create `crates/astro-up-gui/src/commands/mod.rs` (re-exports), `commands/backup.rs`, `commands/catalog.rs`, `commands/operations.rs`, `commands/config.rs`, target <300 lines each
-- [ ] T031 [US5] Decompose `run_orchestrated_operation()` in `crates/astro-up-core/src/engine/orchestrator.rs` into `build_operation_plan()`, `execute_plan()`, `forward_events()` — each under 50 lines. Create `crates/astro-up-core/src/engine/orchestrator/` submodule directory if needed
-- [ ] T032 [US5] Simplify orchestrator trait in `crates/astro-up-core/src/engine/orchestrator.rs` — inline trait into `UpdateOrchestrator` struct (single implementation), reduce type parameters. Remove `#[allow(dead_code)]` fields not needed for current functionality, add TODO comments for fields needed by upcoming specs (T014–T016)
-
-**Checkpoint**: Codebase simplified — all files under 500 lines, no duplicates
+- [ ] T029 [US5] DEFERRED — Consolidate command handlers → spec 031
+- [ ] T030 [US5] DEFERRED — Decompose commands.rs → spec 031
+- [ ] T031 [US5] DEFERRED — Decompose orchestrator → spec 031
+- [ ] T032 [US5] DEFERRED — Simplify orchestrator trait → spec 031
 
 ---
 
@@ -262,25 +258,25 @@ blocked_by = []
 [graph.T028]
 blocked_by = []
 
-# Phase 8: US5 - Simplified Codebase (AFTER commands.rs changes in Phases 4+5)
+# Phase 8: US5 - DEFERRED to spec 031
 [graph.T029]
-blocked_by = ["T013", "T014", "T015", "T017", "T020"]
+blocked_by = ["DEFERRED"]
 
 [graph.T030]
-blocked_by = ["T029"]
+blocked_by = ["DEFERRED"]
 
 [graph.T031]
-blocked_by = []
+blocked_by = ["DEFERRED"]
 
 [graph.T032]
-blocked_by = ["T031"]
+blocked_by = ["DEFERRED"]
 
 # Phase 9: US6 - Complete Observability
 [graph.T033]
 blocked_by = []
 
 [graph.T034]
-blocked_by = ["T030"]
+blocked_by = []
 
 [graph.T035]
 blocked_by = []
@@ -297,7 +293,7 @@ blocked_by = []
 
 # Phase 11: Polish
 [graph.T039]
-blocked_by = ["T021", "T022", "T025", "T029", "T030", "T031", "T032", "T033", "T034"]
+blocked_by = ["T021", "T022", "T025", "T033", "T034"]
 
 [graph.T040]
 blocked_by = ["T039"]
