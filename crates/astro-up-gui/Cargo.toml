@@ -1,6 +1,6 @@
 [package]
 name = "astro-up-gui"
-version = "0.1.18"
+version = "0.1.19"
 description = "Tauri v2 desktop app for astro-up — astrophotography software manager"
 publish = false
 edition.workspace = true
