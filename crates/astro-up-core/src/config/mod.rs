@@ -32,10 +32,11 @@ pub fn load_config(
     // Layer 1: compiled defaults with caller-provided platform paths
     let mut config = AppConfig::with_paths(default_paths, log_file);
 
-    // Layer 2: SQLite stored overrides
+    // Layer 2: SQLite stored overrides (skip unknown keys gracefully — they may
+    // come from a newer version that wrote config keys this version doesn't know).
     let store = open_store(db_path)?;
     let stored = store.list()?;
-    merge_overrides(&mut config, &stored)?;
+    merge_overrides_lenient(&mut config, &stored);
 
     // Layer 3: CLI flag overrides (highest precedence)
     let cli_pairs: Vec<(String, String)> = cli_overrides
@@ -87,7 +88,7 @@ fn recover_corrupt(
     Ok(ConfigStore::new(conn)?)
 }
 
-/// Merge key-value overrides into an AppConfig.
+/// Merge key-value overrides into an AppConfig. Errors on unknown keys.
 fn merge_overrides(
     config: &mut AppConfig,
     overrides: &[(String, String)],
@@ -102,6 +103,20 @@ fn merge_overrides(
         set_field(config, key, value)?;
     }
     Ok(())
+}
+
+/// Merge key-value overrides, skipping unknown keys with a warning.
+/// Used for DB-stored config which may contain keys from a newer version.
+fn merge_overrides_lenient(config: &mut AppConfig, overrides: &[(String, String)]) {
+    for (key, value) in overrides {
+        if !config.is_known_key(key) {
+            warn!(key, "ignoring unknown config key from database");
+            continue;
+        }
+        if let Err(e) = set_field(config, key, value) {
+            warn!(key, error = %e, "ignoring unparsable config value from database");
+        }
+    }
 }
 
 /// Set a single field on AppConfig by dot-path key.
