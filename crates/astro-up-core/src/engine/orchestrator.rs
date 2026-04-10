@@ -607,6 +607,24 @@ where
             install_status
         };
 
+        // 7b. Record to ledger on success so package shows as installed
+        if matches!(
+            final_status,
+            super::history::OperationStatus::Success
+                | super::history::OperationStatus::RebootPending
+        ) {
+            if let Err(e) = self
+                .detector
+                .upsert_acknowledged(pkg_id.as_ref(), &planned.target_version)
+            {
+                tracing::warn!(
+                    package = %pkg_id,
+                    error = %e,
+                    "failed to record installation to ledger"
+                );
+            }
+        }
+
         // 8. Emit PackageComplete
         let status_str = match &final_status {
             super::history::OperationStatus::Success => "succeeded",
