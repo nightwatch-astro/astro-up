@@ -65,6 +65,19 @@ pub enum ScanInterval {
     Weekly,
 }
 
+impl ScanInterval {
+    /// Returns the minimum duration between scans, or `None` for Manual/OnStartup
+    /// (OnStartup only scans once at launch, not on a timer).
+    pub fn as_duration(&self) -> Option<Duration> {
+        match self {
+            Self::Manual | Self::OnStartup => None,
+            Self::Hourly => Some(Duration::from_secs(3600)),
+            Self::Daily => Some(Duration::from_secs(86400)),
+            Self::Weekly => Some(Duration::from_secs(604_800)),
+        }
+    }
+}
+
 /// Backup schedule frequency.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]

@@ -135,6 +135,132 @@ fn spawn_backup_scheduler(app: &AppHandle) {
     });
 }
 
+/// Spawn the background scan scheduler.
+///
+/// On startup: if `auto_scan_on_launch` is true and no recent scan exists, trigger immediately.
+/// Then, if `scan_interval` specifies a recurring duration (Hourly/Daily/Weekly), run on a timer.
+fn spawn_scan_scheduler(app: &AppHandle) {
+    let handle = app.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let state = handle.state::<state::AppState>();
+
+        // Read config
+        let (auto_scan_on_launch, scan_interval) = {
+            let config = state.config.lock().unwrap();
+            (
+                config.ui.auto_scan_on_launch,
+                config.ui.scan_interval.clone(),
+            )
+        };
+
+        // Check when the last scan happened
+        let detection_store = astro_up_core::adapters::DetectionStore::new(state.db_path.clone());
+        let last_scan_at = detection_store.last_scan_at().ok().flatten();
+        let needs_initial_scan =
+            last_scan_at.is_none() || is_scan_stale(&last_scan_at, &scan_interval);
+
+        // Wait for catalog to be ready before scanning
+        tokio::time::sleep(Duration::from_secs(5)).await;
+
+        // Initial scan on launch
+        if auto_scan_on_launch && needs_initial_scan {
+            tracing::info!(
+                last_scan = last_scan_at.as_deref().unwrap_or("never"),
+                interval = %scan_interval,
+                "Auto-scan on launch: triggering scan"
+            );
+            run_background_scan(&handle).await;
+        }
+
+        // Recurring timer (only for Hourly/Daily/Weekly)
+        if let Some(interval) = scan_interval.as_duration() {
+            let mut ticker = tokio::time::interval(interval);
+            ticker.tick().await; // Skip first immediate tick
+
+            loop {
+                ticker.tick().await;
+                tracing::debug!(interval = ?scan_interval, "Periodic scan triggered");
+                run_background_scan(&handle).await;
+            }
+        }
+    });
+}
+
+/// Check if the last scan is older than the configured interval.
+fn is_scan_stale(
+    last_scan_at: &Option<String>,
+    interval: &astro_up_core::config::ScanInterval,
+) -> bool {
+    use astro_up_core::config::ScanInterval;
+
+    let Some(ts) = last_scan_at else {
+        return true;
+    };
+
+    let Ok(scan_time) = chrono::NaiveDateTime::parse_from_str(ts, "%Y-%m-%d %H:%M:%S") else {
+        return true;
+    };
+    let scan_utc = scan_time.and_utc();
+    let age = chrono::Utc::now() - scan_utc;
+
+    match interval {
+        ScanInterval::Manual => false,
+        ScanInterval::OnStartup => true, // Always scan on startup
+        ScanInterval::Hourly => age > chrono::Duration::hours(1),
+        ScanInterval::Daily => age > chrono::Duration::days(1),
+        ScanInterval::Weekly => age > chrono::Duration::weeks(1),
+    }
+}
+
+/// Run a scan in the background, emitting events to the frontend.
+async fn run_background_scan(handle: &AppHandle) {
+    use astro_up_core::adapters::{CatalogPackageSource, DetectionStore, SqliteLedgerStore};
+    use astro_up_core::detect::scanner::Scanner;
+    use astro_up_core::events::Event;
+    use tauri::Emitter;
+
+    let state = handle.state::<state::AppState>();
+    let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
+    let packages = CatalogPackageSource::new(catalog_path);
+    let ledger = SqliteLedgerStore::new(state.db_path.clone());
+    let scanner = Scanner::new(packages, ledger);
+
+    let _ = handle.emit("core-event", &Event::ScanStarted);
+
+    match scanner.scan().await {
+        Ok(scan_result) => {
+            let total_found = scan_result
+                .results
+                .iter()
+                .filter(|r| r.result.is_installed())
+                .count();
+
+            // Persist detection results
+            let detection_store = DetectionStore::new(state.db_path.clone());
+            if let Err(e) = detection_store.save_results(&scan_result.results) {
+                tracing::warn!(error = %e, "failed to persist background scan results");
+            }
+
+            let _ = handle.emit(
+                "core-event",
+                &Event::ScanComplete {
+                    total_found: total_found as u32,
+                },
+            );
+
+            tracing::info!(
+                total_found,
+                duration_ms = scan_result.duration.as_millis() as u64,
+                "Background scan complete"
+            );
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "Background scan failed");
+        }
+    }
+}
+
 pub fn run() {
     // Resolve data dir early for file logging
     let data_dir = directories::ProjectDirs::from("com", "nightwatch", "astro-up").map_or_else(
@@ -321,6 +447,9 @@ pub fn run() {
 
             // Background periodic update check (T030)
             spawn_background_update_timer(app.handle());
+
+            // Background scan scheduler — auto-scan on launch and/or periodic interval
+            spawn_scan_scheduler(app.handle());
 
             // Background backup scheduler (#507)
             spawn_backup_scheduler(app.handle());
