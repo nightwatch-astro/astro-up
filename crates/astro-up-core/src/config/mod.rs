@@ -60,8 +60,24 @@ pub fn load_config(
     Ok(config)
 }
 
+/// Maximum config database file size (10 MB). Typical configs are <100 KB.
+const MAX_CONFIG_DB_BYTES: u64 = 10 * 1024 * 1024;
+
 /// Open a ConfigStore, handling corruption by renaming the corrupt file and starting fresh.
 fn open_store(db_path: &Path) -> Result<ConfigStore, CoreError> {
+    // Validate file size before opening to prevent OOM on corrupt/bloated databases
+    if db_path.exists() {
+        if let Ok(metadata) = std::fs::metadata(db_path) {
+            if metadata.len() > MAX_CONFIG_DB_BYTES {
+                return Err(CoreError::Validation(format!(
+                    "config database exceeds maximum size ({} bytes > {MAX_CONFIG_DB_BYTES} bytes): {}",
+                    metadata.len(),
+                    db_path.display()
+                )));
+            }
+        }
+    }
+
     match rusqlite::Connection::open(db_path) {
         Ok(conn) => match ConfigStore::new(conn) {
             Ok(store) => Ok(store),
