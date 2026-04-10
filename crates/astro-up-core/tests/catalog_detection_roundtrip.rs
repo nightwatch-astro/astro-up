@@ -60,7 +60,7 @@ fn create_test_catalog(dir: &std::path::Path) -> std::path::PathBuf {
             package_id TEXT PRIMARY KEY REFERENCES packages(id),
             method TEXT NOT NULL,
             scope TEXT,
-            elevation INTEGER NOT NULL DEFAULT 0,
+            elevation TEXT,
             switches TEXT,
             exit_codes TEXT,
             success_codes TEXT
@@ -157,7 +157,7 @@ fn create_test_catalog(dir: &std::path::Path) -> std::path::PathBuf {
         params![
             "nina",
             "inno_setup",
-            0,
+            Option::<String>::None,
             r#"{"silent":"/VERYSILENT /NORESTART /SUPPRESSMSGBOXES"}"#,
         ],
     )

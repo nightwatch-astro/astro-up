@@ -319,7 +319,7 @@ impl SqliteCatalogReader {
                     Ok((
                         row.get::<_, String>(0)?,
                         row.get::<_, Option<String>>(1)?,
-                        row.get::<_, i32>(2)?,
+                        row.get::<_, Option<String>>(2)?,
                         row.get::<_, Option<String>>(3)?,
                         row.get::<_, Option<String>>(4)?,
                         row.get::<_, Option<String>>(5)?,
@@ -332,7 +332,7 @@ impl SqliteCatalogReader {
         let Some((
             method_str,
             scope_str,
-            elevation_int,
+            elevation_str,
             switches_json,
             exit_codes_json,
             success_codes_json,
@@ -361,11 +361,12 @@ impl SqliteCatalogReader {
             )
             .unwrap_or(None);
         let scope = scope_str.and_then(|s| s.parse().ok());
-        let elevation = if elevation_int != 0 {
-            Some(crate::types::Elevation::Required)
-        } else {
-            None
-        };
+        let elevation = elevation_str.and_then(|s| match s.as_str() {
+            "required" => Some(crate::types::Elevation::Required),
+            "prohibited" => Some(crate::types::Elevation::Prohibited),
+            "self" => Some(crate::types::Elevation::Self_),
+            _ => None,
+        });
 
         let switches = switches_json
             .and_then(|json| {
