@@ -587,4 +587,119 @@ mod tests {
         let names = resolve_dir_names(&paths);
         assert_eq!(names, vec!["Settings", "Settings_2", "Profiles"]);
     }
+
+    // --- Path traversal integration tests (T012) ---
+
+    /// Create a malicious ZIP with a directory traversal entry.
+    fn make_traversal_zip(dest: &Path, entry_name: &str) -> PathBuf {
+        use std::io::Write;
+        use zip::write::SimpleFileOptions;
+        let zip_path = dest.join("malicious.zip");
+        let file = File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+
+        // Write metadata.json (required by restore)
+        let meta = BackupMetadata {
+            package_id: "test-pkg".into(),
+            version: Version::parse("1.0.0"),
+            created_at: chrono::Utc::now(),
+            total_size: 0,
+            file_count: 1,
+            file_hashes: std::collections::HashMap::new(),
+            paths: vec![dest.join("Profiles")],
+            excluded_files: vec![],
+        };
+        zip.start_file("metadata.json", SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(serde_json::to_string(&meta).unwrap().as_bytes())
+            .unwrap();
+
+        // Write the malicious entry
+        zip.start_file(entry_name, SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(b"malicious content").unwrap();
+
+        zip.finish().unwrap();
+        zip_path
+    }
+
+    #[tokio::test]
+    async fn restore_rejects_dotdot_traversal() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("Profiles")).unwrap();
+
+        let zip = make_traversal_zip(tmp.path(), "Profiles/../../etc/passwd");
+        let result = restore(&zip, None).await;
+
+        // Should succeed (skips malicious entry) but not create the file
+        assert!(result.is_ok());
+        assert!(!tmp.path().join("etc/passwd").exists());
+    }
+
+    #[tokio::test]
+    async fn restore_rejects_absolute_path_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("Profiles")).unwrap();
+
+        let zip = make_traversal_zip(tmp.path(), "Profiles//etc/shadow");
+        let result = restore(&zip, None).await;
+
+        assert!(result.is_ok());
+        assert!(!PathBuf::from("/etc/shadow").exists());
+    }
+
+    #[tokio::test]
+    async fn restore_valid_entries_succeed() {
+        let src = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        make_test_tree(src.path());
+
+        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+        let request = BackupRequest {
+            package_id: "safe-pkg".into(),
+            version: Version::parse("1.0.0"),
+            config_paths: vec![src.path().join("Profiles"), src.path().join("Settings")],
+            event_tx: tx,
+        };
+
+        create_backup(&request, backup_dir.path()).await.unwrap();
+
+        // Modify files
+        fs::write(src.path().join("Profiles/default.json"), "CHANGED").unwrap();
+
+        let archive = fs::read_dir(backup_dir.path().join("safe-pkg"))
+            .unwrap()
+            .find_map(Result::ok)
+            .unwrap()
+            .path();
+
+        // Restore should overwrite
+        restore(&archive, None).await.unwrap();
+        let content = fs::read_to_string(src.path().join("Profiles/default.json")).unwrap();
+        assert_eq!(content, r#"{"name":"default"}"#);
+    }
+
+    #[test]
+    fn resolve_restore_target_rejects_traversal() {
+        let mut dir_map = HashMap::new();
+        let profiles = PathBuf::from("/safe/Profiles");
+        dir_map.insert("Profiles", profiles.as_path());
+
+        let result = resolve_restore_target("Profiles/../../etc/passwd", &dir_map);
+        assert!(result.is_err() || result.unwrap().is_none());
+    }
+
+    #[test]
+    fn resolve_restore_target_accepts_valid_path() {
+        let mut dir_map = HashMap::new();
+        let profiles = PathBuf::from("/safe/Profiles");
+        dir_map.insert("Profiles", profiles.as_path());
+
+        let result = resolve_restore_target("Profiles/subdir/file.txt", &dir_map);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Some(PathBuf::from("/safe/Profiles/subdir/file.txt"))
+        );
+    }
 }
