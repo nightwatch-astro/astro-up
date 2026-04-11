@@ -65,7 +65,10 @@ fn snapshot_lifecycle_report_json() {
 fn snapshot_lifecycle_report_toml_config() {
     let config = DetectionConfig {
         method: DetectionMethod::Registry,
-        registry_key: Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1".into()),
+        registry_key: Some(
+            r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1"
+                .into(),
+        ),
         registry_value: Some("DisplayVersion".into()),
         file_path: None,
         version_regex: None,

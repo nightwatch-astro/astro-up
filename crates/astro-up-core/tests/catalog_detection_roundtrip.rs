@@ -298,7 +298,9 @@ fn detection_config_no_fallback() {
     assert_eq!(config.method, DetectionMethod::Registry);
     assert_eq!(
         config.registry_key.as_deref(),
-        Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PHDGuiding2_is1")
+        Some(
+            r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PHDGuiding2_is1"
+        )
     );
     assert!(config.fallback.is_none());
     assert!(config.file_path.is_none());

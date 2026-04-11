@@ -263,22 +263,26 @@ fn create_fixture_catalog() {
         (
             "nina",
             "registry",
-            None::<&str>,           // file_path
-            Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1"), // registry_key
+            None::<&str>, // file_path
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1",
+            ), // registry_key
             Some("DisplayVersion"), // registry_value
-            None::<&str>,           // version_regex
-            None::<&str>,           // product_code
-            None::<&str>,           // upgrade_code
-            None::<&str>,           // inf_provider
-            None::<&str>,           // device_class
-            None::<&str>,           // inf_name
+            None::<&str>, // version_regex
+            None::<&str>, // product_code
+            None::<&str>, // upgrade_code
+            None::<&str>, // inf_provider
+            None::<&str>, // device_class
+            None::<&str>, // inf_name
             Some(r#"{"method":"pe_file","file_path":"{program_dir}\\NINA\\NINA.exe"}"#), // fallback_config
         ),
         (
             "phd2",
             "registry",
             None,
-            Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PHDGuiding2_is1"),
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PHDGuiding2_is1",
+            ),
             Some("DisplayVersion"),
             None,
             None,
@@ -292,7 +296,9 @@ fn create_fixture_catalog() {
             "ascom-platform",
             "registry",
             None,
-            Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASCOM Platform 6_is1"),
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASCOM Platform 6_is1",
+            ),
             Some("DisplayVersion"),
             Some(r"^(\d+\.\d+)"),
             Some("{B3A4F860-DA18-4B76-8E4A-3E29C2C01738}"),
@@ -306,7 +312,9 @@ fn create_fixture_catalog() {
             "astap",
             "registry",
             None,
-            Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\AppName=ASTAP, the Astrometric STAcking Program,~D52A8A79_is1"),
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\AppName=ASTAP, the Astrometric STAcking Program,~D52A8A79_is1",
+            ),
             Some("DisplayVersion"),
             None,
             None,
@@ -320,7 +328,9 @@ fn create_fixture_catalog() {
             "sharpcap",
             "registry",
             None,
-            Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SharpCap 4_is1"),
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SharpCap 4_is1",
+            ),
             Some("DisplayVersion"),
             None,
             None,

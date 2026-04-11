@@ -91,9 +91,7 @@ fn detect_windows(config: &DetectionConfig) -> DetectionResult {
                 key = %key_path,
                 "bare subkey name detected, auto-prefixing with Uninstall path"
             );
-            let subkey = format!(
-                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{key_path}"
-            );
+            let subkey = format!(r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{key_path}");
             (
                 vec![
                     (HKEY_LOCAL_MACHINE, KEY_READ | KEY_WOW64_64KEY),

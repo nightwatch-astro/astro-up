@@ -117,7 +117,9 @@ pub async fn run_chain(
     let result = run_single_method(config, resolver, ledger_path, wmi_ctx).await;
 
     match &result {
-        DetectionResult::Installed { version, method, .. } => {
+        DetectionResult::Installed {
+            version, method, ..
+        } => {
             tracing::debug!(
                 method = %method,
                 version = %version,
