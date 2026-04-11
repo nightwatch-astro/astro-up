@@ -9,6 +9,7 @@ use crate::types::{DetectionMethod, Version};
 ///
 /// Requires ASCOM Platform 7+. Reads driver registration under
 /// HKLM\SOFTWARE\ASCOM\{DeviceType}\{DriverId}.
+#[tracing::instrument(skip_all)]
 pub async fn detect(config: &DetectionConfig) -> DetectionResult {
     trace!(method = "ascom", registry_key = ?config.registry_key, "detect_ascom entry");
     #[cfg(windows)]

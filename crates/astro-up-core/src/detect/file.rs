@@ -6,6 +6,7 @@ use crate::detect::{DetectionResult, PathResolver};
 use crate::types::{DetectionConfig, DetectionMethod, Version};
 
 /// Check if a file exists at the resolved path. Returns InstalledUnknownVersion or NotInstalled.
+#[tracing::instrument(skip_all)]
 pub async fn detect_exists(config: &DetectionConfig, resolver: &PathResolver) -> DetectionResult {
     let Some(ref template) = config.file_path else {
         return DetectionResult::NotInstalled;
@@ -29,6 +30,7 @@ pub async fn detect_exists(config: &DetectionConfig, resolver: &PathResolver) ->
 }
 
 /// Read a config/manifest file and extract version via regex capture group 1.
+#[tracing::instrument(skip_all)]
 pub async fn detect_config(config: &DetectionConfig, resolver: &PathResolver) -> DetectionResult {
     let Some(ref template) = config.file_path else {
         return DetectionResult::NotInstalled;

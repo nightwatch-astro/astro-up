@@ -67,6 +67,7 @@ pub fn find_uninstall_command(_package_id: &str) -> Option<String> {
 ///
 /// Appends common silent switches if not already present in the command.
 #[cfg(windows)]
+#[tracing::instrument(skip_all)]
 pub async fn run_uninstall(command: &str, quiet: bool) -> Result<(), CoreError> {
     use tokio::process::Command;
 
@@ -121,6 +122,7 @@ pub async fn run_uninstall(_command: &str, _quiet: bool) -> Result<(), CoreError
 /// Removes a ZIP/portable install by deleting the directory.
 ///
 /// Requires `confirm = true` — the caller (CLI/GUI) must prompt the user first.
+#[tracing::instrument(skip_all)]
 pub async fn remove_directory(install_dir: &Path, confirm: bool) -> Result<(), CoreError> {
     if !confirm {
         return Err(CoreError::Io(std::io::Error::new(

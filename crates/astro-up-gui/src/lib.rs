@@ -1,10 +1,11 @@
-// Tauri state management uses Mutex::lock().unwrap() pervasively —
-// poisoned mutexes indicate unrecoverable state, so unwrap is intentional.
+// parking_lot::Mutex — no poisoning, lock() returns guard directly.
+// Remaining unwrap/expect usages are for compile-time constants or test code.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 mod commands;
 mod log_layer;
 mod state;
+mod supervisor;
 pub mod tray;
 
 use std::time::Duration;
@@ -58,32 +59,32 @@ pub(crate) async fn check_for_app_update(app: &AppHandle) {
     }
 }
 
-/// Spawn a periodic background update check timer.
+/// Spawn a periodic background update check timer with panic supervision.
 fn spawn_background_update_timer(app: &AppHandle) {
     let handle = app.clone();
     let state = app.state::<state::AppState>();
-    let config = state.config.lock().unwrap();
+    let config = state.config.lock();
     let interval = if config.ui.auto_check_updates {
         config.ui.check_interval
     } else {
-        Duration::from_secs(24 * 60 * 60) // Check once a day even if auto-check disabled
+        Duration::from_secs(24 * 60 * 60)
     };
 
-    tauri::async_runtime::spawn(async move {
-        let mut ticker = tokio::time::interval(interval);
-        ticker.tick().await; // Skip first immediate tick (startup check already ran)
-
-        loop {
+    supervisor::spawn_supervised(app, "update_timer", move || {
+        let h = handle.clone();
+        async move {
+            let mut ticker = tokio::time::interval(interval);
             ticker.tick().await;
-            tracing::debug!("Background update check triggered");
-            check_for_app_update(&handle).await;
 
-            // Update tray badge with available update count
-            let count = tray::badge_count();
-            if count > 0 {
-                // If window is hidden, the update-available event already fired.
-                // The tray badge is already set by the update check.
-                tracing::debug!(count, "Updates available (badge already set)");
+            loop {
+                ticker.tick().await;
+                tracing::info!("Background update check triggered");
+                check_for_app_update(&h).await;
+
+                let count = tray::badge_count();
+                if count > 0 {
+                    tracing::debug!(count, "Updates available (badge already set)");
+                }
             }
         }
     });
@@ -93,39 +94,35 @@ fn spawn_background_update_timer(app: &AppHandle) {
 fn spawn_backup_scheduler(app: &AppHandle) {
     let handle = app.clone();
 
-    tauri::async_runtime::spawn(async move {
-        // Check every hour if scheduled backups are due
-        let mut ticker = tokio::time::interval(Duration::from_secs(3600));
-        ticker.tick().await; // Skip first immediate tick
-
-        loop {
+    supervisor::spawn_supervised(app, "backup_scheduler", move || {
+        let h = handle.clone();
+        async move {
+            let mut ticker = tokio::time::interval(Duration::from_secs(3600));
             ticker.tick().await;
 
-            let state = handle.state::<state::AppState>();
-            let policy = state.config.lock().unwrap().backup_policy.clone();
+            loop {
+                ticker.tick().await;
 
-            if !policy.scheduled_enabled {
-                continue;
-            }
+                let state = h.state::<state::AppState>();
+                let policy = state.config.lock().backup_policy.clone();
 
-            tracing::debug!(schedule = %policy.schedule, "Backup scheduler tick");
+                if !policy.scheduled_enabled {
+                    continue;
+                }
 
-            // Prune old backups according to retention policy
-            if policy.max_per_package > 0 {
-                // List all known package IDs from the catalog and prune each
-                if let Ok(reader) = state.open_catalog_reader() {
-                    if let Ok(packages) = reader.list_all() {
-                        for pkg in &packages {
-                            if let Err(e) = state
-                                .backup_service
-                                .prune(pkg.id.as_ref(), policy.max_per_package as usize)
-                                .await
-                            {
-                                tracing::warn!(
-                                    package = %pkg.id,
-                                    error = %e,
-                                    "Failed to prune backups"
-                                );
+                tracing::debug!(schedule = %policy.schedule, "Backup scheduler tick");
+
+                if policy.max_per_package > 0 {
+                    if let Ok(reader) = state.open_catalog_reader() {
+                        if let Ok(packages) = reader.list_all() {
+                            for pkg in &packages {
+                                if let Err(e) = state
+                                    .backup_service
+                                    .prune(pkg.id.as_ref(), policy.max_per_package as usize)
+                                    .await
+                                {
+                                    tracing::warn!(package = %pkg.id, error = %e, "Failed to prune backups");
+                                }
                             }
                         }
                     }
@@ -142,46 +139,45 @@ fn spawn_backup_scheduler(app: &AppHandle) {
 fn spawn_scan_scheduler(app: &AppHandle) {
     let handle = app.clone();
 
-    tauri::async_runtime::spawn(async move {
-        let state = handle.state::<state::AppState>();
+    supervisor::spawn_supervised(app, "scan_scheduler", move || {
+        let h = handle.clone();
+        async move {
+            let state = h.state::<state::AppState>();
 
-        // Read config
-        let (auto_scan_on_launch, scan_interval) = {
-            let config = state.config.lock().unwrap();
-            (
-                config.ui.auto_scan_on_launch,
-                config.ui.scan_interval.clone(),
-            )
-        };
+            let (auto_scan_on_launch, scan_interval) = {
+                let config = state.config.lock();
+                (
+                    config.ui.auto_scan_on_launch,
+                    config.ui.scan_interval.clone(),
+                )
+            };
 
-        // Check when the last scan happened
-        let detection_store = astro_up_core::adapters::DetectionStore::new(state.db_path.clone());
-        let last_scan_at = detection_store.last_scan_at().ok().flatten();
-        let needs_initial_scan =
-            last_scan_at.is_none() || is_scan_stale(&last_scan_at, &scan_interval);
+            let detection_store =
+                astro_up_core::adapters::DetectionStore::new(state.db_path.clone());
+            let last_scan_at = detection_store.last_scan_at().ok().flatten();
+            let needs_initial_scan =
+                last_scan_at.is_none() || is_scan_stale(&last_scan_at, &scan_interval);
 
-        // Wait for catalog to be ready before scanning
-        tokio::time::sleep(Duration::from_secs(5)).await;
+            tokio::time::sleep(Duration::from_secs(5)).await;
 
-        // Initial scan on launch
-        if auto_scan_on_launch && needs_initial_scan {
-            tracing::info!(
-                last_scan = last_scan_at.as_deref().unwrap_or("never"),
-                interval = %scan_interval,
-                "Auto-scan on launch: triggering scan"
-            );
-            run_background_scan(&handle).await;
-        }
+            if auto_scan_on_launch && needs_initial_scan {
+                tracing::info!(
+                    last_scan = last_scan_at.as_deref().unwrap_or("never"),
+                    interval = %scan_interval,
+                    "Auto-scan on launch: triggering scan"
+                );
+                run_background_scan(&h).await;
+            }
 
-        // Recurring timer (only for Hourly/Daily/Weekly)
-        if let Some(interval) = scan_interval.as_duration() {
-            let mut ticker = tokio::time::interval(interval);
-            ticker.tick().await; // Skip first immediate tick
-
-            loop {
+            if let Some(interval) = scan_interval.as_duration() {
+                let mut ticker = tokio::time::interval(interval);
                 ticker.tick().await;
-                tracing::debug!(interval = ?scan_interval, "Periodic scan triggered");
-                run_background_scan(&handle).await;
+
+                loop {
+                    ticker.tick().await;
+                    tracing::debug!(interval = ?scan_interval, "Periodic scan triggered");
+                    run_background_scan(&h).await;
+                }
             }
         }
     });
@@ -405,7 +401,7 @@ pub fn run() {
                 use tauri_plugin_autostart::ManagerExt;
                 let autostart = app.autolaunch();
                 let state = app.state::<AppState>();
-                let want_autostart = state.config.lock().unwrap().startup.start_at_login;
+                let want_autostart = state.config.lock().startup.start_at_login;
                 let is_enabled = autostart.is_enabled().unwrap_or(false);
 
                 if want_autostart && !is_enabled {
@@ -487,7 +483,6 @@ pub fn run() {
                 let minimize_to_tray = state
                     .config
                     .lock()
-                    .unwrap()
                     .startup
                     .minimize_to_tray_on_close;
 

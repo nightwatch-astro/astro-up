@@ -61,6 +61,7 @@ pub struct HardwareMatch {
 /// Returns matches for devices that have a matching manifest entry.
 /// On non-Windows, returns an empty vec.
 #[cfg(windows)]
+#[tracing::instrument(skip_all)]
 pub async fn discover(
     manifest_patterns: &[(VidPid, String)],
     managed_packages: &std::collections::HashSet<String>,

@@ -29,6 +29,11 @@ impl BackupService {
         }
     }
 
+    /// Returns the backup directory path.
+    pub fn backup_dir(&self) -> &Path {
+        &self.backup_dir
+    }
+
     #[instrument(skip_all, fields(package = %request.package_id))]
     pub async fn backup(&self, request: &BackupRequest) -> Result<BackupMetadata, CoreError> {
         if request.config_paths.is_empty() {

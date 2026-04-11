@@ -114,8 +114,8 @@ export function useUpdateQueue() {
         await invoke("cancel_operation", {
           operationId: currentOperationId.value,
         });
-      } catch {
-        // ignore — operation may have already finished
+      } catch (e) {
+        logger.warn("update-queue", `Cancel operation failed (may have already finished): ${e}`);
       }
     }
   }

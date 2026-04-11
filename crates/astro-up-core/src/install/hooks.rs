@@ -14,6 +14,7 @@ const HOOK_TIMEOUT: Duration = Duration::from_secs(60);
 ///
 /// Hooks from manifests are trusted (signed manifests authored by maintainer).
 #[cfg(windows)]
+#[tracing::instrument(skip_all)]
 pub async fn run_hook(command: &str) -> Result<(), CoreError> {
     use tokio::process::Command;
 

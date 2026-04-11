@@ -31,7 +31,9 @@ pub async fn handle_scan(state: &CliState, mode: &OutputMode) -> Result<()> {
         let persist_ledger = SqliteLedgerStore::new(state.db_path.clone());
         for r in &scan_result.results {
             if let astro_up_core::detect::DetectionResult::Installed { version, .. } = &r.result {
-                let _ = persist_ledger.upsert_acknowledged(&r.package_id, version);
+                if let Err(e) = persist_ledger.upsert_acknowledged(&r.package_id, version) {
+                    tracing::warn!(package = %r.package_id, error = %e, "failed to persist ledger entry");
+                }
             }
         }
     }

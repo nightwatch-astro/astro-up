@@ -16,6 +16,7 @@ use crate::error::CoreError;
 /// # Single-root flattening
 /// If all entries share a single common root directory (e.g., `NINA-3.1/`), that prefix
 /// is stripped to avoid double nesting like `dest/NINA-3.1/NINA-3.1/`.
+#[tracing::instrument(skip_all)]
 pub async fn extract_zip(archive_path: &Path, dest_dir: &Path) -> Result<PathBuf, CoreError> {
     let archive_path = archive_path.to_path_buf();
     let dest_dir = dest_dir.to_path_buf();

@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import RadioButton from "primevue/radiobutton";
+import { logger } from "../../utils/logger";
 
 interface AssetOption {
   index: number;
@@ -45,16 +46,24 @@ const formattedAssets = computed(() =>
 
 async function handleConfirm() {
   visible.value = false;
-  await invoke("resolve_asset_selection", {
-    response: { index: selectedIndex.value },
-  });
+  try {
+    await invoke("resolve_asset_selection", {
+      response: { index: selectedIndex.value },
+    });
+  } catch (e) {
+    logger.error("asset-selection", `Failed to resolve asset selection: ${e}`);
+  }
 }
 
 async function handleCancel() {
   visible.value = false;
-  await invoke("resolve_asset_selection", {
-    response: { index: null },
-  });
+  try {
+    await invoke("resolve_asset_selection", {
+      response: { index: null },
+    });
+  } catch (e) {
+    logger.error("asset-selection", `Failed to cancel asset selection: ${e}`);
+  }
 }
 
 onMounted(async () => {

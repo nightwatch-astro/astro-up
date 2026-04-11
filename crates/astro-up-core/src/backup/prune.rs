@@ -9,6 +9,7 @@ use crate::backup::types::BackupListEntry;
 use crate::error::CoreError;
 
 /// Lists available backups for a package, sorted by date descending (newest first).
+#[tracing::instrument(skip_all)]
 pub async fn list_backups(
     backup_dir: &Path,
     package_id: &str,
@@ -58,6 +59,7 @@ fn list_backups_sync(package_dir: &Path) -> Result<Vec<BackupListEntry>, CoreErr
 /// Deletes old backups beyond the retention count.
 /// Returns the number of archives deleted.
 /// A `keep` of 0 means unlimited — no pruning.
+#[tracing::instrument(skip_all)]
 pub async fn prune_backups(
     backup_dir: &Path,
     package_id: &str,

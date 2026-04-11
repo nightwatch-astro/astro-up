@@ -17,6 +17,7 @@ use crate::events::Event;
 /// Walks each config_path, hashes files with SHA-256, writes to ZIP with relative paths.
 /// Skips locked/inaccessible files with a warning. Writes `metadata.json` into the archive.
 /// Emits `BackupProgress` events during archiving.
+#[tracing::instrument(skip_all, fields(package))]
 pub async fn create_backup(
     request: &BackupRequest,
     backup_dir: &Path,
@@ -248,6 +249,7 @@ pub(crate) fn read_metadata_sync(archive_path: &Path) -> Result<BackupMetadata, 
 }
 
 /// Reads metadata.json from a backup archive without extracting.
+#[tracing::instrument(skip_all)]
 pub async fn read_metadata(archive_path: &Path) -> Result<BackupMetadata, CoreError> {
     let archive_path = archive_path.to_path_buf();
     tokio::task::spawn_blocking(move || read_metadata_sync(&archive_path))
@@ -256,6 +258,7 @@ pub async fn read_metadata(archive_path: &Path) -> Result<BackupMetadata, CoreEr
 }
 
 /// Extracts a backup archive to the original paths stored in metadata.
+#[tracing::instrument(skip_all)]
 pub async fn restore(archive_path: &Path, path_filter: Option<&str>) -> Result<(), CoreError> {
     let archive_path = archive_path.to_path_buf();
     let filter = path_filter.map(ToString::to_string);
@@ -287,13 +290,14 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
         .map(|(name, path)| (name.as_str(), path.as_path()))
         .collect();
 
-    // Check if path_filter matches anything
+    // Check if path_filter matches anything (component-based matching)
     if let Some(filter) = path_filter {
+        let filter_path = Path::new(filter);
         let has_match = (0..archive.len()).any(|i| {
             archive
                 .by_index(i)
                 .ok()
-                .is_some_and(|e| e.name().starts_with(filter))
+                .is_some_and(|e| Path::new(e.name()).starts_with(filter_path))
         });
         if !has_match {
             let available: Vec<String> = dir_names.clone();
@@ -317,18 +321,32 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
             continue;
         }
 
-        // Apply path filter
+        // Apply path filter (component-based matching, not string prefix)
         if let Some(filter) = path_filter {
-            if !name.starts_with(filter) {
+            if !Path::new(&name).starts_with(Path::new(filter)) {
                 continue;
             }
         }
 
-        // Resolve target path: find which dir prefix matches, map to original path
-        let target = resolve_restore_target(&name, &dir_to_path);
-        let Some(target) = target else {
-            warn!(entry = %name, "skipping archive entry: cannot resolve restore target");
+        // Reject symlinks (Unix symlink mode or zip-reported symlink)
+        let is_symlink =
+            entry.is_symlink() || entry.unix_mode().is_some_and(|m| m & 0xF000 == 0xA000);
+        if is_symlink {
+            warn!(entry = %name, "skipping symlink archive entry");
             continue;
+        }
+
+        // Resolve target path: validate entry safety and map to original path
+        let target = match resolve_restore_target(&name, &dir_to_path) {
+            Ok(Some(t)) => t,
+            Ok(None) => {
+                warn!(entry = %name, "skipping archive entry: cannot resolve restore target");
+                continue;
+            }
+            Err(e) => {
+                warn!(entry = %name, error = %e, "skipping unsafe archive entry");
+                continue;
+            }
         };
 
         if entry.is_dir() {
@@ -348,19 +366,32 @@ fn restore_sync(archive_path: &Path, path_filter: Option<&str>) -> Result<(), Co
 }
 
 /// Maps an archive entry name back to its original filesystem path.
-fn resolve_restore_target(entry_name: &str, dir_to_path: &HashMap<&str, &Path>) -> Option<PathBuf> {
+///
+/// Validates the relative path portion against directory traversal and
+/// absolute path attacks before resolving within the original directory.
+fn resolve_restore_target(
+    entry_name: &str,
+    dir_to_path: &HashMap<&str, &Path>,
+) -> Result<Option<PathBuf>, CoreError> {
     // entry_name is like "Profiles/subdir/file.txt"
     // First component is the dir name, rest is relative path
-    let slash_pos = entry_name.find('/')?;
+    let Some(slash_pos) = entry_name.find('/') else {
+        return Ok(None);
+    };
     let dir_name = &entry_name[..slash_pos];
     let relative = &entry_name[slash_pos + 1..];
 
     if relative.is_empty() {
-        return None; // Directory entry itself
+        return Ok(None); // Directory entry itself
     }
 
-    let original_path = dir_to_path.get(dir_name)?;
-    Some(original_path.join(relative))
+    let Some(original_path) = dir_to_path.get(dir_name) else {
+        return Ok(None);
+    };
+
+    // Validate the relative path portion for traversal attacks.
+    // Symlinks are already rejected by the caller before we get here.
+    crate::validation::validate_zip_entry(relative, 0, original_path).map(Some)
 }
 
 /// Checks if an I/O error indicates a locked/sharing violation file.
@@ -555,5 +586,121 @@ mod tests {
         ];
         let names = resolve_dir_names(&paths);
         assert_eq!(names, vec!["Settings", "Settings_2", "Profiles"]);
+    }
+
+    // --- Path traversal integration tests (T012) ---
+
+    /// Create a malicious ZIP with a directory traversal entry.
+    fn make_traversal_zip(dest: &Path, entry_name: &str) -> PathBuf {
+        use std::io::Write;
+        use zip::write::SimpleFileOptions;
+        let zip_path = dest.join("malicious.zip");
+        let file = File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+
+        // Write metadata.json (required by restore)
+        let meta = BackupMetadata {
+            package_id: "test-pkg".into(),
+            version: Version::parse("1.0.0"),
+            created_at: chrono::Utc::now(),
+            total_size: 0,
+            file_count: 1,
+            file_hashes: std::collections::HashMap::new(),
+            paths: vec![dest.join("Profiles")],
+            excluded_files: vec![],
+        };
+        zip.start_file("metadata.json", SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(serde_json::to_string(&meta).unwrap().as_bytes())
+            .unwrap();
+
+        // Write the malicious entry
+        zip.start_file(entry_name, SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(b"malicious content").unwrap();
+
+        zip.finish().unwrap();
+        zip_path
+    }
+
+    #[tokio::test]
+    async fn restore_rejects_dotdot_traversal() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("Profiles")).unwrap();
+
+        let zip = make_traversal_zip(tmp.path(), "Profiles/../../etc/passwd");
+        let result = restore(&zip, None).await;
+
+        // Should succeed (skips malicious entry) but not create the file
+        assert!(result.is_ok());
+        assert!(!tmp.path().join("etc/passwd").exists());
+    }
+
+    #[tokio::test]
+    async fn restore_handles_double_slash_entry_safely() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("Profiles")).unwrap();
+
+        // Double slash in entry name — should not escape the target directory
+        let zip = make_traversal_zip(tmp.path(), "Profiles//nested/file.txt");
+        let result = restore(&zip, None).await;
+
+        // Should succeed but file stays within the Profiles directory
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn restore_valid_entries_succeed() {
+        let src = tempfile::tempdir().unwrap();
+        let backup_dir = tempfile::tempdir().unwrap();
+        make_test_tree(src.path());
+
+        let (tx, _rx) = tokio::sync::broadcast::channel(16);
+        let request = BackupRequest {
+            package_id: "safe-pkg".into(),
+            version: Version::parse("1.0.0"),
+            config_paths: vec![src.path().join("Profiles"), src.path().join("Settings")],
+            event_tx: tx,
+        };
+
+        create_backup(&request, backup_dir.path()).await.unwrap();
+
+        // Modify files
+        fs::write(src.path().join("Profiles/default.json"), "CHANGED").unwrap();
+
+        let archive = fs::read_dir(backup_dir.path().join("safe-pkg"))
+            .unwrap()
+            .find_map(Result::ok)
+            .unwrap()
+            .path();
+
+        // Restore should overwrite
+        restore(&archive, None).await.unwrap();
+        let content = fs::read_to_string(src.path().join("Profiles/default.json")).unwrap();
+        assert_eq!(content, r#"{"name":"default"}"#);
+    }
+
+    #[test]
+    fn resolve_restore_target_rejects_traversal() {
+        let mut dir_map = HashMap::new();
+        let profiles = PathBuf::from("/safe/Profiles");
+        dir_map.insert("Profiles", profiles.as_path());
+
+        let result = resolve_restore_target("Profiles/../../etc/passwd", &dir_map);
+        assert!(result.is_err() || result.unwrap().is_none());
+    }
+
+    #[test]
+    fn resolve_restore_target_accepts_valid_path() {
+        let mut dir_map = HashMap::new();
+        let profiles = PathBuf::from("/safe/Profiles");
+        dir_map.insert("Profiles", profiles.as_path());
+
+        let result = resolve_restore_target("Profiles/subdir/file.txt", &dir_map);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Some(PathBuf::from("/safe/Profiles/subdir/file.txt"))
+        );
     }
 }

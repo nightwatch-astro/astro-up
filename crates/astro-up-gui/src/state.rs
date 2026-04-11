@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+
+use parking_lot::Mutex;
 
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};

@@ -140,6 +140,9 @@ pub enum CoreError {
     #[error("database error: {0}")]
     Database(String),
 
+    #[error("validation failed: {0}")]
+    Validation(String),
+
     #[error("download cancelled")]
     Cancelled,
 

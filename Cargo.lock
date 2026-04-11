@@ -157,7 +157,7 @@ version = "0.1.22"
 
 [[package]]
 name = "astro-up-cli"
-version = "0.1.16"
+version = "0.1.22"
 dependencies = [
  "assert_cmd",
  "astro-up-core",
@@ -185,7 +185,7 @@ dependencies = [
 
 [[package]]
 name = "astro-up-core"
-version = "0.1.16"
+version = "0.1.22"
 dependencies = [
  "chrono",
  "directories",
@@ -224,13 +224,15 @@ dependencies = [
 
 [[package]]
 name = "astro-up-gui"
-version = "0.1.16"
+version = "0.1.22"
 dependencies = [
  "astro-up-core",
  "chrono",
  "dashmap",
  "directories",
+ "futures",
  "insta",
+ "parking_lot",
  "rusqlite",
  "semver",
  "serde",
@@ -6100,7 +6102,6 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
- "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",

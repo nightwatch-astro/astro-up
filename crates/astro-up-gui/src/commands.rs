@@ -76,8 +76,18 @@ pub fn emit_event(app: &AppHandle, event: &Event) {
 /// Spawn a task that forwards events from a broadcast channel to the frontend.
 fn forward_events(app: AppHandle, mut rx: broadcast::Receiver<Event>) {
     tauri::async_runtime::spawn(async move {
-        while let Ok(event) = rx.recv().await {
-            emit_event(&app, &event);
+        let task = std::panic::AssertUnwindSafe(async {
+            while let Ok(event) = rx.recv().await {
+                emit_event(&app, &event);
+            }
+        });
+        if let Err(panic_val) = futures::FutureExt::catch_unwind(task).await {
+            let msg: &str = panic_val
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| panic_val.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown");
+            tracing::error!(task = "forward_events", panic = msg, "task panicked");
         }
     });
 }
@@ -393,7 +403,7 @@ pub async fn get_config(state: State<'_, AppState>) -> Result<serde_json::Value,
     let start = std::time::Instant::now();
     tracing::debug!(command = "get_config", "Command invoked");
 
-    let config = state.config.lock().unwrap().clone();
+    let config = state.config.lock().clone();
     let value = serde_json::to_value(&config).map_err(|e| CoreError::from(e.to_string()))?;
 
     tracing::debug!(
@@ -416,7 +426,7 @@ pub async fn save_config(
 
     // Extract key-value pairs from the JSON and write to config store
     let store = state.open_config_store()?;
-    let current = state.config.lock().unwrap().clone();
+    let current = state.config.lock().clone();
 
     if let Some(obj) = config.as_object() {
         for (section, values) in obj {
@@ -451,7 +461,7 @@ pub async fn save_config(
     let paths = current.paths.clone();
     let log_file = current.logging.log_file;
     let new_config = config::load_config(&state.db_path, paths, log_file, &[])?;
-    *state.config.lock().unwrap() = new_config;
+    *state.config.lock() = new_config;
 
     tracing::debug!(
         command = "save_config",
@@ -575,7 +585,7 @@ async fn run_orchestrated_operation(
 
     let catalog_path = state.catalog_manager.catalog_path().to_path_buf();
     let db_path = state.db_path.clone();
-    let config = state.config.lock().unwrap().clone();
+    let config = state.config.lock().clone();
     let backup_dir = state
         .db_path
         .parent()
@@ -668,7 +678,7 @@ async fn run_orchestrated_operation(
                     let (tx, rx) = std::sync::mpsc::channel();
 
                     // Store the sender so resolve_asset_selection can find it
-                    *pending_tx.lock().unwrap() = Some(tx);
+                    *pending_tx.lock() = Some(tx);
 
                     // Emit event to frontend with asset options
                     let request = AssetSelectionRequest {
@@ -707,7 +717,7 @@ async fn run_orchestrated_operation(
                     };
 
                     // Clear the pending sender
-                    *pending_tx.lock().unwrap() = None;
+                    *pending_tx.lock() = None;
                     result
                 });
 
@@ -727,7 +737,7 @@ pub async fn resolve_asset_selection(
     state: State<'_, AppState>,
     response: AssetSelectionResponse,
 ) -> Result<(), CoreError> {
-    let tx = state.pending_asset_tx.lock().unwrap().take();
+    let tx = state.pending_asset_tx.lock().take();
     if let Some(tx) = tx {
         let _ = tx.send(response.index);
         tracing::info!(index = ?response.index, "asset selection resolved");
@@ -875,10 +885,21 @@ pub async fn create_backup(
     let (tx, rx) = broadcast::channel::<Event>(64);
     forward_events(app, rx);
 
+    let source_paths: Vec<std::path::PathBuf> =
+        paths.into_iter().map(std::path::PathBuf::from).collect();
+
+    // Validate backup source paths: exist, not symlinks, aggregate < 1 GB
+    astro_up_core::validation::validate_backup_sources(&source_paths, None).map_err(|e| {
+        CoreError {
+            message: format!("Backup source validation failed: {e}"),
+            code: "validation_error".into(),
+        }
+    })?;
+
     let request = astro_up_core::backup::types::BackupRequest {
         package_id: "manual".into(),
         version: astro_up_core::types::Version::parse("0.0.0"),
-        config_paths: paths.into_iter().map(std::path::PathBuf::from).collect(),
+        config_paths: source_paths,
         event_tx: tx,
     };
 
@@ -997,9 +1018,20 @@ pub async fn backup_preview(
 }
 
 #[tauri::command]
-pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
+pub async fn delete_backup(state: State<'_, AppState>, archive: String) -> Result<(), CoreError> {
     tracing::info!(command = "delete_backup", archive, "Deleting backup...");
-    tokio::fs::remove_file(&archive)
+
+    // Validate archive path is within the backup directory
+    let archive_path = std::path::PathBuf::from(&archive);
+    let backup_dir = state.backup_service.backup_dir().to_path_buf();
+    astro_up_core::validation::validate_within_allowlist(&archive_path, &[backup_dir]).map_err(
+        |e| CoreError {
+            message: format!("Path validation failed: {e}"),
+            code: "validation_error".into(),
+        },
+    )?;
+
+    tokio::fs::remove_file(&archive_path)
         .await
         .map_err(|e| CoreError {
             message: format!("Failed to delete backup: {e}"),
@@ -1011,7 +1043,6 @@ pub async fn delete_backup(archive: String) -> Result<(), CoreError> {
 
 #[tauri::command]
 pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<(), CoreError> {
-    let _state = &state; // keep State in scope for future config-based path resolution
     let path = if dir.is_empty() {
         return Err(CoreError {
             message: "No directory specified".into(),
@@ -1020,6 +1051,20 @@ pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<
     } else {
         std::path::PathBuf::from(&dir)
     };
+
+    // Validate path against allowlist: backup dir, cache dir, download dir
+    let config = state.config.lock().clone();
+    let allowed_dirs = vec![
+        state.backup_service.backup_dir().to_path_buf(),
+        config.paths.cache_dir.clone(),
+        config.paths.download_dir.clone(),
+    ];
+    astro_up_core::validation::validate_within_allowlist(&path, &allowed_dirs).map_err(|e| {
+        CoreError {
+            message: format!("Path validation failed: {e}"),
+            code: "validation_error".into(),
+        }
+    })?;
 
     tracing::info!(command = "clear_directory", path = %path.display(), "Clearing directory...");
 
@@ -1053,7 +1098,7 @@ pub async fn clear_directory(state: State<'_, AppState>, dir: String) -> Result<
 #[tauri::command]
 pub async fn check_survey_eligible(state: State<'_, AppState>) -> Result<bool, CoreError> {
     tracing::debug!(command = "check_survey_eligible", "Command invoked");
-    let config = state.config.lock().unwrap().ui.clone();
+    let config = state.config.lock().ui.clone();
     let conn =
         rusqlite::Connection::open(&state.db_path).map_err(|e| CoreError::from(e.to_string()))?;
     astro_up_core::engine::history::create_table(&conn)
@@ -1073,7 +1118,7 @@ pub async fn dismiss_survey(state: State<'_, AppState>) -> Result<(), CoreError>
     store
         .set("ui.survey_dismissed_at", &now)
         .map_err(|e| CoreError::from(e.to_string()))?;
-    state.config.lock().unwrap().ui.survey_dismissed_at = Some(now);
+    state.config.lock().ui.survey_dismissed_at = Some(now);
     Ok(())
 }
 
@@ -1088,6 +1133,6 @@ pub async fn complete_survey(state: State<'_, AppState>) -> Result<(), CoreError
     store
         .set("ui.survey_completed_at", &now)
         .map_err(|e| CoreError::from(e.to_string()))?;
-    state.config.lock().unwrap().ui.survey_completed_at = Some(now);
+    state.config.lock().ui.survey_completed_at = Some(now);
     Ok(())
 }

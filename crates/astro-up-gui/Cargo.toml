@@ -18,6 +18,8 @@ tauri-build = { version = "2", features = [] }
 astro-up-core.workspace = true
 chrono.workspace = true
 dashmap = "6"
+futures = { version = "0.3", default-features = false, features = ["std"] }
+parking_lot = "0.12"
 directories = "6"
 rusqlite = { version = "0.39", features = ["bundled"] }
 semver.workspace = true
