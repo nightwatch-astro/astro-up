@@ -11,6 +11,7 @@ import EmptyState from "../components/shared/EmptyState.vue";
 import { useSoftwareList, useUpdateSoftware, useScanInstalled, useCreateBackup } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { useUpdateQueue } from "../composables/useUpdateQueue";
+import { FEATURE_BACKUP } from "../features";
 import type { PackageWithStatus } from "../types/package";
 
 const router = useRouter();
@@ -68,6 +69,7 @@ function confirmScan() {
 }
 
 function handleBackup(pkg: PackageWithStatus) {
+  if (!FEATURE_BACKUP) return;
   if (!startOperation(pkg.id, `Backing up ${pkg.name}`)) return;
   backupMutation.mutate([]);
 }
