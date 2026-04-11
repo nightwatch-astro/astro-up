@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.23](https://github.com/nightwatch-astro/astro-up/compare/v0.1.22...v0.1.23) (2026-04-11)
+
+
+### Bug Fixes
+
+* add cancel button to status bar during operations ([#978](https://github.com/nightwatch-astro/astro-up/issues/978)) ([246652e](https://github.com/nightwatch-astro/astro-up/commit/246652e8f84a0b3db9a3bf96c2bd7448d94615e6))
+* codebase stability and hardening audit ([#976](https://github.com/nightwatch-astro/astro-up/issues/976)) ([9b5da37](https://github.com/nightwatch-astro/astro-up/commit/9b5da37284a14961837e07d4e7aa448e8c095e1f))
+* correct registry detection key format in discovery ([#977](https://github.com/nightwatch-astro/astro-up/issues/977)) ([175055b](https://github.com/nightwatch-astro/astro-up/commit/175055b7eabac3852d2b461d14fd0b7f5125bd2e))
+* disable backup UI behind feature flag ([#979](https://github.com/nightwatch-astro/astro-up/issues/979)) ([1b70729](https://github.com/nightwatch-astro/astro-up/commit/1b70729ec60c6d1de73cc7b724f21a3cabada700))
+
 ## [0.1.22](https://github.com/nightwatch-astro/astro-up/compare/v0.1.21...v0.1.22) (2026-04-10)
 
 
