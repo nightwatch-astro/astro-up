@@ -60,7 +60,7 @@ describe("App", () => {
     expect(wrapper.text()).toContain("Dashboard");
     expect(wrapper.text()).toContain("Catalog");
     expect(wrapper.text()).toContain("Installed");
-    expect(wrapper.text()).toContain("Backup");
+    expect(wrapper.text()).not.toContain("Backup");
     expect(wrapper.text()).toContain("Settings");
   });
 });
@@ -92,15 +92,15 @@ describe("View smoke tests", () => {
     expect(wrapper.text()).toContain("Re-scan");
   });
 
-  it("Backup renders empty state", async () => {
+  it("Backup route redirects to dashboard when feature is disabled", async () => {
     const wrapper = mountApp();
     await router.push("/backup");
     await router.isReady();
-    expect(wrapper.text()).toContain("Backup");
-    expect(wrapper.text()).toContain("No backups yet");
+    expect(router.currentRoute.value.name).toBe("dashboard");
+    expect(wrapper.text()).toContain("Dashboard");
   });
 
-  it("Settings renders sidebar nav with 9 sections", async () => {
+  it("Settings renders sidebar nav with 8 sections (backup hidden)", async () => {
     const wrapper = mountApp();
     await router.push("/settings");
     await router.isReady();

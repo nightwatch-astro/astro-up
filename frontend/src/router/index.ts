@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from "vue-router";
+import { FEATURE_BACKUP } from "../features";
 import { logger } from "../utils/logger";
 
 const router = createRouter({
@@ -29,6 +30,7 @@ const router = createRouter({
       path: "/backup",
       name: "backup",
       component: () => import("../views/BackupView.vue"),
+      beforeEnter: () => FEATURE_BACKUP || { name: "dashboard" },
     },
     {
       path: "/settings",
