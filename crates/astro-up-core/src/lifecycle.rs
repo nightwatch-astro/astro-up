@@ -858,7 +858,10 @@ mod tests {
     fn config_to_toml_output() {
         let config = DetectionConfig {
             method: crate::types::DetectionMethod::Registry,
-            registry_key: Some("NINA 2".into()),
+            registry_key: Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1"
+                    .into(),
+            ),
             registry_value: Some("DisplayVersion".into()),
             file_path: None,
             version_regex: None,
@@ -873,6 +876,6 @@ mod tests {
         let toml = LifecycleRunner::config_to_toml(&config);
         assert!(toml.starts_with("[detection]"));
         assert!(toml.contains("registry"));
-        assert!(toml.contains("NINA 2"));
+        assert!(toml.contains("NINA 2_is1"));
     }
 }

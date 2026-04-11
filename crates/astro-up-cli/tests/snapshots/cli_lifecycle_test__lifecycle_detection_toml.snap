@@ -4,7 +4,7 @@ expression: toml
 ---
 [detection]
 method = "registry"
-registry_key = "NINA 2"
+registry_key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1'
 registry_value = "DisplayVersion"
 
 [fallback]

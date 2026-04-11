@@ -197,6 +197,13 @@ impl DiscoveryScanner {
                 continue;
             };
 
+            // Determine the hive prefix string for absolute registry key paths
+            let hive_prefix = if *hive == HKEY_LOCAL_MACHINE {
+                r"HKEY_LOCAL_MACHINE\"
+            } else {
+                r"HKEY_CURRENT_USER\"
+            };
+
             for subkey_name in uninstall_key.enum_keys().flatten() {
                 let Ok(subkey) = uninstall_key.open_subkey(&subkey_name) else {
                     continue;
@@ -242,14 +249,17 @@ impl DiscoveryScanner {
                     DiscoveryConfidence::Medium
                 };
 
-                let _registry_key =
-                    format!(r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{subkey_name}");
+                // Build absolute registry key path (e.g., HKEY_LOCAL_MACHINE\SOFTWARE\...\NINA 2_is1)
+                // registry::detect() requires this prefix to select the correct hive.
+                let absolute_key = format!(
+                    r"{hive_prefix}SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{subkey_name}"
+                );
 
                 candidates.push(DiscoveryCandidate {
                     method: DetectionMethod::Registry,
                     config: DetectionConfig {
                         method: DetectionMethod::Registry,
-                        registry_key: Some(subkey_name.clone()),
+                        registry_key: Some(absolute_key),
                         registry_value: Some("DisplayVersion".into()),
                         file_path: None,
                         version_regex: None,

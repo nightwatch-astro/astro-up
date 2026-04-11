@@ -224,6 +224,24 @@ fn create_fixture_catalog() {
             None,
             false,
         ),
+        (
+            "astap",
+            "2024.12.28",
+            "https://www.hnsky.org/astap_setup.exe",
+            None,
+            "2026-01-20T10:00:00Z",
+            None,
+            false,
+        ),
+        (
+            "sharpcap",
+            "4.1.0",
+            "https://www.sharpcap.co.uk/downloads/SharpCap_setup.exe",
+            None,
+            "2026-02-15T10:00:00Z",
+            None,
+            false,
+        ),
     ];
 
     for (pid, ver, url, sha, disc, rn, pre) in &versions {
@@ -236,26 +254,35 @@ fn create_fixture_catalog() {
     }
 
     // Insert detection configs
+    //
+    // Registry keys must be absolute paths starting with HKEY_LOCAL_MACHINE\ or
+    // HKEY_CURRENT_USER\ — matching the format used by manifest TOML files and
+    // expected by registry::detect(). Bare subkey names are accepted as a
+    // backward-compatible fallback but should not be used in new data.
     let detections = vec![
         (
             "nina",
             "registry",
-            None::<&str>,           // file_path
-            Some("NINA 2"),         // registry_key
+            None::<&str>, // file_path
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1",
+            ), // registry_key
             Some("DisplayVersion"), // registry_value
-            None::<&str>,           // version_regex
-            None::<&str>,           // product_code
-            None::<&str>,           // upgrade_code
-            None::<&str>,           // inf_provider
-            None::<&str>,           // device_class
-            None::<&str>,           // inf_name
-            Some(r#"{"method":"pe_file","file_path":"C:\\Program Files\\NINA\\NINA.exe"}"#), // fallback_config
+            None::<&str>, // version_regex
+            None::<&str>, // product_code
+            None::<&str>, // upgrade_code
+            None::<&str>, // inf_provider
+            None::<&str>, // device_class
+            None::<&str>, // inf_name
+            Some(r#"{"method":"pe_file","file_path":"{program_dir}\\NINA\\NINA.exe"}"#), // fallback_config
         ),
         (
             "phd2",
             "registry",
             None,
-            Some("PHD2"),
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PHDGuiding2_is1",
+            ),
             Some("DisplayVersion"),
             None,
             None,
@@ -269,7 +296,9 @@ fn create_fixture_catalog() {
             "ascom-platform",
             "registry",
             None,
-            Some("ASCOM Platform 6"),
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASCOM Platform 6_is1",
+            ),
             Some("DisplayVersion"),
             Some(r"^(\d+\.\d+)"),
             Some("{B3A4F860-DA18-4B76-8E4A-3E29C2C01738}"),
@@ -283,7 +312,9 @@ fn create_fixture_catalog() {
             "astap",
             "registry",
             None,
-            Some("AppName=ASTAP, the Astrometric STAcking Program,~D52A8A79_is1"),
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\AppName=ASTAP, the Astrometric STAcking Program,~D52A8A79_is1",
+            ),
             Some("DisplayVersion"),
             None,
             None,
@@ -291,7 +322,23 @@ fn create_fixture_catalog() {
             None,
             None,
             None,
-            Some(r#"{"method":"pe_file","file_path":"C:\\Program Files\\astap\\astap.exe"}"#),
+            Some(r#"{"method":"file_exists","file_path":"{program_dir}\\astap\\astap.exe"}"#),
+        ),
+        (
+            "sharpcap",
+            "registry",
+            None,
+            Some(
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\SharpCap 4_is1",
+            ),
+            Some("DisplayVersion"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(r#"{"method":"pe_file","file_path":"{program_dir}\\SharpCap\\SharpCap.exe"}"#),
         ),
     ];
 

@@ -122,7 +122,8 @@ fn create_test_catalog(dir: &std::path::Path) -> std::path::PathBuf {
     )
     .unwrap();
 
-    // Insert detection with full fields including fallback_config JSON
+    // Insert detection with full fields including fallback_config JSON.
+    // Registry keys use absolute paths matching the format expected by registry::detect().
     let fallback_json = serde_json::json!({
         "method": "pe_file",
         "file_path": "C:\\Program Files\\NINA\\NINA.exe",
@@ -137,7 +138,7 @@ fn create_test_catalog(dir: &std::path::Path) -> std::path::PathBuf {
             "nina",
             "registry",
             Option::<String>::None,
-            "NINA 2",
+            r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1",
             "DisplayVersion",
             Option::<String>::None,
             "{B3A4F860-DA18-4B76-8E4A-3E29C2C01738}",
@@ -191,7 +192,10 @@ fn detection_config_roundtrip_with_fallback() {
 
     let config = config.unwrap();
     assert_eq!(config.method, DetectionMethod::Registry);
-    assert_eq!(config.registry_key.as_deref(), Some("NINA 2"));
+    assert_eq!(
+        config.registry_key.as_deref(),
+        Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1")
+    );
     assert_eq!(config.registry_value.as_deref(), Some("DisplayVersion"));
     assert!(config.file_path.is_none());
     assert_eq!(
@@ -276,7 +280,7 @@ fn detection_config_no_fallback() {
         [],
     ).unwrap();
     conn.execute(
-        "INSERT INTO detection (package_id, method, registry_key, registry_value) VALUES ('phd2','registry','PHD2','DisplayVersion')",
+        r"INSERT INTO detection (package_id, method, registry_key, registry_value) VALUES ('phd2','registry','HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PHDGuiding2_is1','DisplayVersion')",
         [],
     ).unwrap();
     conn.execute("INSERT INTO meta VALUES ('schema_version','1')", [])
@@ -292,7 +296,12 @@ fn detection_config_no_fallback() {
     let config = reader.detection_config(&id).unwrap().unwrap();
 
     assert_eq!(config.method, DetectionMethod::Registry);
-    assert_eq!(config.registry_key.as_deref(), Some("PHD2"));
+    assert_eq!(
+        config.registry_key.as_deref(),
+        Some(
+            r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PHDGuiding2_is1"
+        )
+    );
     assert!(config.fallback.is_none());
     assert!(config.file_path.is_none());
     assert!(config.version_regex.is_none());
