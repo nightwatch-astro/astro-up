@@ -93,29 +93,61 @@ async fn chain_exhausted_returns_not_installed() {
 }
 
 #[tokio::test]
-async fn registry_rejects_relative_key() {
-    // registry_key without HKEY_ prefix should return Unavailable, not silently fail
+async fn registry_bare_subkey_returns_unavailable_on_non_windows() {
+    // Bare subkey names (e.g., "PHD 2_is1") are accepted as valid registry keys
+    // (auto-prefixed with the Uninstall path on Windows). On non-Windows, they
+    // return Unavailable because registry detection requires Windows.
     let config = registry_config("PHD 2_is1");
+    let resolver = PathResolver::new();
+    let result = detect::run_chain(&config, &resolver, None, None).await;
+
+    if cfg!(not(windows)) {
+        match result {
+            DetectionResult::Unavailable { reason } => {
+                assert!(
+                    reason.contains("requires Windows"),
+                    "expected 'requires Windows', got: {reason}"
+                );
+            }
+            other => panic!("expected Unavailable on non-Windows, got {other:?}"),
+        }
+    }
+}
+
+#[tokio::test]
+async fn registry_rejects_relative_software_path() {
+    // Keys starting with "SOFTWARE\" are not absolute (missing HKEY_ prefix) and
+    // are not bare subkey names — these should be rejected with a clear error.
+    let config = registry_config(r"SOFTWARE\Some\Key");
     let resolver = PathResolver::new();
     let result = detect::run_chain(&config, &resolver, None, None).await;
 
     match result {
         DetectionResult::Unavailable { reason } => {
-            assert!(
-                reason.contains("absolute path"),
-                "expected absolute path error, got: {reason}"
-            );
+            if cfg!(windows) {
+                // On Windows: explicit "absolute path" rejection
+                assert!(
+                    reason.contains("absolute path"),
+                    "expected absolute path error, got: {reason}"
+                );
+            } else {
+                // On non-Windows: generic "requires Windows" (validated with tracing::warn)
+                assert!(
+                    reason.contains("requires Windows"),
+                    "expected 'requires Windows', got: {reason}"
+                );
+            }
         }
-        other => panic!("expected Unavailable for relative key, got {other:?}"),
+        other => panic!("expected Unavailable for relative SOFTWARE path, got {other:?}"),
     }
 }
 
 #[tokio::test]
-async fn registry_rejects_relative_key_falls_through_to_pe() {
+async fn registry_relative_path_falls_through_to_pe() {
     // Chain should continue to PE fallback when registry key is invalid
     let config = DetectionConfig {
         fallback: Some(Box::new(pe_config("tests/fixtures/test.exe"))),
-        ..registry_config("SOFTWARE\\Some\\Key")
+        ..registry_config(r"SOFTWARE\Some\Key")
     };
 
     let resolver = PathResolver::new();
@@ -131,6 +163,30 @@ async fn registry_rejects_relative_key_falls_through_to_pe() {
                 assert_eq!(method, DetectionMethod::PeFile);
             }
             other => panic!("expected PE fallback after invalid registry key, got {other:?}"),
+        }
+    }
+}
+
+#[tokio::test]
+async fn registry_bare_subkey_falls_through_to_pe_on_non_windows() {
+    // Bare subkey name returns Unavailable on non-Windows (no registry), chain falls to PE
+    let config = DetectionConfig {
+        fallback: Some(Box::new(pe_config("tests/fixtures/test.exe"))),
+        ..registry_config("NINA 2_is1")
+    };
+
+    let resolver = PathResolver::new();
+    let result = detect::run_chain(&config, &resolver, None, None).await;
+
+    if cfg!(not(windows)) {
+        match result {
+            DetectionResult::Installed {
+                version, method, ..
+            } => {
+                assert_eq!(version.raw, "3.2.1");
+                assert_eq!(method, DetectionMethod::PeFile);
+            }
+            other => panic!("expected PE fallback for bare subkey on non-Windows, got {other:?}"),
         }
     }
 }

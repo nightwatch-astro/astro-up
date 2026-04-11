@@ -20,14 +20,14 @@ expression: json
       "status": "pass",
       "duration": 567,
       "logs": [
-        "{\"method\":\"registry\",\"registry_key\":\"NINA 2\",\"registry_value\":\"DisplayVersion\"}"
+        "{\"method\":\"registry\",\"registry_key\":\"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\NINA 2_is1\",\"registry_value\":\"DisplayVersion\"}"
       ],
       "warnings": []
     }
   ],
   "discovered_config": {
     "method": "registry",
-    "registry_key": "NINA 2",
+    "registry_key": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\NINA 2_is1",
     "registry_value": "DisplayVersion",
     "file_path": null,
     "version_regex": null,

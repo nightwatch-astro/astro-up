@@ -30,7 +30,7 @@ fn sample_report() -> LifecycleReport {
                 duration: Duration::from_millis(567),
                 exit_code: None,
                 logs: vec![
-                    r#"{"method":"registry","registry_key":"NINA 2","registry_value":"DisplayVersion"}"#
+                    r#"{"method":"registry","registry_key":"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\NINA 2_is1","registry_value":"DisplayVersion"}"#
                         .into(),
                 ],
                 warnings: vec![],
@@ -38,7 +38,7 @@ fn sample_report() -> LifecycleReport {
         ],
         discovered_config: Some(DetectionConfig {
             method: DetectionMethod::Registry,
-            registry_key: Some("NINA 2".into()),
+            registry_key: Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1".into()),
             registry_value: Some("DisplayVersion".into()),
             file_path: None,
             version_regex: None,
@@ -65,7 +65,7 @@ fn snapshot_lifecycle_report_json() {
 fn snapshot_lifecycle_report_toml_config() {
     let config = DetectionConfig {
         method: DetectionMethod::Registry,
-        registry_key: Some("NINA 2".into()),
+        registry_key: Some(r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NINA 2_is1".into()),
         registry_value: Some("DisplayVersion".into()),
         file_path: None,
         version_regex: None,

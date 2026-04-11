@@ -117,12 +117,56 @@ pub async fn run_chain(
     let result = run_single_method(config, resolver, ledger_path, wmi_ctx).await;
 
     match &result {
-        DetectionResult::Installed { .. } | DetectionResult::InstalledUnknownVersion { .. } => {
+        DetectionResult::Installed { version, method, .. } => {
+            tracing::debug!(
+                method = %method,
+                version = %version,
+                "detection chain: installed"
+            );
             result
         }
-        _ => match &config.fallback {
-            Some(next) => Box::pin(run_chain(next, resolver, ledger_path, wmi_ctx)).await,
-            None => result,
+        DetectionResult::InstalledUnknownVersion { method, .. } => {
+            tracing::debug!(
+                method = %method,
+                "detection chain: installed (unknown version)"
+            );
+            result
+        }
+        DetectionResult::NotInstalled => match &config.fallback {
+            Some(next) => {
+                tracing::debug!(
+                    method = %config.method,
+                    next_method = %next.method,
+                    "detection chain: not installed, trying fallback"
+                );
+                Box::pin(run_chain(next, resolver, ledger_path, wmi_ctx)).await
+            }
+            None => {
+                tracing::debug!(
+                    method = %config.method,
+                    "detection chain: not installed, no fallback"
+                );
+                result
+            }
+        },
+        DetectionResult::Unavailable { reason } => match &config.fallback {
+            Some(next) => {
+                tracing::debug!(
+                    method = %config.method,
+                    reason = %reason,
+                    next_method = %next.method,
+                    "detection chain: unavailable, trying fallback"
+                );
+                Box::pin(run_chain(next, resolver, ledger_path, wmi_ctx)).await
+            }
+            None => {
+                tracing::debug!(
+                    method = %config.method,
+                    reason = %reason,
+                    "detection chain: unavailable, no fallback"
+                );
+                result
+            }
         },
     }
 }
