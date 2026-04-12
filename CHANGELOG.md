@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.24](https://github.com/nightwatch-astro/astro-up/compare/v0.1.23...v0.1.24) (2026-04-12)
+
+
+### Features
+
+* add reinstall option for installed packages ([#983](https://github.com/nightwatch-astro/astro-up/issues/983)) ([e70018b](https://github.com/nightwatch-astro/astro-up/commit/e70018b8a1490e0b1f4d221e5785efc7b02399b1))
+
+
+### Bug Fixes
+
+* add ledger entries for packages detected with unknown version ([#982](https://github.com/nightwatch-astro/astro-up/issues/982)) ([2f6cc91](https://github.com/nightwatch-astro/astro-up/commit/2f6cc9188c2d3f338439c76cdf849584e0cdeaff))
+
 ## [0.1.23](https://github.com/nightwatch-astro/astro-up/compare/v0.1.22...v0.1.23) (2026-04-11)
 
 
