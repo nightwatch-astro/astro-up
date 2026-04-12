@@ -237,9 +237,6 @@ function confirmSingleUpdate() {
       @confirm="confirmSingleUpdate"
     />
 
-    <SurveyDialog
-      v-model:visible="showSurvey"
-    />
   </div>
 </template>
 
