@@ -171,7 +171,7 @@ function confirmSingleUpdate() {
             </div>
           </div>
           <div class="upd-arrow">
-            {{ pkg.installed_version }} &rarr; {{ pkg.latest_version }}
+            {{ pkg.installed_version === "0.0.0" ? "unknown" : pkg.installed_version }} &rarr; {{ pkg.latest_version }}
           </div>
           <Button
             label="Update"

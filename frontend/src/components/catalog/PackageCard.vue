@@ -60,11 +60,11 @@ const categoryClass: Record<Category, string> = {
       <div class="sw-status">
         <template v-if="pkg.update_available">
           <span class="status-dot update" />
-          <span class="status-update">{{ pkg.installed_version }} &rarr; {{ pkg.latest_version }}</span>
+          <span class="status-update">{{ pkg.installed_version === "0.0.0" ? "unknown" : pkg.installed_version }} &rarr; {{ pkg.latest_version }}</span>
         </template>
         <template v-else-if="pkg.installed_version">
           <span class="status-dot installed" />
-          <span class="status-installed">{{ pkg.installed_version }}</span>
+          <span class="status-installed">{{ pkg.installed_version === "0.0.0" ? "unknown" : pkg.installed_version }}</span>
         </template>
         <template v-else>
           <span class="status-dot none" />
