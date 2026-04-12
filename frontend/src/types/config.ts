@@ -79,4 +79,3 @@ export interface LogConfig {
   log_file: string;
   max_age_days: number;
 }
-
