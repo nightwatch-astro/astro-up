@@ -420,6 +420,21 @@ pub fn run() {
                 );
             }
 
+            // Hide window on startup if start_minimized is enabled (#991)
+            {
+                let state = app.state::<AppState>();
+                let start_minimized = state.config.lock().startup.start_minimized;
+                if start_minimized {
+                    if let Some(window) = app.get_webview_window("main") {
+                        if let Err(e) = window.hide() {
+                            tracing::warn!("Failed to hide window on start_minimized: {e}");
+                        } else {
+                            tracing::info!("Window hidden on startup (start_minimized enabled)");
+                        }
+                    }
+                }
+            }
+
             // Startup catalog sync — fetch if missing or stale
             let catalog_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
