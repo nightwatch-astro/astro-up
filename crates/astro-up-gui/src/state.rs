@@ -64,6 +64,7 @@ impl AppState {
             download_dir: data_dir.join("downloads"),
             cache_dir: data_dir.join("cache"),
             data_dir: data_dir.to_path_buf(),
+            portable_apps_dir: data_dir.parent().unwrap_or(data_dir).join("apps"),
             ..PathsConfig::default()
         };
         let log_file = data_dir.join("logs").join("astro-up.log");

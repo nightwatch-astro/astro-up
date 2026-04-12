@@ -56,7 +56,7 @@ const defaultConfig: AppConfig = {
   backup_policy: { scheduled_enabled: false, schedule: "weekly", max_per_package: 5, max_total_size_mb: 0, max_age_days: 0 },
   catalog: { url: "https://github.com/nightwatch-astro/astro-up-manifests/releases/download/catalog/latest/catalog.db", cache_ttl: "1day" },
   network: { proxy: null, connect_timeout: "10s", timeout: "30s", user_agent: "", download_speed_limit: 0 },
-  paths: { download_dir: "", cache_dir: "", data_dir: "", keep_installers: false, purge_installers_after_days: 7 },
+  paths: { download_dir: "", cache_dir: "", data_dir: "", portable_apps_dir: "", keep_installers: false, purge_installers_after_days: 7 },
   updates: { auto_check: true, check_interval: "1day" },
   logging: { level: "info", log_to_file: true, log_file: "", max_age_days: 365 },
 };

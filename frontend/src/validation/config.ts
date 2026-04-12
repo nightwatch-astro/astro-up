@@ -52,6 +52,7 @@ export const PathsSchema = v.object({
   download_dir: v.string(),
   cache_dir: v.string(),
   data_dir: v.optional(v.string()),
+  portable_apps_dir: v.string(),
   keep_installers: v.boolean(),
   purge_installers_after_days: v.pipe(v.number(), v.minValue(0)),
 });

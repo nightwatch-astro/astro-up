@@ -40,6 +40,7 @@ expression: value
     "data_dir": "[platform_path]",
     "download_dir": "[platform_path]",
     "keep_installers": true,
+    "portable_apps_dir": "",
     "purge_installers_after_days": 30
   },
   "startup": {

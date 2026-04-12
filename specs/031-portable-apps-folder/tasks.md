@@ -12,9 +12,9 @@
 
 **Purpose**: Add the `portable_apps_dir` config field across backend and frontend
 
-- [ ] T001 [P] Add `portable_apps_dir: PathBuf` field to `PathsConfig` in `crates/astro-up-core/src/config/model.rs`
-- [ ] T002 [P] Add default value for `portable_apps_dir` in `crates/astro-up-core/src/config/defaults.rs` — default to `{data_dir}/../apps/` resolving to `{AppData}/nightwatch/astro-up/apps/`
-- [ ] T003 Add `config_set`/`config_get` match arms for `paths.portable_apps_dir` in `crates/astro-up-core/src/config/mod.rs`
+- [x] T001 [P] Add `portable_apps_dir: PathBuf` field to `PathsConfig` in `crates/astro-up-core/src/config/model.rs`
+- [x] T002 [P] Add default value for `portable_apps_dir` in `crates/astro-up-core/src/config/defaults.rs` — default to `{data_dir}/../apps/` resolving to `{AppData}/nightwatch/astro-up/apps/`
+- [x] T003 Add `config_set`/`config_get` match arms for `paths.portable_apps_dir` in `crates/astro-up-core/src/config/mod.rs`
 - [ ] T004 Update config snapshot test in `crates/astro-up-core/tests/config/defaults_test.rs` — add `portable_apps_dir` to expected output and update key count
 
 ---
@@ -23,8 +23,8 @@
 
 **Purpose**: Modify `handle_download_only` to copy/extract instead of opening Explorer. Wire the portable dir into the install pipeline.
 
-- [ ] T005 Rewrite `handle_download_only` in `crates/astro-up-core/src/install/mod.rs` — replace Explorer open with: detect if file is zip (check magic bytes `PK\x03\x04`), extract if zip using existing `zip::extract_zip`, copy if single file. Create `{dest}/{package-id}/` dir. Return `InstallResult::Success { path: Some(dest) }`
-- [ ] T006 In `crates/astro-up-gui/src/commands.rs` `run_orchestrated_operation_inner`, when install method is `DownloadOnly` or `Portable`, set `InstallRequest.install_dir = Some(config.paths.portable_apps_dir.join(package_id))`. Read `portable_apps_dir` from `config.paths`
+- [x] T005 Rewrite `handle_download_only` in `crates/astro-up-core/src/install/mod.rs` — replace Explorer open with: detect if file is zip (check magic bytes `PK\x03\x04`), extract if zip using existing `zip::extract_zip`, copy if single file. Create `{dest}/{package-id}/` dir. Return `InstallResult::Success { path: Some(dest) }`
+- [x] T006 In `crates/astro-up-gui/src/commands.rs` `run_orchestrated_operation_inner`, when install method is `DownloadOnly` or `Portable`, set `InstallRequest.install_dir = Some(config.paths.portable_apps_dir.join(package_id))`. Read `portable_apps_dir` from `config.paths`
 
 **Checkpoint**: Download-only packages now land in the portable apps directory
 
@@ -50,10 +50,10 @@
 
 **Independent Test**: Change path in Settings, install a download-only package, verify it uses the new path.
 
-- [ ] T010 [P] [US2] Add `portable_apps_dir: string` to `PathsConfig` interface in `frontend/src/types/config.ts`
-- [ ] T011 [P] [US2] Add `portable_apps_dir` validation in `frontend/src/validation/config.ts`
-- [ ] T012 [P] [US2] Add default `portable_apps_dir: ""` to `defaultConfig.paths` in `frontend/src/views/SettingsView.vue`
-- [ ] T013 [US2] Add "Portable Apps Directory" input with browse button to `frontend/src/components/settings/PathsSection.vue` — reuse the pattern from the `download_dir` field
+- [x] T010 [P] [US2] Add `portable_apps_dir: string` to `PathsConfig` interface in `frontend/src/types/config.ts`
+- [x] T011 [P] [US2] Add `portable_apps_dir` validation in `frontend/src/validation/config.ts`
+- [x] T012 [P] [US2] Add default `portable_apps_dir: ""` to `defaultConfig.paths` in `frontend/src/views/SettingsView.vue`
+- [x] T013 [US2] Add "Portable Apps Directory" input with browse button to `frontend/src/components/settings/PathsSection.vue` — reuse the pattern from the `download_dir` field
 
 **Checkpoint**: US2 complete — settings UI shows and persists the portable apps dir
 
@@ -65,7 +65,7 @@
 
 **Independent Test**: Install a portable app, navigate to detail, see path, click to open.
 
-- [ ] T014 [US3] Display `install_path` in `frontend/src/components/detail/OverviewTab.vue` when present — show path text with a clickable folder icon that calls `open()` from `@tauri-apps/plugin-shell`
+- [x] T014 [US3] Display `install_path` in `frontend/src/components/detail/OverviewTab.vue` when present — show path text with a clickable folder icon that calls `open()` from `@tauri-apps/plugin-shell`
 - [ ] T015 [US3] Verify `list_software` in `crates/astro-up-gui/src/commands.rs` includes `install_path` from the ledger in the enriched package JSON — check if already present from detection cache or ledger enrichment
 
 **Checkpoint**: US3 complete — install path visible and openable
@@ -78,7 +78,7 @@
 
 **Independent Test**: Install, then update — verify old files replaced, ledger updated.
 
-- [ ] T016 [US4] In `handle_download_only` (`crates/astro-up-core/src/install/mod.rs`), when target dir already exists, delete its contents before copying/extracting the new version (clean replace)
+- [x] T016 [US4] In `handle_download_only` (`crates/astro-up-core/src/install/mod.rs`), when target dir already exists, delete its contents before copying/extracting the new version (clean replace)
 - [ ] T017 [US4] Verify the orchestrator passes the existing ledger `install_path` as `install_dir` on the `InstallRequest` when updating a package that already has a recorded path — check `crates/astro-up-core/src/engine/orchestrator.rs`
 
 **Checkpoint**: US4 complete — updates replace in-place

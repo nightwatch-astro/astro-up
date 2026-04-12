@@ -668,6 +668,14 @@ async fn run_orchestrated_operation_inner(
                     force_reinstall,
                     quiet,
                     install_scope: config.ui.default_install_scope.clone(),
+                    portable_apps_dir: {
+                        let dir = &config.paths.portable_apps_dir;
+                        if dir.as_os_str().is_empty() {
+                            None
+                        } else {
+                            Some(dir.clone())
+                        }
+                    },
                 })
                 .await?;
 

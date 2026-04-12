@@ -205,6 +205,7 @@ pub struct PathsConfig {
     pub download_dir: PathBuf,
     pub cache_dir: PathBuf,
     pub data_dir: PathBuf,
+    pub portable_apps_dir: PathBuf,
     pub keep_installers: bool,
     pub purge_installers_after_days: u32,
 }

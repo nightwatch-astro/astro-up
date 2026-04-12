@@ -63,6 +63,11 @@ pub struct UpdateRequest {
     /// Install scope: user or machine.
     #[serde(default)]
     pub install_scope: crate::config::InstallScope,
+    /// Directory for portable/download-only packages.
+    /// When set, DownloadOnly and Portable packages are installed to
+    /// `{portable_apps_dir}/{package-id}/` instead of a temp directory.
+    #[serde(default)]
+    pub portable_apps_dir: Option<std::path::PathBuf>,
 }
 
 pub(crate) fn default_quiet() -> bool {
@@ -279,6 +284,7 @@ where
         cancel: &CancellationToken,
         quiet: bool,
         install_scope: &crate::config::InstallScope,
+        portable_apps_dir: &Option<std::path::PathBuf>,
     ) -> PackageResult {
         use std::time::Instant;
 
@@ -516,12 +522,24 @@ where
             .timeout
             .unwrap_or(std::time::Duration::from_secs(600));
 
+        // For DownloadOnly/Portable packages, set install_dir to portable apps dir
+        let install_dir = if matches!(
+            install_config.method,
+            crate::types::InstallMethod::DownloadOnly | crate::types::InstallMethod::Portable
+        ) {
+            portable_apps_dir
+                .as_ref()
+                .map(|dir| dir.join(pkg_id.as_ref()))
+        } else {
+            None
+        };
+
         let install_request = crate::install::types::InstallRequest {
             package_id: pkg_id.to_string(),
             package_name: planned.software.name.clone(),
             version: planned.target_version.clone(),
             installer_path,
-            install_dir: None,
+            install_dir,
             install_config,
             detection_config: planned.software.detection.clone(),
             timeout,
@@ -844,6 +862,7 @@ where
         };
         plan.quiet = request.quiet;
         plan.install_scope = request.install_scope;
+        plan.portable_apps_dir = request.portable_apps_dir;
         Ok(plan)
     }
 
@@ -908,6 +927,7 @@ where
                     &cancel,
                     plan.quiet,
                     &plan.install_scope,
+                    &plan.portable_apps_dir,
                 )
                 .await;
 
@@ -1304,6 +1324,7 @@ mod tests {
             force_reinstall: false,
             quiet: false,
             install_scope: crate::config::InstallScope::default(),
+            portable_apps_dir: None,
         };
 
         let json = serde_json::to_string(&req).unwrap();
@@ -1366,6 +1387,7 @@ mod tests {
                 &cancel,
                 true,
                 &crate::config::InstallScope::default(),
+                &None,
             )
             .await;
 
@@ -1409,6 +1431,7 @@ mod tests {
                 &cancel,
                 true,
                 &crate::config::InstallScope::default(),
+                &None,
             )
             .await;
 
@@ -1461,6 +1484,7 @@ mod tests {
             warnings: vec![],
             quiet: true,
             install_scope: crate::config::InstallScope::default(),
+            portable_apps_dir: None,
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -1506,6 +1530,7 @@ mod tests {
             warnings: vec![],
             quiet: true,
             install_scope: crate::config::InstallScope::default(),
+            portable_apps_dir: None,
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
@@ -1549,6 +1574,7 @@ mod tests {
             warnings: vec![],
             quiet: true,
             install_scope: crate::config::InstallScope::default(),
+            portable_apps_dir: None,
         };
 
         let result = orch.execute(plan, on_event, None, cancel).await.unwrap();
