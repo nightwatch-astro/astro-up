@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.26](https://github.com/nightwatch-astro/astro-up/compare/v0.1.25...v0.1.26) (2026-04-12)
+
+
+### Bug Fixes
+
+* remove duplicate SurveyDialog causing dismiss to not stick ([#1001](https://github.com/nightwatch-astro/astro-up/issues/1001)) ([8eec77c](https://github.com/nightwatch-astro/astro-up/commit/8eec77c432a433b4d0285212f43b2c9730dae0ec))
+* try fallback when primary detection returns unknown version ([#1002](https://github.com/nightwatch-astro/astro-up/issues/1002)) ([b5fd9d9](https://github.com/nightwatch-astro/astro-up/commit/b5fd9d91d56f5c44d3ea5b84707a355d91c538a9))
+
 ## [0.1.25](https://github.com/nightwatch-astro/astro-up/compare/v0.1.24...v0.1.25) (2026-04-12)
 
 
