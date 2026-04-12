@@ -349,6 +349,7 @@ pub fn run() {
             commands::save_config,
             commands::scan_installed,
             commands::install_software,
+            commands::reinstall_software,
             commands::update_software,
             commands::update_all,
             commands::create_backup,

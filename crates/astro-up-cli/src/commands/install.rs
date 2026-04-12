@@ -129,6 +129,7 @@ pub async fn handle_install(
         allow_downgrade: false,
         dry_run: false,
         confirmed: true,
+        force_reinstall: false,
         quiet,
         install_scope: state.config.ui.default_install_scope.clone(),
     };

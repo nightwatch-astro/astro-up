@@ -8,7 +8,7 @@ import Button from "primevue/button";
 import PackageRow from "../components/installed/PackageRow.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
-import { useSoftwareList, useInstallSoftware, useUpdateSoftware, useScanInstalled, useCreateBackup } from "../composables/useInvoke";
+import { useSoftwareList, useReinstallSoftware, useUpdateSoftware, useScanInstalled, useCreateBackup } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { useUpdateQueue } from "../composables/useUpdateQueue";
 import { FEATURE_BACKUP } from "../features";
@@ -16,7 +16,7 @@ import type { PackageWithStatus } from "../types/package";
 
 const router = useRouter();
 const { data: software, isLoading } = useSoftwareList(() => "installed");
-const installMutation = useInstallSoftware();
+const reinstallMutation = useReinstallSoftware();
 const updateMutation = useUpdateSoftware();
 const scanMutation = useScanInstalled();
 const backupMutation = useCreateBackup();
@@ -79,7 +79,7 @@ function handleReinstall(pkg: PackageWithStatus) {
 function confirmReinstall() {
   const pkg = pendingReinstallPkg.value;
   if (!pkg || !startOperation(pkg.id, `Reinstalling ${pkg.name}`)) return;
-  installMutation.mutate(pkg.id);
+  reinstallMutation.mutate(pkg.id);
   pendingReinstallPkg.value = null;
 }
 

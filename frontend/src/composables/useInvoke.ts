@@ -144,6 +144,19 @@ export function useInstallSoftware() {
   });
 }
 
+export function useReinstallSoftware() {
+  const queryClient = useQueryClient();
+  const onError = useMutationErrorHandler("Reinstall");
+  return useMutation({
+    mutationFn: (id: string) => { logMutation("reinstall_software", id); return invoke<OperationId>("reinstall_software", { id }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["software"] });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
+    },
+    onError,
+  });
+}
+
 export function useUpdateSoftware() {
   const queryClient = useQueryClient();
   const onError = useMutationErrorHandler("Update");

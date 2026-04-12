@@ -332,11 +332,50 @@ impl UpdatePlanner {
     }
 
     /// Build an update plan for specific packages only.
-    pub fn plan_specific(&self, package_ids: &[PackageId]) -> Result<UpdatePlan, CoreError> {
+    ///
+    /// When `force_reinstall` is true, packages that are `UpToDate` are planned
+    /// as an install from the current version to the same version instead of
+    /// being skipped. This only applies to the explicitly requested packages,
+    /// not to their transitive dependencies.
+    pub fn plan_specific(
+        &self,
+        package_ids: &[PackageId],
+        force_reinstall: bool,
+    ) -> Result<UpdatePlan, CoreError> {
         let full_plan = self.plan_all()?;
 
         let update_map: HashMap<&PackageId, &PlannedUpdate> =
             full_plan.items.iter().map(|u| (&u.package_id, u)).collect();
+
+        // When force_reinstall is set, build PlannedUpdate entries for
+        // requested packages that were skipped as UpToDate.
+        let requested_set: HashSet<&PackageId> = package_ids.iter().collect();
+        let entry_map: HashMap<&PackageId, &CatalogEntry> =
+            self.entries.iter().map(|e| (&e.software.id, e)).collect();
+
+        let mut force_items: Vec<PlannedUpdate> = Vec::new();
+        if force_reinstall {
+            for skipped in &full_plan.skipped {
+                if skipped.reason == SkipReason::UpToDate
+                    && requested_set.contains(&skipped.package_id)
+                {
+                    if let Some(entry) = entry_map.get(&skipped.package_id) {
+                        if let Some(ref installed) = entry.installed_version {
+                            force_items.push(PlannedUpdate {
+                                package_id: entry.software.id.clone(),
+                                software: entry.software.clone(),
+                                current_version: installed.clone(),
+                                target_version: entry.catalog_version.clone(),
+                                version_entry: entry.version_entry.clone(),
+                                version_format: entry.version_format.clone(),
+                                has_backup_config: entry.software.backup.is_some(),
+                                dependencies: Vec::new(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
 
         let mut included: HashSet<PackageId> = HashSet::new();
         let mut queue: VecDeque<PackageId> = package_ids.iter().cloned().collect();
@@ -354,17 +393,29 @@ impl UpdatePlanner {
             }
         }
 
-        let items: Vec<PlannedUpdate> = full_plan
+        // Also include force-reinstall items in the included set
+        for fi in &force_items {
+            included.insert(fi.package_id.clone());
+        }
+
+        let mut items: Vec<PlannedUpdate> = full_plan
             .items
             .into_iter()
             .filter(|u| included.contains(&u.package_id))
             .collect();
 
-        let requested: HashSet<&PackageId> = package_ids.iter().collect();
+        // Append force-reinstall items (they weren't in full_plan.items)
+        items.extend(force_items);
+
         let skipped: Vec<SkippedPackage> = full_plan
             .skipped
             .into_iter()
-            .filter(|s| requested.contains(&s.package_id))
+            .filter(|s| {
+                // Keep skipped entries for requested packages, but exclude
+                // UpToDate ones that were promoted to items by force_reinstall.
+                requested_set.contains(&s.package_id)
+                    && !(force_reinstall && s.reason == SkipReason::UpToDate)
+            })
             .collect();
 
         let warnings: Vec<String> = full_plan
@@ -606,7 +657,7 @@ mod tests {
         ];
         let planner = UpdatePlanner::new(entries);
         let plan = planner
-            .plan_specific(&[PackageId::new("nina").unwrap()])
+            .plan_specific(&[PackageId::new("nina").unwrap()], false)
             .unwrap();
         assert_eq!(plan.items.len(), 1);
         assert_eq!(plan.items[0].package_id, PackageId::new("nina").unwrap());
@@ -622,7 +673,7 @@ mod tests {
         ];
         let planner = UpdatePlanner::new(entries);
         let plan = planner
-            .plan_specific(&[PackageId::new("nina").unwrap()])
+            .plan_specific(&[PackageId::new("nina").unwrap()], false)
             .unwrap();
         assert_eq!(plan.items.len(), 3);
         let ids: Vec<String> = plan
@@ -638,7 +689,53 @@ mod tests {
     fn plan_specific_empty_ids_returns_empty() {
         let entries = vec![make_entry("nina", "1.0.0", "2.0.0", vec![])];
         let planner = UpdatePlanner::new(entries);
-        let plan = planner.plan_specific(&[]).unwrap();
+        let plan = planner.plan_specific(&[], false).unwrap();
         assert!(plan.items.is_empty());
+    }
+
+    #[test]
+    fn plan_specific_force_reinstall_promotes_up_to_date() {
+        let entries = vec![
+            make_entry("nina", "2.0.0", "2.0.0", vec![]),
+            make_entry("phd2", "1.0.0", "2.0.0", vec![]),
+        ];
+        let planner = UpdatePlanner::new(entries);
+
+        // Without force: up-to-date package is skipped
+        let plan = planner
+            .plan_specific(&[PackageId::new("nina").unwrap()], false)
+            .unwrap();
+        assert!(plan.items.is_empty());
+        assert_eq!(plan.skipped.len(), 1);
+        assert_eq!(plan.skipped[0].reason, SkipReason::UpToDate);
+
+        // With force: up-to-date package is promoted to items
+        let plan = planner
+            .plan_specific(&[PackageId::new("nina").unwrap()], true)
+            .unwrap();
+        assert_eq!(plan.items.len(), 1);
+        assert_eq!(plan.items[0].package_id, PackageId::new("nina").unwrap());
+        assert_eq!(plan.items[0].current_version, Version::parse("2.0.0"));
+        assert_eq!(plan.items[0].target_version, Version::parse("2.0.0"));
+        assert!(
+            plan.skipped.is_empty(),
+            "UpToDate entry should not be in skipped when force_reinstall is true"
+        );
+    }
+
+    #[test]
+    fn plan_specific_force_reinstall_only_affects_requested() {
+        let entries = vec![
+            make_entry("nina", "2.0.0", "2.0.0", vec![]),
+            make_entry("phd2", "2.0.0", "2.0.0", vec![]),
+        ];
+        let planner = UpdatePlanner::new(entries);
+
+        // Force reinstall only nina — phd2 should remain skipped
+        let plan = planner
+            .plan_specific(&[PackageId::new("nina").unwrap()], true)
+            .unwrap();
+        assert_eq!(plan.items.len(), 1);
+        assert_eq!(plan.items[0].package_id, PackageId::new("nina").unwrap());
     }
 }
