@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.25](https://github.com/nightwatch-astro/astro-up/compare/v0.1.24...v0.1.25) (2026-04-12)
+
+
+### Bug Fixes
+
+* add force_reinstall flag to bypass up-to-date skip ([#995](https://github.com/nightwatch-astro/astro-up/issues/995)) ([b807858](https://github.com/nightwatch-astro/astro-up/commit/b807858d39cc624442d7a6a3e05c9f27a84ddf9a))
+* add force-tag-creation to prevent ghost release-please PRs ([#986](https://github.com/nightwatch-astro/astro-up/issues/986)) ([0d539c6](https://github.com/nightwatch-astro/astro-up/commit/0d539c60723926fff4660aa09076b406eb811457))
+* change frontend default install method from silent to interactive ([#988](https://github.com/nightwatch-astro/astro-up/issues/988)) ([30f16d1](https://github.com/nightwatch-astro/astro-up/commit/30f16d1c22f4a0dd5483cfe7715f0792785a42c7))
+* hide main window on startup when start_minimized is enabled ([#997](https://github.com/nightwatch-astro/astro-up/issues/997)) ([3ba333a](https://github.com/nightwatch-astro/astro-up/commit/3ba333a1b2fc2a92626c9098b8df053c093f0726))
+* wire notification and auto_notify_updates settings to toast display ([#996](https://github.com/nightwatch-astro/astro-up/issues/996)) ([d1ff022](https://github.com/nightwatch-astro/astro-up/commit/d1ff0222549d24acb369323bd8f26f2031533aae))
+
 ## [0.1.24](https://github.com/nightwatch-astro/astro-up/compare/v0.1.23...v0.1.24) (2026-04-12)
 
 
