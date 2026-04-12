@@ -37,11 +37,11 @@ defineEmits<{
     </div>
     <div class="inst-version">
       <template v-if="pkg.update_available">
-        <span class="ver-update">{{ pkg.installed_version }} &rarr; {{ pkg.latest_version }}</span>
+        <span class="ver-update">{{ pkg.installed_version === "0.0.0" ? "unknown" : pkg.installed_version }} &rarr; {{ pkg.latest_version }}</span>
       </template>
       <template v-else>
         <span class="ver-ok">
-          {{ pkg.installed_version }}
+          {{ pkg.installed_version === "0.0.0" ? "unknown" : pkg.installed_version }}
           <i class="pi pi-check" />
         </span>
       </template>
