@@ -127,12 +127,32 @@ pub async fn run_chain(
             );
             result
         }
-        DetectionResult::InstalledUnknownVersion { method, .. } => {
+        DetectionResult::InstalledUnknownVersion {
+            method,
+            install_path,
+        } => {
+            // Try fallback to get an actual version — a versioned result is
+            // strictly better than unknown-version.
+            if let Some(next) = &config.fallback {
+                tracing::debug!(
+                    method = %method,
+                    next_method = %next.method,
+                    "detection chain: installed (unknown version), trying fallback for version"
+                );
+                let fallback_result =
+                    Box::pin(run_chain(next, resolver, ledger_path, wmi_ctx)).await;
+                if matches!(&fallback_result, DetectionResult::Installed { .. }) {
+                    return fallback_result;
+                }
+            }
             tracing::debug!(
                 method = %method,
-                "detection chain: installed (unknown version)"
+                "detection chain: installed (unknown version, no better result from fallback)"
             );
-            result
+            DetectionResult::InstalledUnknownVersion {
+                method: method.clone(),
+                install_path: install_path.clone(),
+            }
         }
         DetectionResult::NotInstalled => match &config.fallback {
             Some(next) => {

@@ -23,7 +23,7 @@ function detectionMethod(pkg: PackageWithStatus): string {
       class="info-item"
     >
       <span class="info-label">Installed Version</span>
-      <span class="info-value">{{ pkg.installed_version }}</span>
+      <span class="info-value">{{ pkg.installed_version === "0.0.0" ? "unknown" : pkg.installed_version }}</span>
     </div>
     <div
       v-if="pkg.latest_version"

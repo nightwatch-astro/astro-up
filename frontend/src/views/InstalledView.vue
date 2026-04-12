@@ -175,7 +175,7 @@ function handleBackup(pkg: PackageWithStatus) {
     <ConfirmDialog
       v-model:visible="showUpdateConfirm"
       title="Update Package"
-      :message="`Update ${pendingUpdatePkg?.name} from ${pendingUpdatePkg?.installed_version} to ${pendingUpdatePkg?.latest_version}?`"
+      :message="`Update ${pendingUpdatePkg?.name} from ${pendingUpdatePkg?.installed_version === '0.0.0' ? 'unknown' : pendingUpdatePkg?.installed_version} to ${pendingUpdatePkg?.latest_version}?`"
       icon="pi-arrow-up"
       confirm-label="Update"
       severity="warn"
@@ -196,7 +196,7 @@ function handleBackup(pkg: PackageWithStatus) {
           v-for="pkg in updatable"
           :key="pkg.id"
         >
-          {{ pkg.name }}: {{ pkg.installed_version }} &rarr; {{ pkg.latest_version }}
+          {{ pkg.name }}: {{ pkg.installed_version === "0.0.0" ? "unknown" : pkg.installed_version }} &rarr; {{ pkg.latest_version }}
         </li>
       </ul>
     </ConfirmDialog>
