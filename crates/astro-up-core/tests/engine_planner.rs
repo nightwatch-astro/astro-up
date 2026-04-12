@@ -155,7 +155,7 @@ fn plan_specific_transitive_deps() {
     ];
     let planner = UpdatePlanner::new(entries);
     let plan = planner
-        .plan_specific(&[PackageId::new("nina").unwrap()])
+        .plan_specific(&[PackageId::new("nina").unwrap()], false)
         .unwrap();
 
     // nina + ascom-platform + dotnet, but NOT phd2

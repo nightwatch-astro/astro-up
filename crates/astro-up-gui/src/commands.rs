@@ -578,6 +578,18 @@ async fn run_orchestrated_operation(
     _op_id: &OperationId,
     cancel_token: tokio_util::sync::CancellationToken,
 ) -> Result<serde_json::Value, CoreError> {
+    run_orchestrated_operation_inner(app, state, ids, _op_id, cancel_token, false).await
+}
+
+/// Like [`run_orchestrated_operation`] but with `force_reinstall` support.
+async fn run_orchestrated_operation_inner(
+    app: &AppHandle,
+    state: &AppState,
+    ids: &[&str],
+    _op_id: &OperationId,
+    cancel_token: tokio_util::sync::CancellationToken,
+    force_reinstall: bool,
+) -> Result<serde_json::Value, CoreError> {
     use astro_up_core::backup::BackupService;
     use astro_up_core::download::DownloadManager;
     use astro_up_core::engine::orchestrator::{Orchestrator, UpdateRequest};
@@ -653,6 +665,7 @@ async fn run_orchestrated_operation(
                     allow_downgrade: false,
                     dry_run: false,
                     confirmed: true,
+                    force_reinstall,
                     quiet,
                     install_scope: config.ui.default_install_scope.clone(),
                 })
@@ -781,6 +794,47 @@ pub async fn install_software(
 
     tracing::debug!(
         command = "install_software",
+        operation_id = op_id.id,
+        duration_ms = start.elapsed().as_millis() as u64,
+        "Command completed"
+    );
+    Ok(op_id)
+}
+
+#[tauri::command]
+pub async fn reinstall_software(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<OperationId, CoreError> {
+    let start = std::time::Instant::now();
+    let (op_id, token) = state.register_operation();
+    tracing::info!(
+        command = "reinstall_software",
+        package = id,
+        operation_id = op_id.id,
+        "Command invoked"
+    );
+
+    match run_orchestrated_operation_inner(&app, &state, &[&id], &op_id, token, true).await {
+        Ok(_) => {
+            tracing::info!(command = "reinstall_software", package = id, "Completed");
+        }
+        Err(e) => {
+            tracing::error!(command = "reinstall_software", package = id, error = %e, "Failed");
+            emit_event(
+                &app,
+                &Event::InstallFailed {
+                    id: id.clone(),
+                    error: e.message,
+                },
+            );
+        }
+    }
+    state.remove_operation(&op_id.id);
+
+    tracing::debug!(
+        command = "reinstall_software",
         operation_id = op_id.id,
         duration_ms = start.elapsed().as_millis() as u64,
         "Command completed"

@@ -14,7 +14,7 @@ import BackupTab from "../components/detail/BackupTab.vue";
 import TechnicalTab from "../components/detail/TechnicalTab.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
-import { useSoftwareList, useVersions, useInstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
+import { useSoftwareList, useVersions, useInstallSoftware, useReinstallSoftware, useUpdateSoftware, useCreateBackup } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { useUpdateQueue } from "../composables/useUpdateQueue";
 import { logger } from "../utils/logger";
@@ -28,6 +28,7 @@ const router = useRouter();
 const { data: software, isLoading } = useSoftwareList(() => "all");
 const { data: versions } = useVersions(() => props.id);
 const installMutation = useInstallSoftware();
+const reinstallMutation = useReinstallSoftware();
 const updateMutation = useUpdateSoftware();
 const backupMutation = useCreateBackup();
 const { isRunning } = useOperations();
@@ -70,7 +71,7 @@ function handleReinstall() {
 function confirmReinstall() {
   if (!pkg.value) return;
   logger.debug("PackageDetailView", `reinstall confirmed: ${pkg.value.id}`);
-  installMutation.mutate(pkg.value.id);
+  reinstallMutation.mutate(pkg.value.id);
 }
 
 function handleBackup() {

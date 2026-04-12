@@ -52,6 +52,10 @@ pub struct UpdateRequest {
     pub dry_run: bool,
     /// The user has reviewed and confirmed the plan.
     pub confirmed: bool,
+    /// Force reinstall even when the package is already up to date.
+    /// Only effective for `plan_specific` — `plan_all` ignores this flag.
+    #[serde(default)]
+    pub force_reinstall: bool,
     /// Run installers silently (true) or show installer UI (false).
     /// Defaults to true for backward compatibility.
     #[serde(default = "default_quiet")]
@@ -836,7 +840,7 @@ where
         let mut plan = if request.packages.is_empty() {
             planner.plan_all()?
         } else {
-            planner.plan_specific(&request.packages)?
+            planner.plan_specific(&request.packages, request.force_reinstall)?
         };
         plan.quiet = request.quiet;
         plan.install_scope = request.install_scope;
@@ -1297,6 +1301,7 @@ mod tests {
             allow_downgrade: false,
             dry_run: true,
             confirmed: false,
+            force_reinstall: false,
             quiet: false,
             install_scope: crate::config::InstallScope::default(),
         };
