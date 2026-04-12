@@ -174,7 +174,6 @@ function confirmBackup() {
       :message="`Download and reinstall ${pkg?.name ?? 'this package'}?`"
       icon="pi-refresh"
       confirm-label="Reinstall"
-      severity="secondary"
       @confirm="confirmReinstall"
     />
 

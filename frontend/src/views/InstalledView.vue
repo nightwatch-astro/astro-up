@@ -207,7 +207,6 @@ function handleBackup(pkg: PackageWithStatus) {
       :message="`Download and reinstall ${pendingReinstallPkg?.name}?`"
       icon="pi-refresh"
       confirm-label="Reinstall"
-      severity="secondary"
       @confirm="confirmReinstall"
     />
 
