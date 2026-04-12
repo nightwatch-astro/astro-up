@@ -10,7 +10,6 @@ export const UiSchema = v.object({
   auto_check_updates: v.boolean(),
   check_interval: v.pipe(v.string(), v.minLength(1, "Required")),
   auto_notify_updates: v.boolean(),
-  auto_install_updates: v.boolean(),
 });
 
 export const StartupSchema = v.object({
@@ -68,10 +67,6 @@ export const UpdateSchema = v.object({
   check_interval: v.pipe(v.string(), v.minLength(1, "Required")),
 });
 
-export const TelemetrySchema = v.object({
-  enabled: v.boolean(),
-});
-
 export const AppConfigSchema = v.object({
   ui: UiSchema,
   startup: StartupSchema,
@@ -82,5 +77,4 @@ export const AppConfigSchema = v.object({
   network: NetworkSchema,
   updates: UpdateSchema,
   logging: LogSchema,
-  telemetry: TelemetrySchema,
 });

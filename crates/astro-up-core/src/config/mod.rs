@@ -16,7 +16,7 @@ pub use api::{config_get, config_list, config_reset, config_set};
 pub use model::{
     AppConfig, BackupPolicyConfig, BackupSchedule, CatalogConfig, FontSize, InstallMethod,
     InstallScope, LogConfig, LogLevel, NetworkConfig, NotificationsConfig, PathsConfig,
-    ScanInterval, StartupConfig, TelemetryConfig, ThemeMode, UiConfig, UpdateConfig,
+    ScanInterval, StartupConfig, ThemeMode, UiConfig, UpdateConfig,
 };
 pub use store::ConfigStore;
 
@@ -184,11 +184,6 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
                 .parse::<bool>()
                 .map_err(|_| parse_err("boolean (true/false)"))?;
         }
-        "ui.auto_install_updates" => {
-            config.ui.auto_install_updates = value
-                .parse::<bool>()
-                .map_err(|_| parse_err("boolean (true/false)"))?;
-        }
         "ui.survey_threshold" => {
             config.ui.survey_threshold = value
                 .parse::<u32>()
@@ -344,11 +339,6 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
                 .parse::<u32>()
                 .map_err(|_| parse_err("number (days, 0 = never)"))?;
         }
-        "telemetry.enabled" => {
-            config.telemetry.enabled = value
-                .parse::<bool>()
-                .map_err(|_| parse_err("boolean (true/false)"))?;
-        }
         _ => {
             return Err(CoreError::ConfigUnknownKey {
                 key: key.to_string(),
@@ -419,7 +409,6 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
             Some(humantime::format_duration(config.ui.check_interval).to_string())
         }
         "ui.auto_notify_updates" => Some(config.ui.auto_notify_updates.to_string()),
-        "ui.auto_install_updates" => Some(config.ui.auto_install_updates.to_string()),
         "ui.survey_threshold" => Some(config.ui.survey_threshold.to_string()),
         "ui.survey_dismissed_at" => config.ui.survey_dismissed_at.clone(),
         "ui.survey_completed_at" => config.ui.survey_completed_at.clone(),
@@ -483,7 +472,6 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         "logging.log_to_file" => Some(config.logging.log_to_file.to_string()),
         "logging.log_file" => Some(config.logging.log_file.display().to_string()),
         "logging.max_age_days" => Some(config.logging.max_age_days.to_string()),
-        "telemetry.enabled" => Some(config.telemetry.enabled.to_string()),
         _ => None,
     }
 }

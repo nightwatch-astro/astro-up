@@ -43,9 +43,9 @@ const defaultConfig: AppConfig = {
   ui: {
     theme: "system", font_size: "medium", auto_scan_on_launch: true,
     scan_interval: "on_startup",
-    default_install_scope: "user", default_install_method: "silent",
+    default_install_scope: "user", default_install_method: "interactive",
     auto_check_updates: true, check_interval: "1day",
-    auto_notify_updates: true, auto_install_updates: false,
+    auto_notify_updates: true,
   },
   startup: { start_at_login: true, start_minimized: true, minimize_to_tray_on_close: true },
   notifications: {
@@ -59,7 +59,6 @@ const defaultConfig: AppConfig = {
   paths: { download_dir: "", cache_dir: "", data_dir: "", keep_installers: false, purge_installers_after_days: 7 },
   updates: { auto_check: true, check_interval: "1day" },
   logging: { level: "info", log_to_file: true, log_file: "", max_age_days: 365 },
-  telemetry: { enabled: false },
 };
 
 const config = reactive<AppConfig>(structuredClone(defaultConfig));

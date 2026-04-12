@@ -32,8 +32,6 @@ fn load_config_with_empty_db_returns_defaults() {
     assert_eq!(config.logging.level.to_string(), "info");
     assert!(!config.logging.log_to_file);
     assert_eq!(config.logging.log_file, log_file);
-    assert!(!config.telemetry.enabled);
-
     // Snapshot the config shape (excluding platform-dependent paths)
     let mut value = serde_json::to_value(&config).unwrap();
     // Redact platform-dependent paths for stable snapshots
@@ -79,6 +77,5 @@ fn known_keys_discovers_all_fields() {
     assert!(keys.contains(&"catalog.url".to_string()));
     assert!(keys.contains(&"network.timeout".to_string()));
     assert!(keys.contains(&"logging.level".to_string()));
-    assert!(keys.contains(&"telemetry.enabled".to_string()));
-    assert_eq!(keys.len(), 46);
+    assert_eq!(keys.len(), 44);
 }

@@ -8,7 +8,6 @@ export interface AppConfig {
   network: NetworkConfig;
   updates: UpdateConfig;
   logging: LogConfig;
-  telemetry: TelemetryConfig;
 }
 
 export type ScanInterval = "manual" | "on_startup" | "hourly" | "daily" | "weekly";
@@ -23,7 +22,6 @@ export interface UiConfig {
   auto_check_updates: boolean;
   check_interval: string;
   auto_notify_updates: boolean;
-  auto_install_updates: boolean;
 }
 
 export interface StartupConfig {
@@ -82,6 +80,3 @@ export interface LogConfig {
   max_age_days: number;
 }
 
-export interface TelemetryConfig {
-  enabled: boolean;
-}
