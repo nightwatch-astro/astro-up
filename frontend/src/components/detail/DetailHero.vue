@@ -13,6 +13,7 @@ defineProps<{
 defineEmits<{
   install: [];
   update: [];
+  reinstall: [];
   backup: [];
 }>();
 </script>
@@ -62,11 +63,12 @@ defineEmits<{
       />
       <Button
         v-else-if="pkg.installed_version"
-        label="Installed"
-        icon="pi pi-check"
-        severity="success"
+        label="Reinstall"
+        icon="pi pi-refresh"
+        severity="secondary"
         outlined
-        disabled
+        :disabled="actionsDisabled"
+        @click="$emit('reinstall')"
       />
       <Button
         v-else
