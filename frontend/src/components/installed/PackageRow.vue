@@ -11,6 +11,7 @@ defineProps<{
 
 defineEmits<{
   update: [];
+  reinstall: [];
   backup: [];
   detail: [];
 }>();
@@ -68,6 +69,17 @@ defineEmits<{
         class="action-btn"
         :disabled="actionsDisabled"
         @click="$emit('update')"
+      />
+      <Button
+        v-else
+        label="Reinstall"
+        icon="pi pi-refresh"
+        text
+        size="small"
+        severity="secondary"
+        class="action-btn"
+        :disabled="actionsDisabled"
+        @click="$emit('reinstall')"
       />
     </div>
   </div>

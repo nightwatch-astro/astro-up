@@ -8,7 +8,7 @@ import Button from "primevue/button";
 import PackageRow from "../components/installed/PackageRow.vue";
 import ConfirmDialog from "../components/shared/ConfirmDialog.vue";
 import EmptyState from "../components/shared/EmptyState.vue";
-import { useSoftwareList, useUpdateSoftware, useScanInstalled, useCreateBackup } from "../composables/useInvoke";
+import { useSoftwareList, useInstallSoftware, useUpdateSoftware, useScanInstalled, useCreateBackup } from "../composables/useInvoke";
 import { useOperations } from "../composables/useOperations";
 import { useUpdateQueue } from "../composables/useUpdateQueue";
 import { FEATURE_BACKUP } from "../features";
@@ -16,6 +16,7 @@ import type { PackageWithStatus } from "../types/package";
 
 const router = useRouter();
 const { data: software, isLoading } = useSoftwareList(() => "installed");
+const installMutation = useInstallSoftware();
 const updateMutation = useUpdateSoftware();
 const scanMutation = useScanInstalled();
 const backupMutation = useCreateBackup();
@@ -25,7 +26,9 @@ const { enqueue, isActive: queueActive } = useUpdateQueue();
 const searchFilter = ref("");
 const showUpdateConfirm = ref(false);
 const showUpdateAllConfirm = ref(false);
+const showReinstallConfirm = ref(false);
 const pendingUpdatePkg = ref<PackageWithStatus | null>(null);
+const pendingReinstallPkg = ref<PackageWithStatus | null>(null);
 
 // Backend "installed" filter returns only packages with ledger entries (post-scan).
 // No client-side filtering needed — all returned packages are installed.
@@ -66,6 +69,18 @@ function confirmUpdateAll() {
 function confirmScan() {
   if (!startOperation("scan", "Scanning installed software")) return;
   scanMutation.mutate();
+}
+
+function handleReinstall(pkg: PackageWithStatus) {
+  pendingReinstallPkg.value = pkg;
+  showReinstallConfirm.value = true;
+}
+
+function confirmReinstall() {
+  const pkg = pendingReinstallPkg.value;
+  if (!pkg || !startOperation(pkg.id, `Reinstalling ${pkg.name}`)) return;
+  installMutation.mutate(pkg.id);
+  pendingReinstallPkg.value = null;
 }
 
 function handleBackup(pkg: PackageWithStatus) {
@@ -134,6 +149,7 @@ function handleBackup(pkg: PackageWithStatus) {
           :pkg="pkg"
           :actions-disabled="isRunning || queueActive"
           @update="handleUpdate(pkg)"
+          @reinstall="handleReinstall(pkg)"
           @backup="handleBackup(pkg)"
           @detail="router.push({ name: 'package-detail', params: { id: pkg.id } })"
         />
@@ -184,6 +200,16 @@ function handleBackup(pkg: PackageWithStatus) {
         </li>
       </ul>
     </ConfirmDialog>
+
+    <ConfirmDialog
+      v-model:visible="showReinstallConfirm"
+      title="Reinstall Package"
+      :message="`Download and reinstall ${pendingReinstallPkg?.name}?`"
+      icon="pi-refresh"
+      confirm-label="Reinstall"
+      severity="secondary"
+      @confirm="confirmReinstall"
+    />
 
   </div>
 </template>

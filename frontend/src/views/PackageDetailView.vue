@@ -61,6 +61,18 @@ function handleUpdate() {
   updateMutation.mutate(pkg.value.id);
 }
 
+const showReinstallConfirm = ref(false);
+
+function handleReinstall() {
+  showReinstallConfirm.value = true;
+}
+
+function confirmReinstall() {
+  if (!pkg.value) return;
+  logger.debug("PackageDetailView", `reinstall confirmed: ${pkg.value.id}`);
+  installMutation.mutate(pkg.value.id);
+}
+
 function handleBackup() {
   logger.debug("PackageDetailView", `backup clicked: ${pkg.value?.id}`);
   showBackupConfirm.value = true;
@@ -102,6 +114,7 @@ function confirmBackup() {
         :actions-disabled="actionsDisabled"
         @install="handleInstall"
         @update="handleUpdate"
+        @reinstall="handleReinstall"
         @backup="handleBackup"
       />
 
@@ -154,6 +167,16 @@ function confirmBackup() {
         </Tabs>
       </div>
     </template>
+
+    <ConfirmDialog
+      v-model:visible="showReinstallConfirm"
+      title="Reinstall Package"
+      :message="`Download and reinstall ${pkg?.name ?? 'this package'}?`"
+      icon="pi-refresh"
+      confirm-label="Reinstall"
+      severity="secondary"
+      @confirm="confirmReinstall"
+    />
 
     <ConfirmDialog
       v-if="FEATURE_BACKUP"
