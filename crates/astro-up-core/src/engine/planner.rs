@@ -717,7 +717,10 @@ mod tests {
         assert_eq!(plan.items[0].package_id, PackageId::new("nina").unwrap());
         assert_eq!(plan.items[0].current_version, Version::parse("2.0.0"));
         assert_eq!(plan.items[0].target_version, Version::parse("2.0.0"));
-        assert!(plan.skipped.is_empty(), "UpToDate entry should not be in skipped when force_reinstall is true");
+        assert!(
+            plan.skipped.is_empty(),
+            "UpToDate entry should not be in skipped when force_reinstall is true"
+        );
     }
 
     #[test]
