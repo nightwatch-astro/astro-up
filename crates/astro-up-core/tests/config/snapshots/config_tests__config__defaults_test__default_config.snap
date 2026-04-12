@@ -47,12 +47,8 @@ expression: value
     "start_at_login": false,
     "start_minimized": false
   },
-  "telemetry": {
-    "enabled": false
-  },
   "ui": {
     "auto_check_updates": true,
-    "auto_install_updates": false,
     "auto_notify_updates": true,
     "auto_scan_on_launch": false,
     "check_interval": "1day",

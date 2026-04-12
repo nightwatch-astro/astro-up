@@ -21,7 +21,6 @@ default_install_method = "silent"
 auto_check_updates = true
 check_interval = "12h"
 auto_notify_updates = true
-auto_install_updates = false
 
 [catalog]
 url = "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db"
@@ -78,7 +77,6 @@ Every field below has a corresponding control in the GUI Settings panel. The tab
 | `auto_check_updates` | bool | `true` | General | Periodically check for package updates |
 | `check_interval` | duration | `"12h"` | General | How often to check for updates |
 | `auto_notify_updates` | bool | `true` | General | Show notification when updates found |
-| `auto_install_updates` | bool | `false` | General | Automatically install updates |
 
 ### `[catalog]`
 

@@ -142,7 +142,6 @@ pub struct UiConfig {
     #[garde(custom(validate_min_one_minute))]
     pub check_interval: Duration,
     pub auto_notify_updates: bool,
-    pub auto_install_updates: bool,
     /// Number of successful operations before showing the feedback survey.
     #[serde(default = "default_survey_threshold")]
     pub survey_threshold: u32,
@@ -251,12 +250,6 @@ fn default_log_max_age_days() -> u32 {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]
-#[garde(allow_unvalidated)]
-pub struct TelemetryConfig {
-    pub enabled: bool,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]
 pub struct AppConfig {
     #[garde(dive)]
     pub ui: UiConfig,
@@ -276,8 +269,6 @@ pub struct AppConfig {
     pub updates: UpdateConfig,
     #[garde(dive)]
     pub logging: LogConfig,
-    #[garde(dive)]
-    pub telemetry: TelemetryConfig,
 }
 
 impl AppConfig {

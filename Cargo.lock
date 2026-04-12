@@ -157,7 +157,7 @@ version = "0.1.24"
 
 [[package]]
 name = "astro-up-cli"
-version = "0.1.23"
+version = "0.1.24"
 dependencies = [
  "assert_cmd",
  "astro-up-core",
@@ -185,7 +185,7 @@ dependencies = [
 
 [[package]]
 name = "astro-up-core"
-version = "0.1.23"
+version = "0.1.24"
 dependencies = [
  "chrono",
  "directories",
@@ -224,7 +224,7 @@ dependencies = [
 
 [[package]]
 name = "astro-up-gui"
-version = "0.1.23"
+version = "0.1.24"
 dependencies = [
  "astro-up-core",
  "chrono",
