@@ -20,7 +20,7 @@ path = "src/main.rs"
 astro-up-core.workspace = true
 clap = { version = "4", features = ["derive"] }
 color-eyre = "0.6"
-dialoguer = "0.11"
+dialoguer = "0.12"
 directories = "6.0"
 human-panic = "2"
 indicatif = { version = "0.18", features = ["tokio"] }
