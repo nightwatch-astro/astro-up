@@ -253,8 +253,15 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
 
         // Upsert installed packages
         for pd in results {
-            if let DetectionResult::Installed { ref version, .. } = pd.result {
-                self.ledger.upsert_acknowledged(&pd.package_id, version)?;
+            match &pd.result {
+                DetectionResult::Installed { version, .. } => {
+                    self.ledger.upsert_acknowledged(&pd.package_id, version)?;
+                }
+                DetectionResult::InstalledUnknownVersion { .. } => {
+                    let sentinel = Version::parse("0.0.0");
+                    self.ledger.upsert_acknowledged(&pd.package_id, &sentinel)?;
+                }
+                _ => {}
             }
         }
 
@@ -526,6 +533,62 @@ mod tests {
         // "gone-app" should be removed, "test-app" should be added
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].package_id, "test-app");
+    }
+
+    #[test]
+    fn ledger_sync_creates_entry_for_unknown_version() {
+        let ledger = MockLedger::new();
+        let packages = MockPackages(vec![]);
+        let scanner = Scanner::new(packages, ledger);
+
+        let results = vec![PackageDetection {
+            package_id: "astap".into(),
+            result: DetectionResult::InstalledUnknownVersion {
+                method: DetectionMethod::Registry,
+                install_path: Some("C:\\Program Files\\ASTAP".into()),
+            },
+        }];
+
+        scanner.sync_ledger(&results).unwrap();
+
+        let entries = scanner.ledger.list_acknowledged().unwrap();
+        assert_eq!(
+            entries.len(),
+            1,
+            "InstalledUnknownVersion must create a ledger entry"
+        );
+        assert_eq!(entries[0].package_id, "astap");
+        assert_eq!(
+            entries[0].version.raw, "0.0.0",
+            "sentinel version for unknown"
+        );
+    }
+
+    #[test]
+    fn ledger_sync_removes_stale_when_unknown_version_present() {
+        let ledger = MockLedger::new();
+        // Pre-populate with a package that will no longer be detected
+        ledger
+            .upsert_acknowledged("gone-app", &Version::parse("1.0.0"))
+            .unwrap();
+
+        let packages = MockPackages(vec![]);
+        let scanner = Scanner::new(packages, ledger);
+
+        // Only "astap" is detected (with unknown version)
+        let results = vec![PackageDetection {
+            package_id: "astap".into(),
+            result: DetectionResult::InstalledUnknownVersion {
+                method: DetectionMethod::Registry,
+                install_path: None,
+            },
+        }];
+
+        scanner.sync_ledger(&results).unwrap();
+
+        let entries = scanner.ledger.list_acknowledged().unwrap();
+        assert_eq!(entries.len(), 1, "stale entry should be removed");
+        assert_eq!(entries[0].package_id, "astap");
     }
 
     #[tokio::test]

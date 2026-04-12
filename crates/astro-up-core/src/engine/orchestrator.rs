@@ -609,6 +609,13 @@ where
                         install_status
                     }
                 }
+                crate::detect::DetectionResult::InstalledUnknownVersion { .. } => {
+                    tracing::info!(
+                        package = %pkg_id,
+                        "post-install detected but version unknown — verification skipped"
+                    );
+                    install_status
+                }
                 _ => {
                     tracing::warn!(
                         package = %pkg_id,
