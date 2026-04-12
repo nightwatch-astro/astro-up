@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onErrorCaptured, onMounted, onUnmounted, ref } from "vue";
+import { computed, onErrorCaptured, onMounted, onUnmounted, ref } from "vue";
 import { logger, onLog } from "./utils/logger";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
@@ -8,6 +8,7 @@ import { useCoreEvents } from "./composables/useCoreEvents";
 import { useKeyboard } from "./composables/useKeyboard";
 import { useOperations } from "./composables/useOperations";
 import { useErrorLog } from "./stores/errorLog";
+import { useConfig } from "./composables/useInvoke";
 import AppSidebar from "./components/layout/AppSidebar.vue";
 import AppStatusBar from "./components/layout/AppStatusBar.vue";
 import OperationsDock from "./components/layout/OperationsDock.vue";
@@ -15,9 +16,21 @@ import LogPanel from "./components/layout/LogPanel.vue";
 import AssetSelectionDialog from "./components/shared/AssetSelectionDialog.vue";
 import { useUpdateQueue } from "./composables/useUpdateQueue";
 import type { CoreEvent } from "./types/commands";
+import type { AppConfig } from "./types/config";
 
 const toast = useToast();
 const { addEntry } = useErrorLog();
+
+// Load config for notification gating
+const { data: configData } = useConfig();
+const appConfig = computed(() => configData.value as AppConfig | undefined);
+
+/** Convert config display_duration (seconds, 0 = sticky) to PrimeVue life (ms, 0 = sticky). */
+function toastLife(fallbackMs = 5000): number {
+  const seconds = appConfig.value?.notifications?.display_duration;
+  if (seconds === undefined) return fallbackMs;
+  return seconds === 0 ? 0 : seconds * 1000;
+}
 
 // Global error boundary — rate-limited toasts (max 3 per 5 seconds)
 let errorToastCount = 0;
@@ -30,12 +43,12 @@ onErrorCaptured((err, instance, info) => {
   logger.error("vue:error-boundary", `${component}: ${message} (${info})`);
 
   errorToastCount++;
-  if (errorToastCount <= 3) {
+  if (errorToastCount <= 3 && appConfig.value?.notifications?.show_errors !== false) {
     toast.add({
       severity: "error",
       summary: "Unexpected error",
       detail: message,
-      life: 5000,
+      life: toastLife(),
     });
   }
   if (!errorToastResetTimer) {
@@ -128,19 +141,23 @@ useCoreEvents((event: CoreEvent) => {
   } else if (event.type === "process_blocking") {
     if (queueActive.value) {
       markCurrentBlocked(event.data.process_name, event.data.pid);
-      toast.add({
-        severity: "warn",
-        summary: `Skipped ${event.data.package_id}`,
-        detail: `${event.data.process_name} is running (PID ${event.data.pid})`,
-        life: 5000,
-      });
+      if (appConfig.value?.notifications?.show_warnings !== false) {
+        toast.add({
+          severity: "warn",
+          summary: `Skipped ${event.data.package_id}`,
+          detail: `${event.data.process_name} is running (PID ${event.data.pid})`,
+          life: toastLife(),
+        });
+      }
     } else {
-      toast.add({
-        severity: "error",
-        summary: "Application is running",
-        detail: `Please close ${event.data.process_name} (PID ${event.data.pid}) before installing or updating ${event.data.package_id}.`,
-        life: 10000,
-      });
+      if (appConfig.value?.notifications?.show_errors !== false) {
+        toast.add({
+          severity: "error",
+          summary: "Application is running",
+          detail: `Please close ${event.data.process_name} (PID ${event.data.pid}) before installing or updating ${event.data.package_id}.`,
+          life: toastLife(10000),
+        });
+      }
     }
   } else if (event.type === "scan_started") {
     startOperation("scan", "Scanning installed software");
@@ -181,12 +198,14 @@ useCoreEvents((event: CoreEvent) => {
     const detail = "error" in event.data ? event.data.error : "Unknown error";
     failOperation(detail);
     addEntry("error", `Operation failed: ${event.data.id}`, detail);
-    toast.add({
-      severity: "error",
-      summary: `Error: ${event.data.id}`,
-      detail,
-      life: 5000,
-    });
+    if (appConfig.value?.notifications?.show_errors !== false) {
+      toast.add({
+        severity: "error",
+        summary: `Error: ${event.data.id}`,
+        detail,
+        life: toastLife(),
+      });
+    }
   }
 });
 
@@ -197,14 +216,19 @@ async function setupUpdateListener() {
     "update-available",
     (event) => {
       updateVersion.value = event.payload.version;
-      toast.add({
-        severity: "info",
-        summary: `Update available: v${event.payload.version}`,
-        detail: "Go to Settings → About to view release notes and install.",
-        life: 0,
-        closable: true,
-        group: "update",
-      });
+      if (
+        appConfig.value?.ui?.auto_notify_updates !== false
+        && appConfig.value?.notifications?.show_update_available !== false
+      ) {
+        toast.add({
+          severity: "info",
+          summary: `Update available: v${event.payload.version}`,
+          detail: "Go to Settings → About to view release notes and install.",
+          life: 0,
+          closable: true,
+          group: "update",
+        });
+      }
     },
   );
   } catch {
@@ -220,19 +244,21 @@ async function installUpdate() {
       toast.add({
         severity: "info",
         summary: "Downloading update...",
-        life: 3000,
+        life: toastLife(3000),
       });
       await update.downloadAndInstall();
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     addEntry("error", "Update failed", msg);
-    toast.add({
-      severity: "error",
-      summary: "Update failed",
-      detail: msg,
-      life: 5000,
-    });
+    if (appConfig.value?.notifications?.show_errors !== false) {
+      toast.add({
+        severity: "error",
+        summary: "Update failed",
+        detail: msg,
+        life: toastLife(),
+      });
+    }
   }
 }
 
