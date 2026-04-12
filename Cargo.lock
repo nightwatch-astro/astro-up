@@ -153,7 +153,7 @@ dependencies = [
 
 [[package]]
 name = "astro-up"
-version = "0.1.25"
+version = "0.1.26"
 
 [[package]]
 name = "astro-up-cli"
