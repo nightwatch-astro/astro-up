@@ -4,6 +4,7 @@ import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import { useToast } from "primevue/usetoast";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
+import MarkdownContent from "../shared/MarkdownContent.vue";
 
 const toast = useToast();
 
@@ -24,6 +25,7 @@ async function checkForUpdates() {
       updateVersion.value = update.version;
       updateNotes.value = update.body ?? "";
       showNotes.value = true;
+
     } else {
       updateAvailable.value = false;
       updateVersion.value = "";
@@ -110,10 +112,11 @@ async function installUpdate() {
       modal
       :style="{ width: '500px', maxHeight: '80vh' }"
     >
-      <pre
+      <MarkdownContent
         v-if="updateNotes"
+        :content="updateNotes"
         class="release-notes"
-      >{{ updateNotes }}</pre>
+      />
       <p v-else>
         A new version is available.
       </p>
@@ -158,13 +161,6 @@ async function installUpdate() {
 }
 .about-link:hover { text-decoration: underline; }
 .release-notes {
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--p-surface-200);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  margin: 0;
   max-height: 400px;
   overflow-y: auto;
 }

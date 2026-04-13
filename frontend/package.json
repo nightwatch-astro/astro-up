@@ -23,6 +23,7 @@
     "@tauri-apps/plugin-window-state": "^2",
     "@vueuse/core": "^14",
     "primevue": "^4.5.5",
+    "snarkdown": "^2.0.0",
     "valibot": "^1",
     "vue": "^3",
     "vue-router": "^5"
