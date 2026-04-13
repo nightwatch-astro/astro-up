@@ -90,17 +90,19 @@ impl InstallerService {
             }
         }
 
-        // Proactive elevation check
-        #[cfg(windows)]
-        if matches!(config.elevation, Some(Elevation::Required)) && !elevation::is_elevated() {
-            info!("proactive elevation required, re-executing");
-            let args: Vec<String> = std::env::args().collect();
-            elevation::elevate_and_reexec(&args).await?;
-            return Ok(InstallResult::Success { path: None });
-        }
+        // Proactive elevation: if the manifest declares elevation required and we
+        // are not already running as admin, we note this so the installer spawn
+        // path will use elevated execution. We do NOT re-exec the whole app.
+        let needs_elevation =
+            matches!(config.elevation, Some(Elevation::Required)) && !elevation::is_elevated();
+
         #[cfg(not(windows))]
-        if matches!(config.elevation, Some(Elevation::Required)) && !elevation::is_elevated() {
+        if needs_elevation {
             return Err(CoreError::ElevationRequired);
+        }
+
+        if needs_elevation {
+            info!("installer requires elevation — will launch with elevated privileges");
         }
 
         // upgrade_behavior = uninstall_previous
@@ -125,12 +127,13 @@ impl InstallerService {
         let result = if config.zip_wrapped {
             // Extract zip first, then run inner installer
             info!(package = %request.package_id, "zip_wrapped: extracting before install");
-            self.handle_zip_wrapped_install(request, config).await
+            self.handle_zip_wrapped_install(request, config, needs_elevation)
+                .await
         } else {
             match config.method {
                 InstallMethod::Zip => self.handle_zip_install(request).await,
                 InstallMethod::Portable => self.handle_portable_install(request).await,
-                _ => self.handle_exe_install(request).await,
+                _ => self.handle_exe_install(request, needs_elevation).await,
             }
         };
 
@@ -196,6 +199,7 @@ impl InstallerService {
     async fn handle_exe_install(
         &self,
         request: &InstallRequest,
+        needs_elevation: bool,
     ) -> Result<InstallResult, CoreError> {
         let config = &request.install_config;
         let (exe, args) = build_args(
@@ -206,7 +210,10 @@ impl InstallerService {
             &request.install_scope,
         );
 
-        let exit_code = if matches!(config.method, InstallMethod::Burn) {
+        let exit_code = if needs_elevation {
+            // Elevate just the installer process — not the entire app
+            elevation::spawn_elevated(&exe, &args, request.timeout).await?
+        } else if matches!(config.method, InstallMethod::Burn) {
             process::spawn_with_job_object(
                 &exe,
                 &args,
@@ -227,12 +234,34 @@ impl InstallerService {
                 Ok(InstallResult::SuccessRebootRequired { path: None })
             }
             ExitCodeOutcome::ElevationRequired => {
+                // Reactive elevation: the installer returned exit code 740 at
+                // runtime even though the manifest didn't declare elevation.
+                // Retry with elevated spawn instead of re-executing the app.
                 #[cfg(windows)]
                 {
-                    info!("reactive elevation (exit code 740), re-executing");
-                    let args_vec: Vec<String> = std::env::args().collect();
-                    elevation::elevate_and_reexec(&args_vec).await?;
-                    Ok(InstallResult::Success { path: None })
+                    info!("reactive elevation (exit code 740), retrying installer with elevation");
+                    let retry_code =
+                        elevation::spawn_elevated(&exe, &args, request.timeout).await?;
+                    let retry_outcome = interpret_exit_code(retry_code, config);
+                    match retry_outcome {
+                        ExitCodeOutcome::Success => Ok(InstallResult::Success { path: None }),
+                        ExitCodeOutcome::SuccessRebootRequired => {
+                            Ok(InstallResult::SuccessRebootRequired { path: None })
+                        }
+                        ExitCodeOutcome::ElevationRequired => Err(CoreError::ElevationRequired),
+                        ExitCodeOutcome::Failed { code, semantic } => {
+                            if let Some(known) = semantic {
+                                Err(CoreError::InstallerFailed {
+                                    exit_code: code,
+                                    response: known,
+                                })
+                            } else {
+                                Err(CoreError::Io(std::io::Error::other(format!(
+                                    "installer failed with exit code {code}"
+                                ))))
+                            }
+                        }
+                    }
                 }
                 #[cfg(not(windows))]
                 Err(CoreError::ElevationRequired)
@@ -274,6 +303,7 @@ impl InstallerService {
         &self,
         request: &InstallRequest,
         config: &InstallConfig,
+        needs_elevation: bool,
     ) -> Result<InstallResult, CoreError> {
         let temp_dir = std::env::temp_dir().join(format!(
             "astro-up-zip-{}",
@@ -343,13 +373,17 @@ impl InstallerService {
                     request.quiet,
                     &request.install_scope,
                 );
-                let exit_code = process::spawn_simple(
-                    &exe,
-                    &args,
-                    request.timeout,
-                    request.cancel_token.clone(),
-                )
-                .await?;
+                let exit_code = if needs_elevation {
+                    elevation::spawn_elevated(&exe, &args, request.timeout).await?
+                } else {
+                    process::spawn_simple(
+                        &exe,
+                        &args,
+                        request.timeout,
+                        request.cancel_token.clone(),
+                    )
+                    .await?
+                };
                 let outcome = interpret_exit_code(exit_code, config);
                 match outcome {
                     ExitCodeOutcome::Success => Ok(InstallResult::Success { path: None }),
