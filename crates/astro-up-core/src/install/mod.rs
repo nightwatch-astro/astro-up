@@ -3,6 +3,7 @@ pub mod exit_codes;
 pub mod hooks;
 pub mod ledger;
 pub mod process;
+pub mod shortcut;
 pub mod switches;
 pub mod types;
 pub mod uninstall;
@@ -457,6 +458,12 @@ impl InstallerService {
             let target = dest.join(filename);
             info!(src = %request.installer_path.display(), dest = %target.display(), "copying file to portable dir");
             tokio::fs::copy(&request.installer_path, &target).await?;
+        }
+
+        // Create a .lnk shortcut in the packages root directory so the user
+        // can easily find and launch the portable app.
+        if let Some(shortcut_dir) = dest.parent() {
+            shortcut::create_portable_shortcut(&dest, shortcut_dir, &request.package_name);
         }
 
         Ok(InstallResult::Success { path: Some(dest) })
