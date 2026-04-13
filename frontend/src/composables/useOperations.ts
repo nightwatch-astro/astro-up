@@ -15,10 +15,12 @@ export function useOperations() {
       activeOperation.value = null;
     }
 
-    // Safety valve: force-clear stale running operations (>2min)
+    // Safety valve: force-clear stale operations (2min for scans, 1hr for installs)
     if (activeOperation.value && activeOperation.value.status === "running") {
+      const isScan = activeOperation.value.id === "scan";
+      const timeout = isScan ? 120_000 : 3_600_000;
       const started = activeOperation.value.steps[0]?.timestamp;
-      if (started && Date.now() - new Date(started).getTime() > 120_000) {
+      if (started && Date.now() - new Date(started).getTime() > timeout) {
         logger.debug("useOperations", `force-clearing stale operation: ${activeOperation.value.id}`);
         activeOperation.value = null;
       }
