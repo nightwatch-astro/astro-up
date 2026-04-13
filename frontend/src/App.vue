@@ -60,7 +60,7 @@ onErrorCaptured((err, instance, info) => {
 
   return false; // prevent propagation
 });
-const { updateProgress, completeOperation, failOperation, addStep, startOperation, isRunning } = useOperations();
+const { operation, updateProgress, completeOperation, failOperation, addStep, startOperation, isRunning } = useOperations();
 const { isActive: queueActive, markCurrentComplete, markCurrentFailed, markCurrentBlocked, currentItem } = useUpdateQueue();
 const logVisible = ref(false);
 const logPanel = ref<InstanceType<typeof LogPanel> | null>(null);
@@ -162,7 +162,8 @@ useCoreEvents((event: CoreEvent) => {
   } else if (event.type === "scan_started") {
     if (!isRunning.value) startOperation("scan", "Scanning installed software");
   } else if (event.type === "scan_complete") {
-    completeOperation();
+    // Only complete if the active operation is a scan — don't kill installs
+    if (operation.value?.id === "scan") completeOperation();
   } else if (event.type === "backup_started" || event.type === "restore_started" || event.type === "install_started") {
     addStep("info", `${event.type}`);
   } else if (event.type === "backup_complete" || event.type === "restore_complete" || event.type === "install_complete") {
