@@ -26,6 +26,7 @@
     "snarkdown": "^2.0.0",
     "valibot": "^1",
     "vue": "^3",
+    "vue-markdown-render": "^2.3.0",
     "vue-router": "^5"
   },
   "devDependencies": {
