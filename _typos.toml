@@ -2,3 +2,8 @@
 ratatui = "ratatui"
 Pn = "Pn"
 flate = "flate"
+# Git commit hash fragments in CHANGELOG.md
+ba = "ba"
+
+[files]
+extend-exclude = ["CHANGELOG.md"]

@@ -69,9 +69,9 @@ impl InstallerService {
             debug!("failed to send InstallStarted event: {e}");
         }
 
-        // DownloadOnly: open folder, no execution
+        // DownloadOnly: copy/extract to portable apps dir
         if config.method == InstallMethod::DownloadOnly {
-            let result = self.handle_download_only(&request.installer_path).await;
+            let result = self.handle_download_only(request).await;
             self.record_metrics(&request.package_id, start);
             return result;
         }
@@ -385,23 +385,47 @@ impl InstallerService {
         Ok(InstallResult::Success { path: Some(dest) })
     }
 
-    /// Handles DownloadOnly packages: opens the containing folder on Windows.
-    /// On non-Windows, returns `Success` without opening a folder (no desktop
-    /// environment assumed in CI/cross-compile targets).
+    /// Handles DownloadOnly packages: copies or extracts the download to the
+    /// portable apps directory (`install_dir` on the request).
     ///
-    /// Returns the parent directory of the installer so the UI can show the
-    /// download location to the user.
-    #[allow(unused_variables)]
+    /// If the download is a zip archive (detected via magic bytes), it is extracted.
+    /// Otherwise, the file is copied as-is into the target directory.
+    #[instrument(skip_all, fields(package = %request.package_id))]
     async fn handle_download_only(
         &self,
-        installer_path: &std::path::Path,
+        request: &InstallRequest,
     ) -> Result<InstallResult, CoreError> {
-        let parent = installer_path.parent().map(std::path::Path::to_path_buf);
-        #[cfg(windows)]
-        if let Some(ref dir) = parent {
-            std::process::Command::new("explorer").arg(dir).spawn()?;
+        let dest = self.resolve_install_dir(request);
+
+        // Clean existing contents for in-place updates (FR-009)
+        if dest.exists() {
+            if let Err(e) = tokio::fs::remove_dir_all(&dest).await {
+                warn!(path = %dest.display(), error = %e, "failed to clean existing portable dir");
+            }
         }
-        Ok(InstallResult::Success { path: parent })
+
+        tokio::fs::create_dir_all(&dest).await?;
+
+        // Detect zip by magic bytes (PK\x03\x04)
+        let is_zip = if let Ok(mut f) = tokio::fs::File::open(&request.installer_path).await {
+            use tokio::io::AsyncReadExt;
+            let mut magic = [0u8; 4];
+            f.read_exact(&mut magic).await.is_ok() && magic == [0x50, 0x4B, 0x03, 0x04]
+        } else {
+            false
+        };
+
+        if is_zip {
+            info!(path = %request.installer_path.display(), dest = %dest.display(), "extracting zip to portable dir");
+            zip::extract_zip(&request.installer_path, &dest).await?;
+        } else {
+            let filename = request.installer_path.file_name().unwrap_or_default();
+            let target = dest.join(filename);
+            info!(src = %request.installer_path.display(), dest = %target.display(), "copying file to portable dir");
+            tokio::fs::copy(&request.installer_path, &target).await?;
+        }
+
+        Ok(InstallResult::Success { path: Some(dest) })
     }
 
     #[instrument(skip_all, fields(package = %request.package_id))]

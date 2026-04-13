@@ -118,6 +118,9 @@ pub struct UpdatePlan {
     /// Install scope: user or machine.
     #[serde(default)]
     pub install_scope: crate::config::InstallScope,
+    /// Directory for portable/download-only packages.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub portable_apps_dir: Option<std::path::PathBuf>,
 }
 
 // ---------------------------------------------------------------------------
@@ -328,6 +331,7 @@ impl UpdatePlanner {
             warnings,
             quiet: false,
             install_scope: crate::config::InstallScope::default(),
+            portable_apps_dir: None,
         })
     }
 
@@ -430,6 +434,7 @@ impl UpdatePlanner {
             warnings,
             quiet: full_plan.quiet,
             install_scope: full_plan.install_scope,
+            portable_apps_dir: full_plan.portable_apps_dir,
         })
     }
 }

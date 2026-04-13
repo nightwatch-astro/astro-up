@@ -68,6 +68,7 @@ impl Default for PathsConfig {
             download_dir: PathBuf::default(),
             cache_dir: PathBuf::default(),
             data_dir: PathBuf::default(),
+            portable_apps_dir: PathBuf::default(),
             keep_installers: true,
             purge_installers_after_days: 30,
         }

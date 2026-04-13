@@ -64,6 +64,7 @@ export interface PathsConfig {
   download_dir: string;
   cache_dir: string;
   data_dir: string;
+  portable_apps_dir: string;
   keep_installers: boolean;
   purge_installers_after_days: number;
 }

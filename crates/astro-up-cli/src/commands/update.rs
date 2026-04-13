@@ -99,6 +99,14 @@ pub async fn handle_update(
         force_reinstall: false,
         quiet,
         install_scope: state.config.ui.default_install_scope.clone(),
+        portable_apps_dir: {
+            let dir = &state.config.paths.portable_apps_dir;
+            if dir.as_os_str().is_empty() {
+                None
+            } else {
+                Some(dir.clone())
+            }
+        },
     };
 
     let plan = orchestrator

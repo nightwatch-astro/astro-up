@@ -160,7 +160,7 @@ useCoreEvents((event: CoreEvent) => {
       }
     }
   } else if (event.type === "scan_started") {
-    startOperation("scan", "Scanning installed software");
+    if (!isRunning.value) startOperation("scan", "Scanning installed software");
   } else if (event.type === "scan_complete") {
     completeOperation();
   } else if (event.type === "backup_started" || event.type === "restore_started" || event.type === "install_started") {

@@ -146,6 +146,8 @@ PR titles become changelog entries via squash merge. The release-please draft PR
 - SQLite (existing — catalog + config via astro-up-core, rusqlite 0.39) (016-tauri-app-shell)
 - Rust 2024 edition (1.85+), TypeScript 5, Vue 3 + racing 0.1, tracing-subscriber 0.3 (fmt, json, env-filter), tracing-appender 0.2, PrimeVue 4 (toast), @tanstack/vue-query 5 (027-logging-debugging)
 - N/A (no new storage — logging is file/stderr/LogPanel) (027-logging-debugging)
+- Rust 2024 edition + Vue 3 / TypeScript 5 + okio (async fs), zip 2 (extraction), directories 6.0 (platform paths) (031-portable-apps-folder)
+- SQLite (config_settings, ledger tables — existing) (031-portable-apps-folder)
 
 - Vue 3 + vue-router 4 (hash mode), PrimeVue 4 (Aura), @tanstack/vue-query 5, @vueuse/core 14, valibot 1, TypeScript 5 (022-vue-frontend)
 - localStorage for config snapshots, mock data layer for stubbed Tauri commands (022-vue-frontend)

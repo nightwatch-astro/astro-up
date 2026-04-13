@@ -92,7 +92,7 @@ where
         event.record(&mut visitor);
 
         let entry = LogEntry {
-            timestamp: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            timestamp: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, false),
             level: level.to_string().to_lowercase(),
             target: metadata.target().to_string(),
             message: visitor.result(),

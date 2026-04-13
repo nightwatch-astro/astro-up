@@ -284,6 +284,7 @@ pub(crate) fn set_field(config: &mut AppConfig, key: &str, value: &str) -> Resul
         "paths.download_dir" => config.paths.download_dir = PathBuf::from(value),
         "paths.cache_dir" => config.paths.cache_dir = PathBuf::from(value),
         "paths.data_dir" => config.paths.data_dir = PathBuf::from(value),
+        "paths.portable_apps_dir" => config.paths.portable_apps_dir = PathBuf::from(value),
         "paths.keep_installers" => {
             config.paths.keep_installers = value
                 .parse::<bool>()
@@ -447,6 +448,7 @@ pub(crate) fn get_field_value(config: &AppConfig, key: &str) -> Option<String> {
         "paths.download_dir" => Some(config.paths.download_dir.display().to_string()),
         "paths.cache_dir" => Some(config.paths.cache_dir.display().to_string()),
         "paths.data_dir" => Some(config.paths.data_dir.display().to_string()),
+        "paths.portable_apps_dir" => Some(config.paths.portable_apps_dir.display().to_string()),
         "paths.keep_installers" => Some(config.paths.keep_installers.to_string()),
         "paths.purge_installers_after_days" => {
             Some(config.paths.purge_installers_after_days.to_string())

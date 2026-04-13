@@ -1,9 +1,18 @@
 <script setup lang="ts">
+import { open as openPath } from "@tauri-apps/plugin-shell";
 import type { PackageWithStatus } from "../../types/package";
 
 defineProps<{
   pkg: PackageWithStatus;
 }>();
+
+function installPath(pkg: PackageWithStatus): string | null {
+  if (!pkg.detection) return null;
+  if ("install_path" in pkg.detection && pkg.detection.install_path) {
+    return pkg.detection.install_path;
+  }
+  return null;
+}
 
 function detectionMethod(pkg: PackageWithStatus): string {
   if (!pkg.detection) return "Not scanned";
@@ -31,6 +40,22 @@ function detectionMethod(pkg: PackageWithStatus): string {
     >
       <span class="info-label">Latest Version</span>
       <span class="info-value">{{ pkg.latest_version }}</span>
+    </div>
+    <div
+      v-if="installPath(pkg)"
+      class="info-item"
+    >
+      <span class="info-label">Install Location</span>
+      <span class="info-value info-path">
+        {{ installPath(pkg) }}
+        <button
+          class="path-open-btn"
+          title="Open folder"
+          @click="openPath(installPath(pkg)!)"
+        >
+          <i class="pi pi-folder-open" />
+        </button>
+      </span>
     </div>
     <div class="info-item">
       <span class="info-label">Category</span>
@@ -101,5 +126,26 @@ function detectionMethod(pkg: PackageWithStatus): string {
 .info-value {
   font-size: 14px;
   color: var(--p-surface-200);
+}
+
+.info-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  word-break: break-all;
+}
+
+.path-open-btn {
+  background: none;
+  border: none;
+  color: var(--p-primary-400);
+  cursor: pointer;
+  padding: 2px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.path-open-btn:hover {
+  color: var(--p-primary-300);
 }
 </style>

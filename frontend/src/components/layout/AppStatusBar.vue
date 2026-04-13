@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useSoftwareList, useUpdateCheck, useCancelOperation } from "../../composables/useInvoke";
+import { useSoftwareList, useCancelOperation } from "../../composables/useInvoke";
 import { useOperations } from "../../composables/useOperations";
+import type { PackageWithStatus } from "../../types/package";
 
 defineEmits<{
   toggleLog: [];
 }>();
 
+// Use the same queries as the dashboard — VueQuery shares the cache
 const { data: software } = useSoftwareList(() => "all");
-const { data: updates } = useUpdateCheck();
+const { data: installedSoftware } = useSoftwareList(() => "installed");
 const { operation, isRunning, cancelOperation } = useOperations();
 const cancelMutation = useCancelOperation();
 
@@ -22,13 +24,11 @@ function handleCancel() {
 }
 
 const catalogCount = computed(() => software.value?.length ?? 0);
-const installedCount = computed(() => {
+const installedCount = computed(() => installedSoftware.value?.length ?? 0);
+const updateCount = computed(() => {
   if (!software.value) return 0;
-  return (software.value as Array<{ detection?: { type: string } }>).filter(
-    (p) => p.detection?.type === "Installed" || p.detection?.type === "InstalledUnknownVersion",
-  ).length;
+  return (software.value as PackageWithStatus[]).filter((p) => p.update_available).length;
 });
-const updateCount = computed(() => updates.value?.length ?? 0);
 
 const lastScanTime = ref<Date | null>(null);
 let unlistenScan: UnlistenFn | null = null;

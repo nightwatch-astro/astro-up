@@ -66,6 +66,19 @@ async function browseDirectory(field: keyof PathsConfig) {
         />
       </div>
     </div>
+    <div class="field">
+      <label>Portable Apps Directory</label>
+      <div class="path-row">
+        <code class="path-display">{{ config.portable_apps_dir || "Not set" }}</code>
+        <Button
+          label="Browse"
+          icon="pi pi-folder-open"
+          outlined
+          size="small"
+          @click="browseDirectory('portable_apps_dir')"
+        />
+      </div>
+    </div>
     <div class="field-toggle">
       <ToggleSwitch v-model="config.keep_installers" />
       <label>Keep installers after install</label>
