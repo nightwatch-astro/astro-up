@@ -6,6 +6,14 @@ defineProps<{
   pkg: PackageWithStatus;
 }>();
 
+function installPath(pkg: PackageWithStatus): string | null {
+  if (!pkg.detection) return null;
+  if ("install_path" in pkg.detection && pkg.detection.install_path) {
+    return pkg.detection.install_path;
+  }
+  return null;
+}
+
 function detectionMethod(pkg: PackageWithStatus): string {
   if (!pkg.detection) return "Not scanned";
   switch (pkg.detection.type) {
@@ -34,16 +42,16 @@ function detectionMethod(pkg: PackageWithStatus): string {
       <span class="info-value">{{ pkg.latest_version }}</span>
     </div>
     <div
-      v-if="pkg.detection && 'install_path' in pkg.detection && pkg.detection.install_path"
+      v-if="installPath(pkg)"
       class="info-item"
     >
       <span class="info-label">Install Location</span>
       <span class="info-value info-path">
-        {{ (pkg.detection as { install_path: string }).install_path }}
+        {{ installPath(pkg) }}
         <button
           class="path-open-btn"
           title="Open folder"
-          @click="openPath((pkg.detection as { install_path: string }).install_path)"
+          @click="openPath(installPath(pkg)!)"
         >
           <i class="pi pi-folder-open" />
         </button>
