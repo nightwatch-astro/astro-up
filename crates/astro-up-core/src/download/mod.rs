@@ -188,21 +188,42 @@ impl DownloadManager {
             false
         };
 
-        // Rename .part to final destination, retry up to 3 times (Windows file locks)
+        // Rename .part to final destination, retry up to 3 times with backoff
+        // (Windows: antivirus or stale handles can lock the .part file)
         let dest = request.dest_path();
         let part = request.part_path();
         let mut last_err = None;
         for attempt in 0..3 {
+            // On retry, remove a stale target file that may block the rename
+            if attempt > 0 && dest.exists() {
+                if let Err(e) = tokio::fs::remove_file(&dest).await {
+                    tracing::warn!(
+                        attempt,
+                        path = %dest.display(),
+                        error = %e,
+                        "failed to remove stale target file before rename retry"
+                    );
+                }
+            }
+
             match tokio::fs::rename(&part, &dest).await {
                 Ok(()) => {
                     last_err = None;
                     break;
                 }
                 Err(e) => {
-                    last_err = Some(e);
                     if attempt < 2 {
+                        tracing::warn!(
+                            attempt = attempt + 1,
+                            max_attempts = 3,
+                            from = %part.display(),
+                            to = %dest.display(),
+                            error = %e,
+                            "rename failed, retrying after backoff"
+                        );
                         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     }
+                    last_err = Some(e);
                 }
             }
         }
