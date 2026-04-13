@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.27](https://github.com/nightwatch-astro/astro-up/compare/v0.1.26...v0.1.27) (2026-04-13)
+
+
+### Features
+
+* portable apps folder for download-only packages ([#1004](https://github.com/nightwatch-astro/astro-up/issues/1004)) ([e12ad43](https://github.com/nightwatch-astro/astro-up/commit/e12ad4350beb77a128101b0308b1b25d5d3f434c))
+
 ## [0.1.26](https://github.com/nightwatch-astro/astro-up/compare/v0.1.25...v0.1.26) (2026-04-12)
 
 
