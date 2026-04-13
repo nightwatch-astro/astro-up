@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.28](https://github.com/nightwatch-astro/astro-up/compare/v0.1.27...v0.1.28) (2026-04-13)
+
+
+### Bug Fixes
+
+* remove draft release to eliminate tag race condition ([#1018](https://github.com/nightwatch-astro/astro-up/issues/1018)) ([7c48482](https://github.com/nightwatch-astro/astro-up/commit/7c484821fa9631dc7f8ac278efbd3294d350c097))
+* scan_complete no longer kills running install operations ([#1016](https://github.com/nightwatch-astro/astro-up/issues/1016)) ([839a6ee](https://github.com/nightwatch-astro/astro-up/commit/839a6ee01750b6e9fd9dc86974b7a571f9e91a73))
+
 ## [0.1.27](https://github.com/nightwatch-astro/astro-up/compare/v0.1.26...v0.1.27) (2026-04-13)
 
 
