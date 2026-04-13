@@ -34,16 +34,16 @@ function detectionMethod(pkg: PackageWithStatus): string {
       <span class="info-value">{{ pkg.latest_version }}</span>
     </div>
     <div
-      v-if="pkg.detection?.install_path"
+      v-if="pkg.detection && 'install_path' in pkg.detection && pkg.detection.install_path"
       class="info-item"
     >
       <span class="info-label">Install Location</span>
       <span class="info-value info-path">
-        {{ pkg.detection.install_path }}
+        {{ (pkg.detection as { install_path: string }).install_path }}
         <button
           class="path-open-btn"
           title="Open folder"
-          @click="openPath(pkg.detection.install_path)"
+          @click="openPath((pkg.detection as { install_path: string }).install_path)"
         >
           <i class="pi pi-folder-open" />
         </button>
