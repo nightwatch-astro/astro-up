@@ -160,7 +160,12 @@ useCoreEvents((event: CoreEvent) => {
       }
     }
   } else if (event.type === "scan_started") {
-    if (!isRunning.value) startOperation("scan", "Scanning installed software");
+    // Only log — do NOT create an operation for background auto-scans.
+    // User-initiated scans already call startOperation() in InstalledView/DashboardView
+    // before triggering the mutation, so they're tracked correctly.
+    // Creating an operation here for scheduler-triggered scans would block
+    // user actions with "An operation is already in progress" (#1023).
+    logger.debug("core-events", "scan_started (background)");
   } else if (event.type === "scan_complete") {
     // Only complete if the active operation is a scan — don't kill installs
     if (operation.value?.id === "scan") completeOperation();
