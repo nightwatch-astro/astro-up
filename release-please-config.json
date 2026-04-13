@@ -3,8 +3,6 @@
   "release-type": "rust",
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
-  "draft": true,
-  "force-tag-creation": true,
   "include-component-in-tag": false,
   "packages": {
     ".": {
