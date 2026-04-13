@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import VueMarkdown from "vue-markdown-render";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
-import snarkdown from "snarkdown";
 
-const props = defineProps<{
+defineProps<{
   content: string;
 }>();
 
-const rendered = computed(() =>
-  snarkdown(props.content),
-);
-
 function handleClick(e: MouseEvent) {
-  const target = e.target as HTMLElement;
-  const anchor = target.closest("a");
+  const anchor = (e.target as HTMLElement).closest("a");
   if (anchor?.href) {
     e.preventDefault();
     openUrl(anchor.href);
@@ -24,9 +18,10 @@ function handleClick(e: MouseEvent) {
 <template>
   <div
     class="markdown-content"
-    v-html="rendered"
     @click="handleClick"
-  />
+  >
+    <VueMarkdown :source="content" />
+  </div>
 </template>
 
 <style scoped>
