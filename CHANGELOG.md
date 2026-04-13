@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.29](https://github.com/nightwatch-astro/astro-up/compare/v0.1.28...v0.1.29) (2026-04-13)
+
+
+### Bug Fixes
+
+* render update release notes as markdown with clickable links ([#1020](https://github.com/nightwatch-astro/astro-up/issues/1020)) ([68b9cc9](https://github.com/nightwatch-astro/astro-up/commit/68b9cc95ce012a379063d6dd50619e8865602ba9))
+* render update release notes as markdown with clickable links ([#1022](https://github.com/nightwatch-astro/astro-up/issues/1022)) ([9013350](https://github.com/nightwatch-astro/astro-up/commit/9013350f6274666043b5040c8cc715bf60e4fa2d))
+
 ## [0.1.28](https://github.com/nightwatch-astro/astro-up/compare/v0.1.27...v0.1.28) (2026-04-13)
 
 
