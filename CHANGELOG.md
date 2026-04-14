@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.31](https://github.com/nightwatch-astro/astro-up/compare/v0.1.30...v0.1.31) (2026-04-14)
+
+
+### Bug Fixes
+
+* retry download rename on Access Denied with backoff ([#1034](https://github.com/nightwatch-astro/astro-up/issues/1034)) ([31c3005](https://github.com/nightwatch-astro/astro-up/commit/31c30053d95bd6c149490d7491c14519ecda7b3f))
+
 ## [0.1.30](https://github.com/nightwatch-astro/astro-up/compare/v0.1.29...v0.1.30) (2026-04-13)
 
 
