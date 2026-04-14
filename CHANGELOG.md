@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.32](https://github.com/nightwatch-astro/astro-up/compare/v0.1.31...v0.1.32) (2026-04-14)
+
+
+### Bug Fixes
+
+* remove phantom operation creation from package_started and download_started events ([#1036](https://github.com/nightwatch-astro/astro-up/issues/1036)) ([f02ecdb](https://github.com/nightwatch-astro/astro-up/commit/f02ecdb5c87d939f8a9001fcfa268cfa79aa5cc2))
+
 ## [0.1.31](https://github.com/nightwatch-astro/astro-up/compare/v0.1.30...v0.1.31) (2026-04-14)
 
 
