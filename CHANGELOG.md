@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.30](https://github.com/nightwatch-astro/astro-up/compare/v0.1.29...v0.1.30) (2026-04-13)
+
+
+### Features
+
+* create Windows shortcut for portable apps after install ([#1031](https://github.com/nightwatch-astro/astro-up/issues/1031)) ([fbd0678](https://github.com/nightwatch-astro/astro-up/commit/fbd0678064b127449ffa17faeb2aa2d70683e78d))
+
+
+### Bug Fixes
+
+* elevate installer process with sudo/runas instead of app re-exec ([#1029](https://github.com/nightwatch-astro/astro-up/issues/1029)) ([9844dbc](https://github.com/nightwatch-astro/astro-up/commit/9844dbc37f19018a6feb51d7ec02588e4c4a008d))
+* prevent auto-scan from creating phantom operations that block user actions ([#1027](https://github.com/nightwatch-astro/astro-up/issues/1027)) ([2fbecf0](https://github.com/nightwatch-astro/astro-up/commit/2fbecf05e63867344b42f40c72b7b4a4730d52ff)), closes [#1023](https://github.com/nightwatch-astro/astro-up/issues/1023)
+
 ## [0.1.29](https://github.com/nightwatch-astro/astro-up/compare/v0.1.28...v0.1.29) (2026-04-13)
 
 
