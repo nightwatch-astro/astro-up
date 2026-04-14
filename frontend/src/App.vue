@@ -126,15 +126,16 @@ useCoreEvents((event: CoreEvent) => {
     const pct = Math.round((event.data.files_processed / event.data.total_files) * 100);
     updateProgress(pct, `Backing up: ${event.data.files_processed}/${event.data.total_files}`);
   } else if (event.type === "package_started") {
+    // User-initiated operations already call startOperation() in their view components.
+    // Only update the label here for queue mode (where the active package changes).
     if (queueActive.value) {
       const item = currentItem.value;
       const label = item ? `Updating ${item.packageName}` : `Updating ${event.data.package_id}`;
       startOperation(event.data.package_id, label);
     } else {
-      startOperation(event.data.package_id, `Installing ${event.data.package_id}`);
+      addStep("info", `Package: ${event.data.package_id}`);
     }
   } else if (event.type === "download_started") {
-    if (!isRunning.value) startOperation(event.data.id, `Downloading ${event.data.id}`);
     addStep("info", "Download started");
   } else if (event.type === "download_complete") {
     addStep("info", "Download complete");
