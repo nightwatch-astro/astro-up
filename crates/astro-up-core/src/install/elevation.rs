@@ -19,14 +19,25 @@ pub fn is_elevated() -> bool {
 
     unsafe {
         let mut token = windows::Win32::Foundation::HANDLE::default();
-        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).is_err() {
-            // Can't check — fall back to IsUserAnAdmin
+        if OpenProcessToken(
+            GetCurrentProcess(),
+            TOKEN_QUERY,
+            std::ptr::from_mut(&mut token),
+        )
+        .is_err()
+        {
             return windows::Win32::UI::Shell::IsUserAnAdmin().as_bool();
         }
 
-        // Query token integrity level
+        // Query token integrity level — first call gets required buffer size
         let mut size: u32 = 0;
-        let _ = GetTokenInformation(token, TokenIntegrityLevel, None, 0, &mut size);
+        let _ = GetTokenInformation(
+            token,
+            TokenIntegrityLevel,
+            None,
+            0,
+            std::ptr::from_mut(&mut size),
+        );
         if size == 0 {
             windows::Win32::Foundation::CloseHandle(token).ok();
             return windows::Win32::UI::Shell::IsUserAnAdmin().as_bool();
@@ -38,7 +49,7 @@ pub fn is_elevated() -> bool {
             TokenIntegrityLevel,
             Some(buffer.as_mut_ptr().cast()),
             size,
-            &mut size,
+            std::ptr::from_mut(&mut size),
         );
         windows::Win32::Foundation::CloseHandle(token).ok();
 
@@ -53,7 +64,7 @@ pub fn is_elevated() -> bool {
             return false;
         }
         let rid =
-            *windows::Win32::Security::GetSidSubAuthority(sid, (sub_authority_count - 1) as u32);
+            *windows::Win32::Security::GetSidSubAuthority(sid, u32::from(sub_authority_count - 1));
         rid >= HIGH_INTEGRITY_RID
     }
 }
