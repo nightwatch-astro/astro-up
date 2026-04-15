@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.35](https://github.com/nightwatch-astro/astro-up/compare/v0.1.34...v0.1.35) (2026-04-15)
+
+
+### Bug Fixes
+
+* check token integrity level for elevation, treat E_ACCESSDENIED as elevation needed ([#1043](https://github.com/nightwatch-astro/astro-up/issues/1043)) ([7a68d89](https://github.com/nightwatch-astro/astro-up/commit/7a68d89fced4a7973f46e06fe9c117290ed593c6))
+
 ## [0.1.34](https://github.com/nightwatch-astro/astro-up/compare/v0.1.33...v0.1.34) (2026-04-15)
 
 
