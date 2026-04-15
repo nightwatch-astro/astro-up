@@ -4,6 +4,9 @@ use crate::types::{InstallConfig, KnownExitCode};
 /// Well-known Windows exit codes with universal meaning.
 const EXIT_CODE_SUCCESS: i32 = 0;
 const EXIT_CODE_ELEVATION_REQUIRED: i32 = 740;
+/// HRESULT E_ACCESSDENIED (0x80070005) — Burn bootstrappers return this when
+/// they detect insufficient privileges. Treat the same as exit code 740.
+const EXIT_CODE_ACCESS_DENIED: i32 = -2_147_024_891; // 0x80070005 as i32
 const EXIT_CODE_REBOOT_REQUIRED: i32 = 3010;
 const EXIT_CODE_REBOOT_INITIATED: i32 = 1641;
 
@@ -41,7 +44,9 @@ pub fn interpret_exit_code(code: i32, config: &InstallConfig) -> ExitCodeOutcome
 
     // 4. Well-known Windows universal codes
     match code {
-        EXIT_CODE_ELEVATION_REQUIRED => ExitCodeOutcome::ElevationRequired,
+        EXIT_CODE_ELEVATION_REQUIRED | EXIT_CODE_ACCESS_DENIED => {
+            ExitCodeOutcome::ElevationRequired
+        }
         EXIT_CODE_REBOOT_REQUIRED | EXIT_CODE_REBOOT_INITIATED => {
             ExitCodeOutcome::SuccessRebootRequired
         }

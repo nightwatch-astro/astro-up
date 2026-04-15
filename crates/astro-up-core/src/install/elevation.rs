@@ -2,10 +2,59 @@ use std::time::Duration;
 
 use crate::error::CoreError;
 
-/// Checks if the current process is running with admin privileges.
+/// Checks if the current process has an elevated (high-integrity) token.
+///
+/// Uses the process token's integrity level rather than `IsUserAnAdmin()`,
+/// which can return `true` for admin-group users even when running with
+/// the limited (non-elevated) UAC token.
 #[cfg(windows)]
 pub fn is_elevated() -> bool {
-    unsafe { windows::Win32::UI::Shell::IsUserAnAdmin().as_bool() }
+    use windows::Win32::Security::TOKEN_QUERY;
+    use windows::Win32::Security::{
+        GetTokenInformation, SECURITY_MANDATORY_HIGH_RID, TOKEN_MANDATORY_LABEL,
+        TokenIntegrityLevel,
+    };
+    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+
+    unsafe {
+        let mut token = windows::Win32::Foundation::HANDLE::default();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).is_err() {
+            // Can't check — fall back to IsUserAnAdmin
+            return windows::Win32::UI::Shell::IsUserAnAdmin().as_bool();
+        }
+
+        // Query token integrity level
+        let mut size: u32 = 0;
+        let _ = GetTokenInformation(token, TokenIntegrityLevel, None, 0, &mut size);
+        if size == 0 {
+            windows::Win32::Foundation::CloseHandle(token).ok();
+            return windows::Win32::UI::Shell::IsUserAnAdmin().as_bool();
+        }
+
+        let mut buffer = vec![0u8; size as usize];
+        let ok = GetTokenInformation(
+            token,
+            TokenIntegrityLevel,
+            Some(buffer.as_mut_ptr().cast()),
+            size,
+            &mut size,
+        );
+        windows::Win32::Foundation::CloseHandle(token).ok();
+
+        if ok.is_err() {
+            return windows::Win32::UI::Shell::IsUserAnAdmin().as_bool();
+        }
+
+        let label: &TOKEN_MANDATORY_LABEL = &*(buffer.as_ptr().cast());
+        let sid = label.Label.Sid;
+        let sub_authority_count = *windows::Win32::Security::GetSidSubAuthorityCount(sid);
+        if sub_authority_count == 0 {
+            return false;
+        }
+        let rid =
+            *windows::Win32::Security::GetSidSubAuthority(sid, (sub_authority_count - 1) as u32);
+        rid >= SECURITY_MANDATORY_HIGH_RID.0
+    }
 }
 
 #[cfg(not(windows))]
