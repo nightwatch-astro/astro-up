@@ -152,7 +152,7 @@ function confirmSingleUpdate() {
       </div>
       <div class="card updates-card">
         <div
-          v-for="pkg in updatablePackages.slice(0, 5)"
+          v-for="pkg in updatablePackages"
           :key="pkg.id"
           class="upd-row"
           @click="router.push({ name: 'package-detail', params: { id: pkg.id } })"
