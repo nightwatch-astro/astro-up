@@ -244,22 +244,54 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
     /// Sync ledger with scan results.
     ///
     /// - New detections → insert Acknowledged entry
-    /// - Changed versions → update Acknowledged entry
+    /// - Changed versions → update Acknowledged entry (never downgrade)
     /// - Gone detections → remove Acknowledged entry (only Acknowledged source)
+    ///
+    /// The "never downgrade" rule prevents PE placeholder versions (e.g. `1.0.0`
+    /// baked into an exe's FileVersion) from overwriting the real catalog version
+    /// that the orchestrator recorded after a successful install.
     fn sync_ledger(&self, results: &[PackageDetection]) -> Result<(), DetectionError> {
         let existing = self.ledger.list_acknowledged()?;
-        let existing_ids: std::collections::HashSet<&str> =
-            existing.iter().map(|e| e.package_id.as_str()).collect();
+        let existing_map: std::collections::HashMap<&str, &Version> = existing
+            .iter()
+            .map(|e| (e.package_id.as_str(), &e.version))
+            .collect();
 
         // Upsert installed packages
         for pd in results {
             match &pd.result {
                 DetectionResult::Installed { version, .. } => {
-                    self.ledger.upsert_acknowledged(&pd.package_id, version)?;
+                    // Don't downgrade: if the ledger already has a higher version
+                    // (e.g., set by the orchestrator after install), keep it.
+                    let should_update = match existing_map.get(pd.package_id.as_str()) {
+                        Some(existing_version) => version >= *existing_version,
+                        None => true,
+                    };
+                    if should_update {
+                        self.ledger.upsert_acknowledged(&pd.package_id, version)?;
+                    } else {
+                        debug!(
+                            package = %pd.package_id,
+                            detected = %version,
+                            ledger = %existing_map[pd.package_id.as_str()],
+                            "skipping ledger downgrade — detected version is lower"
+                        );
+                    }
                 }
                 DetectionResult::InstalledUnknownVersion { .. } => {
-                    let sentinel = Version::parse("0.0.0");
-                    self.ledger.upsert_acknowledged(&pd.package_id, &sentinel)?;
+                    // Only set the 0.0.0 sentinel for new packages. If the ledger
+                    // already has a version (from orchestrator or prior detection),
+                    // keep it — a real version is always better than "unknown".
+                    if existing_map.contains_key(pd.package_id.as_str()) {
+                        debug!(
+                            package = %pd.package_id,
+                            ledger = %existing_map[pd.package_id.as_str()],
+                            "keeping existing ledger version over unknown-version sentinel"
+                        );
+                    } else {
+                        let sentinel = Version::parse("0.0.0");
+                        self.ledger.upsert_acknowledged(&pd.package_id, &sentinel)?;
+                    }
                 }
                 _ => {}
             }
@@ -272,7 +304,7 @@ impl<P: PackageSource, L: LedgerStore> Scanner<P, L> {
             .map(|pd| pd.package_id.as_str())
             .collect();
 
-        for existing_id in &existing_ids {
+        for existing_id in existing_map.keys() {
             if !detected_ids.contains(existing_id) {
                 debug!(package = %existing_id, "removing stale Acknowledged entry");
                 self.ledger.remove_acknowledged(existing_id)?;
@@ -589,6 +621,98 @@ mod tests {
         let entries = scanner.ledger.list_acknowledged().unwrap();
         assert_eq!(entries.len(), 1, "stale entry should be removed");
         assert_eq!(entries[0].package_id, "astap");
+    }
+
+    #[test]
+    fn ledger_sync_does_not_downgrade_version() {
+        let ledger = MockLedger::new();
+        // Orchestrator set the catalog version after install
+        ledger
+            .upsert_acknowledged("astap", &Version::parse("2026.04.10"))
+            .unwrap();
+
+        let packages = MockPackages(vec![]);
+        let scanner = Scanner::new(packages, ledger);
+
+        // PE detection returns a placeholder version lower than the ledger
+        let results = vec![PackageDetection {
+            package_id: "astap".into(),
+            result: DetectionResult::Installed {
+                version: Version::parse("1.0.0"),
+                method: DetectionMethod::PeFile,
+                install_path: Some("C:\\Program Files\\astap\\astap.exe".into()),
+            },
+        }];
+
+        scanner.sync_ledger(&results).unwrap();
+
+        let entries = scanner.ledger.list_acknowledged().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(
+            entries[0].version.raw, "2026.04.10",
+            "ledger must keep the higher version, not downgrade to PE placeholder"
+        );
+    }
+
+    #[test]
+    fn ledger_sync_upgrades_version() {
+        let ledger = MockLedger::new();
+        // Ledger has an older version
+        ledger
+            .upsert_acknowledged("nina-app", &Version::parse("3.0.0"))
+            .unwrap();
+
+        let packages = MockPackages(vec![]);
+        let scanner = Scanner::new(packages, ledger);
+
+        // Detection finds a newer version (user updated outside of astro-up)
+        let results = vec![PackageDetection {
+            package_id: "nina-app".into(),
+            result: DetectionResult::Installed {
+                version: Version::parse("3.1.0"),
+                method: DetectionMethod::Registry,
+                install_path: None,
+            },
+        }];
+
+        scanner.sync_ledger(&results).unwrap();
+
+        let entries = scanner.ledger.list_acknowledged().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(
+            entries[0].version.raw, "3.1.0",
+            "ledger must update to the higher detected version"
+        );
+    }
+
+    #[test]
+    fn ledger_sync_unknown_version_preserves_existing() {
+        let ledger = MockLedger::new();
+        // Orchestrator set a real version
+        ledger
+            .upsert_acknowledged("astap", &Version::parse("2026.04.10"))
+            .unwrap();
+
+        let packages = MockPackages(vec![]);
+        let scanner = Scanner::new(packages, ledger);
+
+        // Re-detection can't determine the version (WMI fallback, no version)
+        let results = vec![PackageDetection {
+            package_id: "astap".into(),
+            result: DetectionResult::InstalledUnknownVersion {
+                method: DetectionMethod::Wmi,
+                install_path: None,
+            },
+        }];
+
+        scanner.sync_ledger(&results).unwrap();
+
+        let entries = scanner.ledger.list_acknowledged().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(
+            entries[0].version.raw, "2026.04.10",
+            "existing version must be preserved over unknown-version sentinel"
+        );
     }
 
     #[tokio::test]
