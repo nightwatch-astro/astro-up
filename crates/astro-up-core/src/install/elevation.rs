@@ -11,9 +11,10 @@ use crate::error::CoreError;
 pub fn is_elevated() -> bool {
     use windows::Win32::Security::TOKEN_QUERY;
     use windows::Win32::Security::{
-        GetTokenInformation, SECURITY_MANDATORY_HIGH_RID, TOKEN_MANDATORY_LABEL,
-        TokenIntegrityLevel,
+        GetTokenInformation, TOKEN_MANDATORY_LABEL, TokenIntegrityLevel,
     };
+    // SECURITY_MANDATORY_HIGH_RID = 0x2000 (not always exported by windows crate features)
+    const HIGH_INTEGRITY_RID: u32 = 0x2000;
     use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 
     unsafe {
@@ -53,7 +54,7 @@ pub fn is_elevated() -> bool {
         }
         let rid =
             *windows::Win32::Security::GetSidSubAuthority(sid, (sub_authority_count - 1) as u32);
-        rid >= SECURITY_MANDATORY_HIGH_RID.0
+        rid >= HIGH_INTEGRITY_RID
     }
 }
 
