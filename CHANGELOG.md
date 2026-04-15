@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.33](https://github.com/nightwatch-astro/astro-up/compare/v0.1.32...v0.1.33) (2026-04-15)
+
+
+### Bug Fixes
+
+* **detect:** prevent sync_ledger from downgrading known-good versions ([#1038](https://github.com/nightwatch-astro/astro-up/issues/1038)) ([22760a4](https://github.com/nightwatch-astro/astro-up/commit/22760a4afabd2ffbc956a8fdd1e430a8b483c90e))
+* skip update_available for unknown versions, add PE binary regex fallback ([#1039](https://github.com/nightwatch-astro/astro-up/issues/1039)) ([0bccdd9](https://github.com/nightwatch-astro/astro-up/commit/0bccdd906256617cdfab14ee5c117464b9ca3158))
+
 ## [0.1.32](https://github.com/nightwatch-astro/astro-up/compare/v0.1.31...v0.1.32) (2026-04-14)
 
 
