@@ -102,8 +102,11 @@ fn which_sudo() -> Option<std::path::PathBuf> {
 /// restart the GUI in Tauri.
 ///
 /// Strategy:
-/// 1. If `sudo.exe` is on PATH (Windows 11 24H2+), prefix the command with `sudo`.
-/// 2. Otherwise, use `ShellExecuteExW` with the `runas` verb to trigger a UAC prompt.
+/// Uses `ShellExecuteExW` with the `runas` verb to trigger a UAC prompt.
+///
+/// Note: `sudo.exe` (Windows 11 24H2+) was previously preferred but its inline
+/// mode does not grant full admin rights to GUI installers with embedded admin
+/// manifests — both .NET and ZWO installers returned E_ACCESSDENIED via sudo.
 ///
 /// Returns the installer process exit code.
 #[cfg(windows)]
@@ -114,12 +117,7 @@ pub async fn spawn_elevated(
     timeout: Duration,
 ) -> Result<i32, CoreError> {
     tracing::info!(args = ?args, "spawning installer with elevation");
-
-    if detect_sudo() {
-        spawn_elevated_sudo(exe, args, timeout).await
-    } else {
-        spawn_elevated_runas(exe, args, timeout).await
-    }
+    spawn_elevated_runas(exe, args, timeout).await
 }
 
 /// Elevation via `sudo.exe` (Windows 11 24H2+). Inline elevation — no new window.
@@ -345,13 +343,7 @@ pub async fn spawn_elevated_with_job(
     timeout: Duration,
 ) -> Result<i32, CoreError> {
     tracing::info!(args = ?args, "spawning elevated installer with job object");
-
-    if detect_sudo() {
-        // sudo.exe path already gives us proper process tracking via kill_on_drop
-        spawn_elevated_sudo(exe, args, timeout).await
-    } else {
-        spawn_elevated_runas_inner(exe, args, timeout, true).await
-    }
+    spawn_elevated_runas_inner(exe, args, timeout, true).await
 }
 
 #[cfg(not(windows))]
