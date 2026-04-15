@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.36](https://github.com/nightwatch-astro/astro-up/compare/v0.1.35...v0.1.36) (2026-04-15)
+
+
+### Bug Fixes
+
+* drop sudo.exe elevation, always use ShellExecuteExW runas ([#1046](https://github.com/nightwatch-astro/astro-up/issues/1046)) ([917c9d8](https://github.com/nightwatch-astro/astro-up/commit/917c9d8842b81ceb301cb3897051b484fe4da760))
+
 ## [0.1.35](https://github.com/nightwatch-astro/astro-up/compare/v0.1.34...v0.1.35) (2026-04-15)
 
 
