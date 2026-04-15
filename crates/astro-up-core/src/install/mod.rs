@@ -211,8 +211,12 @@ impl InstallerService {
             &request.install_scope,
         );
 
-        let exit_code = if needs_elevation {
-            // Elevate just the installer process — not the entire app
+        let exit_code = if needs_elevation && matches!(config.method, InstallMethod::Burn) {
+            // Burn bootstrappers spawn child processes (MSIs) — need job object
+            // tracking even when elevated, plus SW_SHOWNORMAL for window messaging.
+            elevation::spawn_elevated_with_job(&exe, &args, request.timeout).await?
+        } else if needs_elevation {
+            // Simple elevation for non-Burn installers
             elevation::spawn_elevated(&exe, &args, request.timeout).await?
         } else if matches!(config.method, InstallMethod::Burn) {
             process::spawn_with_job_object(
@@ -241,8 +245,11 @@ impl InstallerService {
                 #[cfg(windows)]
                 {
                     info!("reactive elevation (exit code 740), retrying installer with elevation");
-                    let retry_code =
-                        elevation::spawn_elevated(&exe, &args, request.timeout).await?;
+                    let retry_code = if matches!(config.method, InstallMethod::Burn) {
+                        elevation::spawn_elevated_with_job(&exe, &args, request.timeout).await?
+                    } else {
+                        elevation::spawn_elevated(&exe, &args, request.timeout).await?
+                    };
                     let retry_outcome = interpret_exit_code(retry_code, config);
                     match retry_outcome {
                         ExitCodeOutcome::Success => Ok(InstallResult::Success { path: None }),
@@ -374,7 +381,9 @@ impl InstallerService {
                     request.quiet,
                     &request.install_scope,
                 );
-                let exit_code = if needs_elevation {
+                let exit_code = if needs_elevation && matches!(config.method, InstallMethod::Burn) {
+                    elevation::spawn_elevated_with_job(&exe, &args, request.timeout).await?
+                } else if needs_elevation {
                     elevation::spawn_elevated(&exe, &args, request.timeout).await?
                 } else {
                     process::spawn_simple(

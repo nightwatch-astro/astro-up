@@ -110,13 +110,30 @@ async fn spawn_elevated_sudo(
 
 /// Elevation via `ShellExecuteExW` with `runas` verb (pre-Win11 24H2).
 /// Shows a UAC prompt and waits for the elevated process to complete.
+///
+/// Uses `SW_SHOWNORMAL` instead of `SW_HIDE` because some installers
+/// (notably WiX Burn bootstrappers) rely on window messaging internally
+/// and fail when started hidden.
 #[cfg(windows)]
 async fn spawn_elevated_runas(
     exe: &str,
     args: &[String],
     timeout: Duration,
 ) -> Result<i32, CoreError> {
-    tracing::info!("using ShellExecuteExW runas for UAC elevation");
+    spawn_elevated_runas_inner(exe, args, timeout, false).await
+}
+
+/// Inner implementation shared between simple elevation and job-object elevation.
+/// When `with_job` is true, wraps the elevated process in a Windows Job Object
+/// for process tree tracking (needed for Burn bootstrappers).
+#[cfg(windows)]
+async fn spawn_elevated_runas_inner(
+    exe: &str,
+    args: &[String],
+    timeout: Duration,
+    with_job: bool,
+) -> Result<i32, CoreError> {
+    tracing::info!(with_job, "using ShellExecuteExW runas for UAC elevation");
 
     let exe_owned = exe.to_owned();
     let args_str = args.join(" ");
@@ -129,7 +146,7 @@ async fn spawn_elevated_runas(
         use windows::Win32::UI::Shell::{
             SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, ShellExecuteExW,
         };
-        use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
+        use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
         use windows::core::PCWSTR;
 
         let exe_wide = to_wide_null(&exe_owned);
@@ -142,7 +159,7 @@ async fn spawn_elevated_runas(
             lpVerb: PCWSTR(verb_wide.as_ptr()),
             lpFile: PCWSTR(exe_wide.as_ptr()),
             lpParameters: PCWSTR(args_wide.as_ptr()),
-            nShow: SW_HIDE.0,
+            nShow: SW_SHOWNORMAL.0,
             ..Default::default()
         };
 
@@ -156,6 +173,22 @@ async fn spawn_elevated_runas(
             tracing::warn!("ShellExecuteExW returned no process handle");
             return Err(CoreError::ElevationRequired);
         }
+
+        // Optionally wrap in a Job Object for process tree tracking.
+        // The process is already running, but child processes created after
+        // assignment will be contained. This is critical for Burn bootstrappers
+        // that spawn MSI child processes.
+        let job_handle = if with_job {
+            match create_and_assign_job(sei.hProcess) {
+                Ok(job) => Some(job),
+                Err(e) => {
+                    tracing::warn!(error = %e, "failed to create job object for elevated process, continuing without");
+                    None
+                }
+            }
+        } else {
+            None
+        };
 
         let wait = unsafe { WaitForSingleObject(sei.hProcess, timeout_ms) };
         let code = if wait.0 == 0 {
@@ -184,12 +217,91 @@ async fn spawn_elevated_runas(
 
         unsafe {
             CloseHandle(sei.hProcess).ok();
+            if let Some(job) = job_handle {
+                CloseHandle(job).ok();
+            }
         }
 
         code
     })
     .await
     .map_err(|e| CoreError::Io(std::io::Error::other(e)))?
+}
+
+/// Create a Job Object and assign the given process to it.
+/// Returns the job handle on success.
+#[cfg(windows)]
+fn create_and_assign_job(
+    process: windows::Win32::Foundation::HANDLE,
+) -> Result<windows::Win32::Foundation::HANDLE, CoreError> {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::JobObjects::{
+        AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
+        SetInformationJobObject,
+    };
+
+    let job = unsafe { CreateJobObjectW(None, None) }
+        .map_err(|e| CoreError::Io(std::io::Error::other(e)))?;
+
+    let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    unsafe {
+        SetInformationJobObject(
+            job,
+            JobObjectExtendedLimitInformation,
+            (&raw const info).cast(),
+            std::mem::size_of_val(&info) as u32,
+        )
+    }
+    .map_err(|e| {
+        unsafe {
+            CloseHandle(job).ok();
+        }
+        CoreError::Io(std::io::Error::other(e))
+    })?;
+
+    unsafe { AssignProcessToJobObject(job, process) }.map_err(|e| {
+        unsafe {
+            CloseHandle(job).ok();
+        }
+        CoreError::Io(std::io::Error::other(e))
+    })?;
+
+    tracing::debug!("elevated process assigned to Job Object");
+    Ok(job)
+}
+
+/// Spawns an elevated process with Job Object tracking.
+///
+/// Combines UAC elevation with process tree management — needed for
+/// Burn bootstrappers and other installers that spawn child processes.
+#[cfg(windows)]
+#[tracing::instrument(skip_all, fields(exe = %exe, timeout_secs = timeout.as_secs()))]
+pub async fn spawn_elevated_with_job(
+    exe: &str,
+    args: &[String],
+    timeout: Duration,
+) -> Result<i32, CoreError> {
+    tracing::info!(args = ?args, "spawning elevated installer with job object");
+
+    if detect_sudo() {
+        // sudo.exe path already gives us proper process tracking via kill_on_drop
+        spawn_elevated_sudo(exe, args, timeout).await
+    } else {
+        spawn_elevated_runas_inner(exe, args, timeout, true).await
+    }
+}
+
+#[cfg(not(windows))]
+#[tracing::instrument(skip_all, fields(exe = %_exe, timeout_secs = _timeout.as_secs()))]
+pub async fn spawn_elevated_with_job(
+    _exe: &str,
+    _args: &[String],
+    _timeout: Duration,
+) -> Result<i32, CoreError> {
+    tracing::info!("elevated job object execution not supported on this platform");
+    Err(CoreError::ElevationRequired)
 }
 
 #[cfg(not(windows))]
