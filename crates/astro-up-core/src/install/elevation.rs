@@ -74,27 +74,6 @@ pub fn is_elevated() -> bool {
     false
 }
 
-/// Checks if `sudo.exe` is available on PATH (Windows 11 24H2+).
-#[cfg(windows)]
-pub fn detect_sudo() -> bool {
-    which_sudo().is_some()
-}
-
-#[cfg(not(windows))]
-pub fn detect_sudo() -> bool {
-    false
-}
-
-#[cfg(windows)]
-fn which_sudo() -> Option<std::path::PathBuf> {
-    std::env::var_os("PATH").and_then(|paths| {
-        std::env::split_paths(&paths).find_map(|dir| {
-            let candidate = dir.join("sudo.exe");
-            candidate.is_file().then_some(candidate)
-        })
-    })
-}
-
 /// Spawns an installer process with elevated (admin) privileges.
 ///
 /// Elevates only the installer process — the calling application continues
@@ -120,54 +99,7 @@ pub async fn spawn_elevated(
     spawn_elevated_runas(exe, args, timeout).await
 }
 
-/// Elevation via `sudo.exe` (Windows 11 24H2+). Inline elevation — no new window.
-#[cfg(windows)]
-async fn spawn_elevated_sudo(
-    exe: &str,
-    args: &[String],
-    timeout: Duration,
-) -> Result<i32, CoreError> {
-    use std::time::Instant;
-
-    tracing::info!("using sudo.exe for inline elevation");
-    let start = Instant::now();
-
-    let mut child = tokio::process::Command::new("sudo")
-        .arg(exe)
-        .args(args)
-        .kill_on_drop(true)
-        .spawn()
-        .map_err(|e| {
-            tracing::error!(error = %e, "failed to spawn sudo process");
-            CoreError::Io(e)
-        })?;
-
-    tokio::select! {
-        result = child.wait() => {
-            let status = result?;
-            let code = status.code().unwrap_or(-1);
-            tracing::info!(
-                exit_code = code,
-                duration_ms = start.elapsed().as_millis() as u64,
-                "elevated installer process exited"
-            );
-            Ok(code)
-        }
-        () = tokio::time::sleep(timeout) => {
-            if let Err(e) = child.kill().await {
-                tracing::trace!(error = %e, "failed to kill elevated process during timeout");
-            }
-            tracing::warn!(
-                timeout_secs = timeout.as_secs(),
-                duration_ms = start.elapsed().as_millis() as u64,
-                "elevated installer process timed out"
-            );
-            Err(CoreError::InstallerTimeout { timeout_secs: timeout.as_secs() })
-        }
-    }
-}
-
-/// Elevation via `ShellExecuteExW` with `runas` verb (pre-Win11 24H2).
+/// Elevation via `ShellExecuteExW` with `runas` verb.
 /// Shows a UAC prompt and waits for the elevated process to complete.
 ///
 /// Uses `SW_SHOWNORMAL` instead of `SW_HIDE` because some installers
