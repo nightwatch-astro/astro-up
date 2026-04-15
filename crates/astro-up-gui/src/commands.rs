@@ -250,7 +250,7 @@ fn try_list_software(
                 .map(|ve| ve.version);
 
             let update_available = match (&installed_version, &latest_version) {
-                (Some(inst), Some(latest)) => {
+                (Some(inst), Some(latest)) if inst != "0.0.0" => {
                     let iv = astro_up_core::types::Version::parse(inst);
                     let lv = astro_up_core::types::Version::parse(latest);
                     lv > iv
@@ -372,6 +372,10 @@ pub async fn check_for_updates(state: State<'_, AppState>) -> Result<serde_json:
 
     for detection in &scan_result.results {
         if let DetectionResult::Installed { ref version, .. } = detection.result {
+            // Skip sentinel versions — can't meaningfully compare
+            if version.raw == "0.0.0" {
+                continue;
+            }
             let pkg_id = detection
                 .package_id
                 .parse()
