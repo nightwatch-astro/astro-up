@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.34](https://github.com/nightwatch-astro/astro-up/compare/v0.1.33...v0.1.34) (2026-04-15)
+
+
+### Bug Fixes
+
+* **install:** use job object + SW_SHOWNORMAL for elevated Burn installs ([#1041](https://github.com/nightwatch-astro/astro-up/issues/1041)) ([a8785cf](https://github.com/nightwatch-astro/astro-up/commit/a8785cf43e11de3491b66eb1ab74dd7f568bf6b4))
+
 ## [0.1.33](https://github.com/nightwatch-astro/astro-up/compare/v0.1.32...v0.1.33) (2026-04-15)
 
 
