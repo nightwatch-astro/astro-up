@@ -37,6 +37,8 @@ jobs:
 
       - name: Install dependencies
         run: pnpm --dir docs install --frozen-lockfile
+        env:
+          PNPM_ALLOW_BUILDS: esbuild
 
       - name: Build docs
         run: pnpm --dir docs build

@@ -35,9 +35,6 @@ astro-up install nina-app
 astro-up update nina-app
 astro-up update --all
 
-# Show available backups
-astro-up show backups
-
 # Check or initialize config
 astro-up config show
 astro-up config init
@@ -52,7 +49,6 @@ All CLI commands support `--json` for machine-readable output.
 
 1. Astro-Up checks the catalog for the latest version
 2. Downloads the installer with SHA-256 verification
-3. Backs up your configuration automatically
-4. Runs the installer silently (or interactively if configured)
-5. Re-runs detection to verify the new version is installed
-6. Records the result in operation history
+3. Runs the installer silently (or interactively if configured)
+4. Re-runs detection to verify the new version is installed
+5. Records the result in operation history

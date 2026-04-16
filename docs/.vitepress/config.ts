@@ -36,7 +36,6 @@ export default defineConfig({
           { text: "Software Catalog", link: "/guide/catalog" },
           { text: "Detection", link: "/guide/detection" },
           { text: "Installing & Updating", link: "/guide/installing" },
-          { text: "Backup & Restore", link: "/guide/backup" },
           { text: "Configuration", link: "/guide/configuration" },
         ],
       },

@@ -24,7 +24,6 @@ astro-up config init
 | **startup** | `start_at_login`, `start_minimized`, `minimize_to_tray` |
 | **catalog** | `url`, `cache_ttl` |
 | **network** | `proxy`, `timeouts`, `speed_limit` |
-| **backup_policy** | `scheduled`, `max_per_package`, `max_total_size_mb`, `max_age_days` |
 | **notifications** | `enabled`, plus granular per-type toggles |
 | **logging** | `level`, `log_to_file`, `max_age_days` |
 | **paths** | `download_dir`, `cache_dir`, `portable_apps_dir`, `keep_installers`, `purge_installers_after_days` |
