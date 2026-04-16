@@ -12,7 +12,7 @@ Astro-Up requires internet to sync the catalog and download installers. After th
 
 ### Can I use it on multiple imaging PCs?
 
-Yes. Each installation is independent with its own config, catalog cache, and backups.
+Yes. Each installation is independent with its own config and catalog cache.
 
 ### Is it free?
 

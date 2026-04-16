@@ -13,7 +13,6 @@ crates/astro-up-core/src/
   download/       HTTP downloads with resume, progress, SHA-256 verification
   install/        Silent installers (InnoSetup, NSIS, MSI, ZIP), elevation handling
   engine/         Orchestration, dependency resolution, planning
-  backup/         Config backup/restore with retention policies
   events/         Typed event system for UI communication
   ledger/         SQLite ledger for install history
 
@@ -29,7 +28,7 @@ crates/astro-up-gui/src/
   log_layer.rs    Tracing layer forwarding to frontend
 
 frontend/src/
-  views/          6 views (Dashboard, Catalog, Installed, Detail, Backup, Settings)
+  views/          5 views (Dashboard, Catalog, Installed, Detail, Settings)
   components/     30+ Vue components
   composables/    VueQuery hooks wrapping Tauri invoke()
   types/          TypeScript types matching Rust serde output
@@ -60,7 +59,6 @@ User Action (GUI click or CLI command)
     -> Catalog (lookup package, versions)
     -> Detect (scan local system)
     -> Download (fetch installer)
-    -> Backup (save config)
     -> Install (run installer)
     -> Ledger (record result)
   -> Event (notify UI)

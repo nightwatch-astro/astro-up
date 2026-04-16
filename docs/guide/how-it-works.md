@@ -40,10 +40,9 @@ Each detection config can have a `fallback` pointing to another detection config
 3. Disk       -- check available disk space
 4. Asset      -- select download asset (prompt if multiple options)
 5. Download   -- fetch installer (SHA-256 verified, resumable)
-6. Backup     -- save config files (if backup config exists)
-7. Install    -- run installer with elevation if required
-8. Verify     -- re-detect to confirm new version
-9. Ledger     -- record install path and version
+6. Install    -- run installer with elevation if required
+7. Verify     -- re-detect to confirm new version
+8. Ledger     -- record install path and version
 ```
 
 Events are emitted at each step, driving progress display in both GUI and CLI.
@@ -60,7 +59,6 @@ User action (GUI command or CLI subcommand)
     -> Catalog reader (SQLite, FTS5 search)
     -> Scanner (detection chain per package)
     -> Downloader (resumable, SHA-256 verified)
-    -> Backup manager (zip config files)
     -> Installer (method-specific, elevation-aware)
     -> History (operations table in SQLite)
 ```

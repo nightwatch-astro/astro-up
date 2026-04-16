@@ -1,6 +1,6 @@
 # Catalog Format
 
-The catalog is a pre-compiled SQLite database containing all package definitions, detection configs, install configs, version history, and backup paths. Distributed via GitHub Releases and signed with [minisign](https://jedisct1.github.io/minisign/).
+The catalog is a pre-compiled SQLite database containing all package definitions, detection configs, install configs, and version history. Distributed via GitHub Releases and signed with [minisign](https://jedisct1.github.io/minisign/).
 
 ## Pipeline
 
@@ -88,13 +88,6 @@ FTS5 virtual table for full-text search across name, description, tags, aliases,
 | `success_codes` | TEXT (JSON) | Array of non-zero success codes |
 | `zip_wrapped` | INTEGER | 1 if download is a zip containing the installer |
 | `zip_inner_path` | TEXT | Subfolder inside zip to find installer |
-
-### `backup`
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `package_id` | TEXT FK | References `packages.id` |
-| `config_paths` | TEXT (JSON) | Array of paths to back up (supports `$LOCALAPPDATA`, `$APPDATA` variables) |
 
 ## Source Repository
 

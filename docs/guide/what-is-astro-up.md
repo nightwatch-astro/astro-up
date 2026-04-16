@@ -1,6 +1,6 @@
 # What is Astro-Up?
 
-Astro-Up is a software manager for astrophotography on Windows. It detects, installs, updates, and backs up your imaging software from a single app.
+Astro-Up is a software manager for astrophotography on Windows. It detects, installs, and updates your imaging software from a single app.
 
 ## The Problem
 
@@ -12,7 +12,6 @@ Setting up an astrophotography PC means installing dozens of applications, drive
 - **Browse** a curated catalog of astrophotography packages
 - **Install** new software with verified downloads and silent or interactive installers
 - **Update** everything in one click, or queue multiple updates to run sequentially
-- **Back up** configuration before upgrading (profiles, settings, equipment configs)
 - **Force reinstall** packages when something goes wrong
 - **Manage portable apps** with automatic Windows shortcut creation
 
@@ -21,7 +20,6 @@ Setting up an astrophotography PC means installing dozens of applications, drive
 | Principle | Detail |
 |-----------|--------|
 | Windows-optimized | Dark theme, lightweight, fast on imaging PCs |
-| Config backup | Automatic backup before every upgrade |
 | Major version awareness | Warns before breaking upgrades |
 | Extensible catalog | TOML manifests make adding new software straightforward |
 | Self-updating | Astro-Up keeps itself current with markdown release notes |

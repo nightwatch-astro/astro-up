@@ -67,13 +67,6 @@ optional = ["ascom-platform"]
 [hardware]
 vid_pid = []
 device_class = "Camera"
-
-[backup]
-config_paths = [
-  "$LOCALAPPDATA/NINA/Profiles/",
-  "$LOCALAPPDATA/NINA/EquipmentProfiles/",
-  "$LOCALAPPDATA/NINA/Sequence/",
-]
 ```
 
 ## Field Reference
@@ -128,7 +121,7 @@ config_paths = [
 | `inf_name` | string | Driver INF filename |
 | `fallback` | object | Another `[detection]` config tried if primary fails |
 
-### `[checkver]` / `[dependencies]` / `[hardware]` / `[backup]`
+### `[checkver]` / `[dependencies]` / `[hardware]`
 
 See the [complete example](#complete-example) above. Detection configs are optional -- the [lifecycle testing workflow](./lifecycle-testing.md) discovers them automatically by installing on a Windows runner and probing for detection signatures.
 

@@ -55,16 +55,6 @@ Keys use dot-path notation (e.g., `ui.theme`, `network.proxy`). Only keys with n
 | `network.user_agent` | string | `astro-up/{version}` | HTTP User-Agent header |
 | `network.download_speed_limit` | u64 | `0` | Max download speed bytes/sec (0 = unlimited) |
 
-## `backup_policy`
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `backup_policy.scheduled_enabled` | bool | `false` | Enable scheduled backups |
-| `backup_policy.schedule` | `daily` \| `weekly` \| `monthly` | `weekly` | Backup schedule |
-| `backup_policy.max_per_package` | u32 | `5` | Max backups kept per package |
-| `backup_policy.max_total_size_mb` | u32 | `0` | Max total backup size in MB (0 = unlimited) |
-| `backup_policy.max_age_days` | u32 | `0` | Delete backups older than N days (0 = never) |
-
 ## `notifications`
 
 | Key | Type | Default | Description |

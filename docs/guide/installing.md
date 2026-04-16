@@ -24,11 +24,10 @@ astro-up install nina-app --force
 Each install goes through these steps:
 
 1. **Download** -- fetch the installer with progress tracking and SHA-256 verification
-2. **Backup** -- back up existing settings if the package is already installed
-3. **Elevate** -- request administrator privileges via UAC if needed
-4. **Execute** -- run the installer silently by default
-5. **Verify** -- run detection to confirm the package is installed
-6. **Record** -- store install path in the ledger for future backup/updates
+2. **Elevate** -- request administrator privileges via UAC if needed
+3. **Execute** -- run the installer silently by default
+4. **Verify** -- run detection to confirm the package is installed
+5. **Record** -- store install path in the ledger for future updates
 
 ## Updating
 

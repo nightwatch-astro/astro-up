@@ -20,10 +20,8 @@ features:
     details: Download, verify, and install software silently or interactively. Elevation handled automatically per package. Resumable downloads.
   - title: Portable Apps
     details: Packages using zip, portable, or download-only methods are extracted to a configurable folder with a Windows shortcut created automatically.
-  - title: Safe Backups
-    details: Automatic configuration backup before every upgrade -- profiles, settings, and equipment configs are protected. Restore with one command.
   - title: Operation History
-    details: Every install, update, and backup is recorded in the operations ledger. Track what changed, when, and whether it succeeded.
+    details: Every install and update is recorded in the operations ledger. Track what changed, when, and whether it succeeded.
   - title: GUI and CLI
     details: Tauri v2 desktop app with Vue 3 frontend, plus a full CLI for power users and scripted automation. Both share the same core engine.
   - title: Configurable

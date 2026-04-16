@@ -47,8 +47,6 @@ Show software status. Without arguments, lists all catalog packages.
 astro-up show                    # All packages
 astro-up show installed          # Installed only
 astro-up show outdated           # Packages with available updates
-astro-up show backups            # All backups
-astro-up show backups nina-app   # Backups for a specific package
 astro-up show nina-app           # Detail view for a package
 ```
 
@@ -93,29 +91,6 @@ Full-text search across package names, descriptions, tags, aliases, and publishe
 ```sh
 astro-up search "plate solver"
 ```
-
-### `backup`
-
-Create a configuration backup for a package.
-
-```sh
-astro-up backup nina-app
-```
-
-### `restore`
-
-Restore a package from a backup.
-
-```sh
-astro-up restore nina-app                   # Restore latest backup
-astro-up restore nina-app --path backup.zip # Restore specific file
-astro-up restore nina-app -y                # Skip confirmation
-```
-
-| Flag | Description |
-|------|-------------|
-| `--path <FILE>` | Restore from a specific backup file |
-| `-y, --yes` | Skip confirmation prompt |
 
 ### `config`
 
