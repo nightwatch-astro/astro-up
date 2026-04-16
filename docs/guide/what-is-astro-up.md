@@ -1,40 +1,41 @@
 # What is Astro-Up?
 
-Astro-Up is a purpose-built software manager for astrophotography on Windows. It handles the complete lifecycle of your imaging software — detection, installation, updates, and backup — from a single GUI or CLI.
+Astro-Up is a software manager for astrophotography on Windows. It detects, installs, updates, and backs up your imaging software from a single app.
 
 ## The Problem
 
-Setting up an astrophotography imaging PC means installing dozens of applications, drivers, and tools from different vendors. Keeping everything updated requires visiting multiple websites, checking version numbers, and running installers manually. Whether your imaging PC is a permanent observatory setup or a portable rig for dark sites, managing software across all those vendors is tedious and error-prone.
+Setting up an astrophotography PC means installing dozens of applications, drivers, and tools from different vendors. Keeping everything updated requires visiting multiple websites, checking version numbers, and running installers manually. Whether your PC lives in an observatory or travels to dark sites, managing all that software is tedious and error-prone.
 
 ## What Astro-Up Does
 
-- **Detect** installed versions of applications, drivers, and tools automatically
-- **Browse** a curated catalog of 90+ astrophotography packages
-- **Install** new software with verified downloads and silent installers
-- **Update** everything with one click or command
+- **Detect** installed software using 9 methods (registry, PE headers, ASCOM, WMI, driver store, and more)
+- **Browse** a curated catalog of astrophotography packages
+- **Install** new software with verified downloads and silent or interactive installers
+- **Update** everything in one click, or queue multiple updates to run sequentially
 - **Back up** configuration before upgrading (profiles, settings, equipment configs)
-- **Track** star databases, ASCOM drivers, and resources
+- **Force reinstall** packages when something goes wrong
+- **Manage portable apps** with automatic Windows shortcut creation
 
-## Key Design Principles
+## Key Principles
 
-- **Windows-optimized** — dark theme, lightweight, fast on imaging PCs
-- **Config backup** — automatic backup before every upgrade
-- **Major version awareness** — warns before breaking upgrades
-- **Extensible** — TOML manifests make adding new software trivial
-- **Self-updating** — Astro-Up keeps itself up to date
+| Principle | Detail |
+|-----------|--------|
+| Windows-optimized | Dark theme, lightweight, fast on imaging PCs |
+| Config backup | Automatic backup before every upgrade |
+| Major version awareness | Warns before breaking upgrades |
+| Extensible catalog | TOML manifests make adding new software straightforward |
+| Self-updating | Astro-Up keeps itself current with markdown release notes |
 
 ## Architecture
-
-Astro-Up is built in Rust with a clean separation of concerns:
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | `astro-up-core` | Rust library | Catalog, detection, download, install, config |
 | `astro-up-cli` | clap + ratatui | Terminal interface for power users |
-| `astro-up-gui` | Tauri v2 + Vue 3 | Desktop app with PrimeVue UI |
+| `astro-up-gui` | Tauri v2 + Vue 3 | Desktop app with PrimeVue dark theme |
 
-All business logic lives in `astro-up-core`. The CLI and GUI are thin adapters that share the same engine.
+All business logic lives in `astro-up-core`. The CLI and GUI are thin adapters sharing the same engine.
 
 ## Status
 
-Astro-Up is in active development. The core engine, CLI, and GUI are functional. The catalog is being populated with detection configs and download manifests via an [automated lifecycle testing pipeline](./lifecycle-testing.md).
+Astro-Up is in active development (v0.1.x). The core engine, CLI, and GUI are functional. The catalog is being populated with detection configs and download manifests via an [automated lifecycle testing pipeline](./lifecycle-testing.md).
