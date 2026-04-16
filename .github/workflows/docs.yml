@@ -36,10 +36,12 @@ jobs:
           cache-dependency-path: docs/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm --dir docs install --frozen-lockfile
+        working-directory: docs
+        run: pnpm install --frozen-lockfile
 
       - name: Build docs
-        run: pnpm --dir docs build
+        working-directory: docs
+        run: pnpm build
 
       - uses: actions/configure-pages@v6
 
