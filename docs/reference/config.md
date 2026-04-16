@@ -1,147 +1,104 @@
-# Configuration File Reference
+# Configuration Reference
 
-Complete reference for `config.toml`. All settings are also configurable from the **GUI Settings panel** and via **CLI flags**.
+## Storage
 
-See [Configuration Guide](/guide/configuration) for an overview.
+Configuration uses a SQLite dot-path key-value store in the application database. Not a TOML file.
 
-## File Location
+| Item | Value |
+|------|-------|
+| Database | `astro-up.db` |
+| Table | `config_settings` (key TEXT, value TEXT, updated_at TEXT) |
+| Location | `%APPDATA%\nightwatch\astro-up\data\` |
+| Access | `astro-up config show` / `astro-up config init` / GUI Settings |
+| Validation | [garde](https://github.com/jprochazk/garde) on load |
+| Duration format | [humantime](https://docs.rs/humantime/) -- `"30s"`, `"5m"`, `"1h"`, `"24h"`, `"7days"` |
 
-```
-%APPDATA%\nightwatch\astro-up\config.toml
-```
+Keys use dot-path notation (e.g., `ui.theme`, `network.proxy`). Only keys with non-default values are stored; missing keys resolve to their defaults.
 
-## Complete Example
+## `ui`
 
-```toml
-[ui]
-font_size = "medium"
-auto_scan_on_launch = true
-default_install_scope = "user"
-default_install_method = "silent"
-auto_check_updates = true
-check_interval = "12h"
-auto_notify_updates = true
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `ui.theme` | `system` \| `dark` \| `light` | `system` | Color theme |
+| `ui.font_size` | `small` \| `medium` \| `large` | `medium` | UI font size |
+| `ui.auto_scan_on_launch` | bool | `false` | Scan for installed software on startup |
+| `ui.scan_interval` | `manual` \| `on_startup` \| `hourly` \| `daily` \| `weekly` | `hourly` | Auto-scan frequency |
+| `ui.default_install_scope` | `user` \| `machine` | `user` | Default install scope |
+| `ui.default_install_method` | `silent` \| `interactive` | `interactive` | Default installer mode |
+| `ui.auto_check_updates` | bool | `true` | Periodically check for package updates |
+| `ui.check_interval` | duration | `"24h"` | How often to check for updates (min 1m) |
+| `ui.auto_notify_updates` | bool | `true` | Show notification when updates are found |
+| `ui.survey_threshold` | u32 | `3` | Successful operations before showing feedback survey |
 
-[catalog]
-url = "https://github.com/nightwatch-astro/astro-up-manifests/releases/latest/download/catalog.db"
-cache_ttl = "12h"
+## `startup`
 
-[network]
-connect_timeout = "10s"
-timeout = "30s"
-download_speed_limit = 0
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `startup.start_at_login` | bool | `false` | Launch at system startup |
+| `startup.start_minimized` | bool | `false` | Start minimized to tray |
+| `startup.minimize_to_tray_on_close` | bool | `false` | Minimize to tray on close |
 
-[backup_policy]
-scheduled_enabled = false
-schedule = "weekly"
-max_per_package = 5
-max_total_size_mb = 0
-max_age_days = 0
+## `catalog`
 
-[notifications]
-enabled = true
-display_duration = 5
-show_errors = true
-show_warnings = true
-show_update_available = true
-show_operation_complete = true
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `catalog.url` | string (URL) | GitHub Releases URL | Catalog database download URL |
+| `catalog.cache_ttl` | duration | `"24h"` | Time before re-syncing catalog |
 
-[log]
-level = "info"
-log_to_file = false
+## `network`
 
-[startup]
-start_at_login = false
-minimize_to_tray_on_close = true
-start_minimized = false
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `network.proxy` | string? | none | HTTP proxy URL |
+| `network.connect_timeout` | duration | `"10s"` | TCP connection timeout |
+| `network.timeout` | duration | `"30s"` | Full request timeout |
+| `network.user_agent` | string | `astro-up/{version}` | HTTP User-Agent header |
+| `network.download_speed_limit` | u64 | `0` | Max download speed bytes/sec (0 = unlimited) |
 
-[paths]
-download_dir = ""
-backup_dir = ""
-```
+## `backup_policy`
 
-## Field Reference
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `backup_policy.scheduled_enabled` | bool | `false` | Enable scheduled backups |
+| `backup_policy.schedule` | `daily` \| `weekly` \| `monthly` | `weekly` | Backup schedule |
+| `backup_policy.max_per_package` | u32 | `5` | Max backups kept per package |
+| `backup_policy.max_total_size_mb` | u32 | `0` | Max total backup size in MB (0 = unlimited) |
+| `backup_policy.max_age_days` | u32 | `0` | Delete backups older than N days (0 = never) |
 
-::: tip GUI Settings
-Every field below has a corresponding control in the GUI Settings panel. The table column shows which Settings tab contains it.
-:::
+## `notifications`
 
-### `[ui]`
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `notifications.enabled` | bool | `true` | Enable desktop notifications |
+| `notifications.display_duration` | u32 | `5` | Seconds before auto-dismiss |
+| `notifications.show_errors` | bool | `true` | Show error notifications |
+| `notifications.show_warnings` | bool | `true` | Show warning notifications |
+| `notifications.show_update_available` | bool | `true` | Show update available notifications |
+| `notifications.show_operation_complete` | bool | `true` | Show operation complete notifications |
 
-| Field | Type | Default | GUI tab | Description |
-|-------|------|---------|---------|-------------|
-| `font_size` | `"small"` \| `"medium"` \| `"large"` | `"medium"` | General | UI font size |
-| `auto_scan_on_launch` | bool | `true` | General | Scan for installed software on app start |
-| `default_install_scope` | `"user"` \| `"machine"` | `"user"` | General | Default install scope |
-| `default_install_method` | `"silent"` \| `"interactive"` | `"silent"` | General | Default installer mode |
-| `auto_check_updates` | bool | `true` | General | Periodically check for package updates |
-| `check_interval` | duration | `"12h"` | General | How often to check for updates |
-| `auto_notify_updates` | bool | `true` | General | Show notification when updates found |
+## `paths`
 
-### `[catalog]`
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `paths.download_dir` | path | app data dir | Downloaded installers directory |
+| `paths.cache_dir` | path | app data dir | Cache directory |
+| `paths.data_dir` | path | app data dir | Application data directory |
+| `paths.portable_apps_dir` | path | app data dir | Portable apps install directory |
+| `paths.keep_installers` | bool | `true` | Keep downloaded installers after install |
+| `paths.purge_installers_after_days` | u32 | `30` | Delete kept installers after N days |
 
-| Field | Type | Default | GUI tab | Description |
-|-------|------|---------|---------|-------------|
-| `url` | string | GitHub Releases URL | Catalog | Catalog database download URL |
-| `cache_ttl` | duration | `"12h"` | Catalog | How long before re-syncing |
+## `updates`
 
-### `[network]`
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `updates.auto_check` | bool | `true` | Auto-check for astro-up updates |
+| `updates.check_interval` | duration | `"24h"` | Self-update check interval (min 1m) |
 
-| Field | Type | Default | GUI tab | Description |
-|-------|------|---------|---------|-------------|
-| `proxy` | string? | none | Network | HTTP proxy URL |
-| `connect_timeout` | duration | `"10s"` | Network | TCP connection timeout |
-| `timeout` | duration | `"30s"` | Network | Full request timeout |
-| `download_speed_limit` | u64 | `0` | Network | Max download speed in bytes/sec (0 = unlimited) |
+## `logging`
 
-### `[backup_policy]`
-
-| Field | Type | Default | GUI tab | Description |
-|-------|------|---------|---------|-------------|
-| `scheduled_enabled` | bool | `false` | Backup | Enable scheduled backups |
-| `schedule` | `"daily"` \| `"weekly"` \| `"monthly"` | `"weekly"` | Backup | Backup schedule |
-| `max_per_package` | u32 | `5` | Backup | Max backups per package |
-| `max_total_size_mb` | u64 | `0` | Backup | Max total backup size in MB (0 = unlimited) |
-| `max_age_days` | u32 | `0` | Backup | Delete backups older than N days (0 = never) |
-
-### `[notifications]`
-
-| Field | Type | Default | GUI tab | Description |
-|-------|------|---------|---------|-------------|
-| `enabled` | bool | `true` | Notifications | Enable desktop notifications |
-| `display_duration` | u32 | `5` | Notifications | Seconds before auto-dismiss (0 = never) |
-| `show_errors` | bool | `true` | Notifications | Show error notifications |
-| `show_warnings` | bool | `true` | Notifications | Show warning notifications |
-| `show_update_available` | bool | `true` | Notifications | Show update notifications |
-| `show_operation_complete` | bool | `true` | Notifications | Show operation complete notifications |
-
-### `[log]`
-
-| Field | Type | Default | GUI tab | Description |
-|-------|------|---------|---------|-------------|
-| `level` | log level | `"info"` | Logging | Log level (error, warn, info, debug, trace) |
-| `log_to_file` | bool | `false` | Logging | Write logs to file |
-| `log_file` | string? | auto | Logging | Log file path (auto-set when enabled) |
-
-### `[startup]`
-
-| Field | Type | Default | GUI tab | Description |
-|-------|------|---------|---------|-------------|
-| `start_at_login` | bool | `false` | General | Launch at system startup |
-| `minimize_to_tray_on_close` | bool | `true` | General | Minimize to tray on close |
-| `start_minimized` | bool | `false` | General | Start minimized to tray |
-
-### `[paths]`
-
-| Field | Type | Default | GUI tab | Description |
-|-------|------|---------|---------|-------------|
-| `download_dir` | string | app data dir | Paths | Downloaded installers directory |
-| `backup_dir` | string | app data dir | Paths | Backup archive directory |
-
-## Duration Format
-
-Duration values use [humantime](https://docs.rs/humantime/) format: `"30s"`, `"5m"`, `"1h"`, `"12h"`, `"1day"`, `"7days"`.
-
-## Validation
-
-Configuration is validated on load using [garde](https://github.com/jprochazk/garde). Invalid values produce clear error messages with the field name and constraint that failed.
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `logging.level` | `error` \| `warn` \| `info` \| `debug` \| `trace` | `info` | Log level |
+| `logging.log_to_file` | bool | `false` | Write logs to file |
+| `logging.log_file` | path | auto | Log file path |
+| `logging.max_age_days` | u32 | `365` | Delete log files older than N days (0 = never) |

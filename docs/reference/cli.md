@@ -1,63 +1,55 @@
-# CLI Commands
-
-The `astro-up` CLI provides all functionality available in the GUI, plus automation-friendly features like JSON output.
-
-Full documentation: [nightwatch-astro.github.io/astro-up](https://nightwatch-astro.github.io/astro-up/)
-
-## Global Options
+# CLI Reference
 
 ```
 astro-up [OPTIONS] <COMMAND>
-
-Options:
-  --config <PATH>       Path to config file
-  --log-level <LEVEL>   Override log level (error, warn, info, debug, trace)
-  --json                Output in JSON format
-  -v, --verbose         Increase verbosity
-  -q, --quiet           Suppress non-essential output
-  -h, --help            Print help
-  -V, --version         Print version
 ```
+
+## Global Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--json` | | Output as JSON (for scripting) |
+| `--verbose` | `-v` | Show debug output |
+| `--quiet` | `-q` | Suppress non-error output |
+| `--config <PATH>` | | Path to config database |
 
 ## Commands
 
-### `sync`
+### `catalog sync`
 
-Synchronize the software catalog.
+Sync the catalog if cache is stale.
 
 ```sh
-astro-up sync           # Sync if cache is stale
-astro-up sync --force   # Force re-download
+astro-up catalog sync
+```
+
+### `catalog refresh`
+
+Force re-download the catalog regardless of TTL.
+
+```sh
+astro-up catalog refresh
 ```
 
 ### `scan`
 
-Scan the system for installed astrophotography software.
+Scan the system for installed astrophotography software. Uses WMI enumeration, then per-package detection chains (registry, PE headers, ASCOM profiles, known paths, driver store).
 
 ```sh
-astro-up scan           # Scan and display results
-astro-up scan --json    # Output as JSON
+astro-up scan
 ```
 
-### `list` / `show`
+### `show`
 
-List packages from the catalog.
+Show software status. Without arguments, lists all catalog packages.
 
 ```sh
-astro-up list                    # All packages
+astro-up show                    # All packages
 astro-up show installed          # Installed only
-astro-up show outdated           # Packages with updates
-astro-up show backups nina-app   # Backups for a package
-astro-up list --json             # JSON output
-```
-
-### `check`
-
-Check installed packages for available updates.
-
-```sh
-astro-up check          # Check all
-astro-up check nina-app # Check specific
+astro-up show outdated           # Packages with available updates
+astro-up show backups            # All backups
+astro-up show backups nina-app   # Backups for a specific package
+astro-up show nina-app           # Detail view for a package
 ```
 
 ### `install`
@@ -65,63 +57,102 @@ astro-up check nina-app # Check specific
 Download and install a package.
 
 ```sh
-astro-up install nina-app                # Silent install
-astro-up install nina-app --interactive  # Show installer UI
+astro-up install nina-app                # Install (interactive by default)
+astro-up install nina-app --dry-run      # Preview only
+astro-up install nina-app -y             # Skip confirmation
 ```
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Show what would be installed without executing |
+| `-y, --yes` | Skip confirmation prompt |
 
 ### `update`
 
 Update installed packages.
 
 ```sh
-astro-up update nina-app   # Update specific
-astro-up update --all      # Update all
+astro-up update nina-app               # Update one package
+astro-up update --all                  # Update all outdated packages
+astro-up update --all --dry-run        # Preview all updates
+astro-up update nina-app --allow-major # Allow major version jumps
+astro-up update nina-app -y            # Skip confirmation
+```
+
+| Flag | Description |
+|------|-------------|
+| `--all` | Update all outdated packages |
+| `--dry-run` | Show plan without executing |
+| `--allow-major` | Allow updates across major versions |
+| `-y, --yes` | Skip confirmation prompt |
+
+### `search`
+
+Full-text search across package names, descriptions, tags, aliases, and publishers.
+
+```sh
+astro-up search "plate solver"
 ```
 
 ### `backup`
 
-Manage backups.
+Create a configuration backup for a package.
 
 ```sh
-astro-up backup nina-app   # Back up a package
-astro-up backup --list     # List backups
+astro-up backup nina-app
 ```
 
 ### `restore`
 
-Restore from a backup.
+Restore a package from a backup.
 
 ```sh
-astro-up restore nina-app  # Restore latest
+astro-up restore nina-app                   # Restore latest backup
+astro-up restore nina-app --path backup.zip # Restore specific file
+astro-up restore nina-app -y                # Skip confirmation
 ```
+
+| Flag | Description |
+|------|-------------|
+| `--path <FILE>` | Restore from a specific backup file |
+| `-y, --yes` | Skip confirmation prompt |
 
 ### `config`
 
-View or modify configuration.
+Manage configuration (SQLite-backed key-value store).
 
 ```sh
-astro-up config            # Show current config
-astro-up config --edit     # Open in editor
-```
-
-### `clear`
-
-Clear cached data.
-
-```sh
-astro-up clear --cache      # Clear catalog cache
-astro-up clear --downloads  # Clear downloaded installers
-astro-up clear --all        # Clear everything
+astro-up config init    # Generate default config
+astro-up config show    # Show effective configuration
 ```
 
 ### `self-update`
 
-Update Astro-Up itself.
+Update astro-up itself.
 
 ```sh
-astro-up self-update           # Check and install
-astro-up self-update --dry-run # Check only
+astro-up self-update            # Check and install update
+astro-up self-update --dry-run  # Check only
 ```
+
+### `lifecycle-test`
+
+Run a full lifecycle test for a package (download, install, detect, uninstall). Used by CI to validate manifests.
+
+```sh
+astro-up lifecycle-test nina-app --manifest-path ./manifests
+astro-up lifecycle-test nina-app --manifest-path ./manifests --dry-run
+astro-up lifecycle-test nina-app --manifest-path ./manifests --version 3.1.2
+```
+
+| Flag | Description |
+|------|-------------|
+| `--manifest-path <DIR>` | Path to manifests repo checkout (required) |
+| `--version <VER>` | Specific version to test (default: latest) |
+| `--install-dir <DIR>` | Install directory for download-only packages |
+| `--catalog-path <FILE>` | Path to compiled catalog.db for version resolution |
+| `--dry-run` | Download and probe only, skip install/uninstall |
+| `--report-file <FILE>` | Write JSON report to file |
 
 ## Exit Codes
 

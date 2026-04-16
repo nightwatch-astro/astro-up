@@ -1,43 +1,56 @@
 # Configuration
 
-Astro-Up uses a layered TOML configuration system with sensible defaults. **Every setting is configurable from the GUI, CLI, or config file** — choose whichever you prefer.
+Astro-Up uses a layered configuration system stored in SQLite. Every setting is configurable from the GUI, CLI, or config file.
 
 ## GUI Settings
 
-Open **Settings** from the sidebar to access all configuration options organized by category: General, Catalog, Network, Backup, Notifications, and Logging.
+Open **Settings** from the sidebar. Options are organized by category.
 
-## Config File
-
-The config file is at:
-
-```
-%APPDATA%\nightwatch\astro-up\config.toml
-```
-
-It's created automatically on first run. Edit it directly or via:
+## CLI
 
 ```sh
-astro-up config --edit
+# Show current configuration
+astro-up config show
+
+# Initialize config with defaults
+astro-up config init
 ```
 
-## CLI Overrides
-
-Most settings can be overridden per-command:
-
-```sh
-astro-up --log-level debug scan
-astro-up --config C:\path\to\config.toml list
-```
-
-## Quick Reference
+## Config Sections
 
 | Section | Key settings |
 |---------|-------------|
-| **General** | Font size, install scope, install method, auto-scan, auto-update |
-| **Catalog** | Catalog URL, cache TTL |
-| **Network** | Proxy, timeouts, speed limit |
-| **Backup** | Schedule, retention limits |
-| **Notifications** | Enable/disable, display duration, per-type toggles |
-| **Logging** | Log level, file logging |
+| **ui** | `theme`, `font_size`, `scan_interval`, `default_install_scope`, `default_install_method` |
+| **startup** | `start_at_login`, `start_minimized`, `minimize_to_tray` |
+| **catalog** | `url`, `cache_ttl` |
+| **network** | `proxy`, `timeouts`, `speed_limit` |
+| **backup_policy** | `scheduled`, `max_per_package`, `max_total_size_mb`, `max_age_days` |
+| **notifications** | `enabled`, plus granular per-type toggles |
+| **logging** | `level`, `log_to_file`, `max_age_days` |
+| **paths** | `download_dir`, `cache_dir`, `portable_apps_dir`, `keep_installers`, `purge_installers_after_days` |
+
+## Paths
+
+Default data location:
+
+```
+%APPDATA%\nightwatch\astro-up\
+```
+
+Key directories:
+
+| Path | Purpose |
+|------|---------|
+| Database | SQLite database with catalog, config, and ledger |
+| `download_dir` | Downloaded installers (configurable) |
+| `cache_dir` | Catalog cache |
+| `portable_apps_dir` | Extracted portable applications with Windows shortcuts |
+
+## Notable Settings
+
+- **`portable_apps_dir`** -- where portable apps are extracted; Astro-Up creates a Windows shortcut for each
+- **`keep_installers`** / **`purge_installers_after_days`** -- control whether downloaded installers are kept or cleaned up automatically
+- **`speed_limit`** -- cap download bandwidth to avoid saturating your connection
+- **`scan_interval`** -- how often the GUI checks for installed software automatically
 
 For the complete field reference, see [Configuration File Reference](/reference/config).

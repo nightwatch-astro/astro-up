@@ -1,62 +1,68 @@
 # How It Works
 
-Under the hood — catalog management, version checking, caching, and the update pipeline.
-
-## Manifest Catalog
-
-Software definitions (manifests) are maintained in a [separate repository](https://github.com/nightwatch-astro/astro-up-manifests) and compiled into a SQLite database (`catalog.db`). Your Astro-Up installation fetches this file at runtime — you get the latest catalog without updating the app itself.
-
-### Caching
-
-To keep things fast and minimize bandwidth:
-
-- **Disk cache** — `catalog.db` is persisted locally between sessions
-- **TTL validation** — re-syncs only when the cache is stale (configurable, default 12h)
-- **ETag support** — conditional requests avoid re-downloading unchanged data
-- **Force sync** — `astro-up sync --force` or the Re-download button in Settings
-
-### Signature Verification
-
-The catalog is signed with [minisign](https://jedisct1.github.io/minisign/). Astro-Up verifies signatures before trusting fetched data, protecting against tampered manifests.
-
-## Update Flow
-
-When you update a package:
+## Manifest Pipeline
 
 ```
-1. Check catalog for latest version
-2. Compare against locally detected version
-3. If newer: download installer (SHA-256 verified)
-4. Back up configuration (profiles, settings, equipment configs)
-5. Run installer (silently by default)
-6. Re-run detection to verify new version
-7. Record install path in ledger for future backups
+Version checker (CI) scrapes latest versions from GitHub/GitLab/vendor sites
+  -> Compiler reads TOML manifests + discovered versions
+  -> Builds catalog.db (SQLite with FTS5 search)
+  -> Signs with minisign
+  -> Published as GitHub Release artifact
 ```
+
+Astro-Up fetches `catalog.db` at runtime with ETag caching and configurable TTL. You get new packages and versions without updating the app.
 
 ## Detection Pipeline
 
-Detection uses 7 methods (Registry, PE, FileExists, ConfigFile, ASCOM, WMI, DriverStore) with fallback chains. See [Detection](./detection.md) for details.
+Detection runs in two phases:
 
-New detection configs are discovered automatically by the [lifecycle testing workflow](./lifecycle-testing.md), which installs packages on Windows runners and probes for detection signatures.
+1. **WMI enumeration** -- bulk query `Win32_Product` and `Win32_InstalledWin32Program` to find installed software
+2. **Per-package chain** -- for each catalog package, try methods in order with fallback:
+
+| Method | Source | Used for |
+|--------|--------|----------|
+| `registry` | Windows Registry `Uninstall` keys | Most applications |
+| `pe_file` | PE header version info from EXE on disk | Portable apps, version validation |
+| `wmi` / `wmi_apps` | WMI queries by name or product code | Apps without registry entries |
+| `driver_store` | Driver store by INF provider/class | Device drivers |
+| `ascom_profile` | ASCOM Profile COM interface | ASCOM drivers |
+| `file_exists` | Check if file exists at known path | Simple presence detection |
+| `config_file` | Parse version from config/settings file | Apps that store version in config |
+| `ledger` | Astro-Up's own install ledger | Download-only packages |
+
+Each detection config can have a `fallback` pointing to another detection config, forming a chain.
+
+## Install Pipeline
+
+```
+1. Plan       -- resolve target version, check constraints
+2. Process    -- check if software is running (abort if blocking)
+3. Disk       -- check available disk space
+4. Asset      -- select download asset (prompt if multiple options)
+5. Download   -- fetch installer (SHA-256 verified, resumable)
+6. Backup     -- save config files (if backup config exists)
+7. Install    -- run installer with elevation if required
+8. Verify     -- re-detect to confirm new version
+9. Ledger     -- record install path and version
+```
+
+Events are emitted at each step, driving progress display in both GUI and CLI.
+
+Elevation is handled per-package: `required` elevates via `ShellExecuteEx` with `runas`, `self` lets the installer handle its own UAC, `prohibited` runs without elevation.
 
 ## Data Flow
 
+Both GUI (Tauri v2 + Vue 3) and CLI (clap + ratatui) share `astro-up-core`:
+
 ```
-User Action (GUI or CLI)
-  -> Engine (orchestration, dependency resolution)
-    -> Catalog (manifest lookup, version comparison)
-    -> Detect (scan local system)
-    -> Download (fetch installer, verify checksum)
-    -> Backup (save config)
-    -> Install (run installer, verify detection)
-    -> Ledger (record install path)
+User action (GUI command or CLI subcommand)
+  -> Orchestrator (pipeline coordinator, operation lock)
+    -> Catalog reader (SQLite, FTS5 search)
+    -> Scanner (detection chain per package)
+    -> Downloader (resumable, SHA-256 verified)
+    -> Backup manager (zip config files)
+    -> Installer (method-specific, elevation-aware)
+    -> History (operations table in SQLite)
 ```
 
-## GUI vs CLI
-
-Both interfaces share the same `astro-up-core` library:
-
-- **No arguments** -> launches the GUI (Tauri v2 + Vue 3)
-- **Any subcommand** (e.g., `list`, `check`, `update`) -> runs the CLI (clap)
-
-The engine, catalog, detection, download, and install logic is identical in both paths.
+The orchestrator acquires a global file lock to prevent concurrent operations. Operation history is recorded in the `operations` table for the GUI's operation history view.

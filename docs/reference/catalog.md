@@ -1,51 +1,101 @@
 # Catalog Format
 
-The Astro-Up catalog is a pre-built SQLite database distributed via GitHub Releases. This page documents the catalog structure for contributors and advanced users.
+The catalog is a pre-compiled SQLite database containing all package definitions, detection configs, install configs, version history, and backup paths. Distributed via GitHub Releases and signed with [minisign](https://jedisct1.github.io/minisign/).
 
-## Distribution
+## Pipeline
 
-The catalog is maintained in the [astro-up-manifests](https://github.com/nightwatch-astro/astro-up-manifests) repository and published as `catalog.db` in GitHub Releases.
+```
+TOML manifests (astro-up-manifests repo)
+  -> Version checker scrapes latest versions from GitHub/websites
+  -> Compiler builds catalog.db from manifests + discovered versions
+  -> Signed with minisign
+  -> Published as GitHub Release artifact
+  -> Fetched by astro-up at runtime (ETag caching, TTL-based refresh)
+```
 
-## Database Schema
+## Database Tables
+
+### `meta`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `key` | TEXT PK | Metadata key (`schema_version`, `compiled_at`) |
+| `value` | TEXT | Metadata value |
 
 ### `packages`
 
-The main package table.
-
 | Column | Type | Description |
 |--------|------|-------------|
-| `id` | TEXT PK | Unique package identifier (e.g., `nina-app`) |
+| `id` | TEXT PK | Package ID (e.g., `nina-app`) |
+| `manifest_version` | INTEGER | Manifest schema version |
 | `name` | TEXT | Display name |
-| `category` | TEXT | Package category |
-| `publisher` | TEXT | Developer or organization |
-| `website` | TEXT | Official project URL |
 | `description` | TEXT | Short description |
+| `publisher` | TEXT | Developer or organization |
+| `homepage` | TEXT | Official project URL |
+| `category` | TEXT | `capture`, `guiding`, `platesolving`, `equipment`, `focusing`, `planetarium`, `viewers`, `prerequisites`, `usb`, `driver` |
+| `type` | TEXT | `application`, `driver`, `runtime`, `database`, `usb_driver`, `resource` |
+| `slug` | TEXT | URL-friendly short name |
 | `license` | TEXT | License identifier |
+| `tags` | TEXT (JSON) | Searchable tags array |
+| `aliases` | TEXT (JSON) | Alternative names array |
+| `dependencies` | TEXT (JSON) | Required package IDs array |
+| `icon_base64` | TEXT | Base64-encoded package icon |
 
-### `detection_configs`
+### `packages_fts`
 
-How to detect if a package is installed.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `package_id` | TEXT FK | References `packages.id` |
-| `method` | TEXT | Detection method: `registry`, `pe_header`, `known_path` |
-| `config` | TEXT (JSON) | Method-specific detection parameters |
+FTS5 virtual table for full-text search across name, description, tags, aliases, publisher.
 
 ### `versions`
 
-Known versions with download information.
+| Column | Type | Description |
+|--------|------|-------------|
+| `package_id` | TEXT FK | References `packages.id` |
+| `version` | TEXT | Version string |
+| `url` | TEXT | Primary download URL |
+| `sha256` | TEXT | SHA-256 checksum |
+| `discovered_at` | TEXT | ISO 8601 discovery timestamp |
+| `release_notes_url` | TEXT | Changelog URL |
+| `pre_release` | INTEGER | 1 if pre-release |
+| `assets` | TEXT (JSON) | Array of `{name, url, size}` for multi-asset releases |
+
+### `detection`
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `package_id` | TEXT FK | References `packages.id` |
-| `version` | TEXT | Version string (semver when possible) |
-| `download_url` | TEXT | Installer download URL |
-| `sha256` | TEXT | SHA-256 checksum of the installer |
-| `release_date` | TEXT | ISO 8601 release date |
-| `installer_type` | TEXT | `exe`, `msi`, `zip` |
-| `silent_args` | TEXT | Arguments for silent installation |
+| `method` | TEXT | `registry`, `pe_file`, `wmi`, `wmi_apps`, `driver_store`, `ascom_profile`, `file_exists`, `config_file`, `ledger` |
+| `file_path` | TEXT | PE/file path for file-based detection |
+| `registry_key` | TEXT | Registry key path |
+| `registry_value` | TEXT | Registry value name |
+| `version_regex` | TEXT | Regex for extracting version from text |
+| `product_code` | TEXT | MSI product GUID |
+| `upgrade_code` | TEXT | MSI upgrade GUID |
+| `inf_provider` | TEXT | Driver INF provider name |
+| `device_class` | TEXT | Driver device class |
+| `inf_name` | TEXT | Driver INF filename |
+| `fallback_config` | TEXT (JSON) | Recursive `DetectionConfig` for fallback chain |
 
-## Contributing
+### `install`
 
-To add a new package to the catalog, see the [astro-up-manifests](https://github.com/nightwatch-astro/astro-up-manifests) repository for contribution guidelines.
+| Column | Type | Description |
+|--------|------|-------------|
+| `package_id` | TEXT FK | References `packages.id` |
+| `method` | TEXT | `exe`, `msi`, `inno_setup`, `nsis`, `wix`, `burn`, `zip`, `portable`, `download_only` |
+| `scope` | TEXT | `machine`, `user`, `either` |
+| `elevation` | TEXT | `required`, `prohibited`, `self` |
+| `switches` | TEXT (JSON) | `{silent, interactive, log, install_dir}` |
+| `exit_codes` | TEXT (JSON) | Map of exit code to known meaning |
+| `success_codes` | TEXT (JSON) | Array of non-zero success codes |
+| `zip_wrapped` | INTEGER | 1 if download is a zip containing the installer |
+| `zip_inner_path` | TEXT | Subfolder inside zip to find installer |
+
+### `backup`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `package_id` | TEXT FK | References `packages.id` |
+| `config_paths` | TEXT (JSON) | Array of paths to back up (supports `$LOCALAPPDATA`, `$APPDATA` variables) |
+
+## Source Repository
+
+TOML manifests are maintained in [nightwatch-astro/astro-up-manifests](https://github.com/nightwatch-astro/astro-up-manifests). See [Adding Manifests](/guide/adding-manifests) for the manifest format.
