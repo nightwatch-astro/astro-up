@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@primeuix/themes": "^2",
-    "@tanstack/vue-query": "^5.100.14",
+    "@tanstack/vue-query": "^5.101.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-autostart": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.1",
@@ -26,7 +26,7 @@
     "snarkdown": "^2.0.0",
     "valibot": "^1",
     "vue": "^3",
-    "vue-markdown-render": "^2.3.0",
+    "vue-markdown-render": "^2.3.1",
     "vue-router": "^5"
   },
   "devDependencies": {
@@ -36,9 +36,9 @@
     "eslint-plugin-vue": "^10",
     "jsdom": "^29.1.1",
     "typescript": "^6",
-    "typescript-eslint": "^8.60.0",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7",
+    "typescript-eslint": "^8.60.1",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8",
     "vue-tsc": "^2"
   }
 }
