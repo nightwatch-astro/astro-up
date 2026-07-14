@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Tauri Command Contracts — spec 016-tauri-app-shell
 // These are the command signatures the frontend depends on.
 // All commands are thin adapters delegating to astro-up-core.

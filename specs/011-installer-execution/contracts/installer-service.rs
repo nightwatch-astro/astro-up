@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Contract: InstallerService — spec 011 installer execution
 // This is a design contract, not compilable code.
 

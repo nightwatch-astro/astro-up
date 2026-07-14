@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! WMI-based installed software enumeration.
 //!
 //! Queries `Win32_InstalledWin32Program` once to get all installed programs,

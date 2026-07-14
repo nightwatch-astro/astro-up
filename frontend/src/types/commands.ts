@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Adjacently tagged event from astro-up-core: { type: "...", data: {...} } */
 export type CoreEvent =
   | { type: "check_started"; data: { id: string } }

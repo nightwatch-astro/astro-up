@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Contract: CliState — shared state for CLI command handlers
 // Mirrors the GUI's AppState pattern without Tauri dependency.
 

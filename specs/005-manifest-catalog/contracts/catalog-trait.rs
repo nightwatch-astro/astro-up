@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Catalog module public API contract.
 //!
 //! This file defines the trait and types that the catalog module exposes

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Contract: Lifecycle Test Runner
 // Location: crates/astro-up-core/src/lifecycle.rs (new module)
 

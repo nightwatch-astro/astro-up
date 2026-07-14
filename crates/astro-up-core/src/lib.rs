@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Shared library for astro-up — types, detection, download, install, and orchestration engine.
 
 pub mod adapters;

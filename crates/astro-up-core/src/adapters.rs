@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Concrete adapters for Scanner traits.
 //!
 //! These bridge the catalog/ledger storage to the trait interfaces used by

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Lightweight task supervisor with panic recovery and sliding window restart limits.
 //!
 //! Critical background tasks (event forwarding, schedulers) are wrapped in a

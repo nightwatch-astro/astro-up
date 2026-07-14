@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "primevue/usetoast";

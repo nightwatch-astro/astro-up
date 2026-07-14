@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Windows Search index file lookup.
 //!
 //! Queries the Windows Search index to find files by name.

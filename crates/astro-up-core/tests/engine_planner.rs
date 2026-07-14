@@ -1,4 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Integration tests for the update planner — dependency resolution, ordering, and plan building.
 
 use astro_up_core::catalog::{PackageId, VersionEntry};

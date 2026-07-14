@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // parking_lot::Mutex — no poisoning, lock() returns guard directly.
 // Remaining unwrap/expect usages are for compile-time constants or test code.
 #![allow(clippy::unwrap_used, clippy::expect_used)]

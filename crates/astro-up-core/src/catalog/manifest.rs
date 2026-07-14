@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! TOML manifest reader — reads raw manifests from the manifests repo checkout.
 
 use std::path::Path;

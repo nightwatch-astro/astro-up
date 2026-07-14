@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Contract: TOML Manifest Reader
 // Location: crates/astro-up-core/src/catalog/manifest.rs (new module)
 
