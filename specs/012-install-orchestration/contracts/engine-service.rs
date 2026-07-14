@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Engine Service Contract — public API surface for install orchestration
 //
 // This contract defines the interface that CLI and GUI consume.

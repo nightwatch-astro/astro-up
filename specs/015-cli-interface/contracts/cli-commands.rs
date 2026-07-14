@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Contract: CLI Commands — spec 015
 // This is a design contract, not compilable code.
 

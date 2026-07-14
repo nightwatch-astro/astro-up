@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Detection discovery — blind probing of all detection methods to discover
 //! detection signatures for packages without a `[detection]` config.
 

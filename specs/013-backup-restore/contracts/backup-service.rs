@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Contract: BackupService — spec 013 backup and restore
 // This is a design contract, not compilable code.
 

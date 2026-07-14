@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { useStorage } from "@vueuse/core";
 import type { AppConfig } from "../types/config";
 import type { ConfigSnapshot } from "../types/operations";

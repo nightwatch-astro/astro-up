@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Catalog manager — orchestrates fetch, verify, and refresh.
 
 use std::path::{Path, PathBuf};

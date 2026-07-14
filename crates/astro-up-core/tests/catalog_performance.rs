@@ -1,4 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Performance benchmarks for catalog operations (SC-001, SC-002 from spec 005).
 
 use std::path::Path;

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Catalog module — fetch, verify, and query the software catalog.
 
 pub mod fetch;

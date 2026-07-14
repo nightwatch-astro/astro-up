@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use std::process::ExitCode;
 
 use clap::Parser;
@@ -40,8 +43,7 @@ async fn main() -> ExitCode {
             ..astro_up_core::config::PathsConfig::default()
         };
         astro_up_core::config::load_config(&db_path, paths, log_dir.join("astro-up.log"), &[])
-            .map(|c| c.logging.max_age_days)
-            .unwrap_or(365)
+            .map_or(365, |c| c.logging.max_age_days)
     };
 
     let _log_guard =

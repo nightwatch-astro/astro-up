@@ -13,7 +13,7 @@ members = ["crates/astro-up-core", "crates/astro-up-cli", "crates/astro-up-gui"]
 [workspace.package]
 version = "0.1.12"
 edition = "2024"
-license = "Apache-2.0"
+license = "AGPL-3.0-only"
 repository = "https://github.com/nightwatch-astro/astro-up"
 rust-version = "1.85"
 

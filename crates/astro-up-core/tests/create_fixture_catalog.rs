@@ -1,4 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Helper to create test fixture catalog.db.
 //! Run with: cargo test -p astro-up-core --test create_fixture_catalog -- --ignored
 

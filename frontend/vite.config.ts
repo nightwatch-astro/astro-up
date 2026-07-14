@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /// <reference types="vitest/config" />
 import { readFileSync } from "fs";
 import { defineConfig } from "vite";

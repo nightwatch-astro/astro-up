@@ -1,4 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Snapshot tests for lifecycle-test CLI command output structures.
 //!
 //! These tests verify JSON report structure and TOML detection config output

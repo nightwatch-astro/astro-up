@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Lifecycle test runner — orchestrates download, install, detect, uninstall phases
 //! for a single package, producing a report and discovered detection config.
 

@@ -1,4 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Round-trip integration test: create fixture catalog with full detection configs,
 //! read via SqliteCatalogReader::detection_config(), verify all fields match
 //! including deserialized fallback chain.

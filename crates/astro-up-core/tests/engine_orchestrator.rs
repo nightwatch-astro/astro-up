@@ -1,4 +1,8 @@
 #![allow(
+
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
     clippy::unwrap_used,
     clippy::expect_used,
     clippy::unwrap_in_result,

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Metric name constants for the `metrics` crate facade.
 //!
 //! Core types export names only — the engine and UI layers register

@@ -1,3 +1,6 @@
+// Copyright (C) 2024-2026 Sjors Robroek
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Global lock file — PID-based single-instance enforcement with stale detection.
 //!
 //! Uses OS-level advisory file locking (`fd_lock`) combined with PID tracking
