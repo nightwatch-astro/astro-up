@@ -86,7 +86,7 @@ strum = { version = "0.28", features = ["derive"] }
 trait-variant = "0.1"
 semver = { version = "1", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-garde = { version = "0.22", features = ["derive", "url"] }
+garde = { version = "0.23", features = ["derive", "url"] }
 humantime = "2"
 humantime-serde = "1"
 tracing = "0.1"
