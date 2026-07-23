@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/nightwatch-astro/astro-up/compare/v0.1.36...v0.2.0) (2026-07-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* relicense from Apache-2.0 to AGPL-3.0-only ([#1104](https://github.com/nightwatch-astro/astro-up/issues/1104))
+
+### Miscellaneous
+
+* relicense from Apache-2.0 to AGPL-3.0-only ([#1104](https://github.com/nightwatch-astro/astro-up/issues/1104)) ([5187589](https://github.com/nightwatch-astro/astro-up/commit/518758931f70165e3b08837eaad8d8c3569af6d8))
+
 ## [0.1.36](https://github.com/nightwatch-astro/astro-up/compare/v0.1.35...v0.1.36) (2026-04-15)
 
 
