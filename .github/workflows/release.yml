@@ -78,6 +78,10 @@ jobs:
     needs: release-please
     if: needs.release-please.outputs.releases_created == 'true'
     runs-on: windows-latest
+    permissions:
+      contents: write # gh release upload + tauri-action's own uploads
+      id-token: write # OIDC identity that signs the attestation
+      attestations: write # publish the attestation to this repo
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -124,6 +128,7 @@ jobs:
         run: cargo binstall tauri-cli --version ^2 --no-confirm
 
       - name: Build Tauri app
+        id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -139,6 +144,54 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
+
+      # Attest everything this job produced: the standalone CLI plus the Tauri bundles.
+      # Runs while the release is still a draft, so nothing is publicly downloadable
+      # before its provenance exists.
+      #
+      # tauri-action emits artifactPaths as a JSON ARRAY STRING (see its src/index.ts:
+      # `JSON.stringify(artifacts.map((a) => a.path))`), which actions/attest cannot
+      # consume directly — subject-path wants a newline-separated list. Convert it here
+      # rather than hardcoding bundle filenames, which carry the version and would drift
+      # on every release.
+      #
+      # This does NOT replace the Tauri updater signatures (.sig) that tauri-action
+      # produces: those are what the auto-updater checks against the app's embedded
+      # public key, offline and with no GitHub dependency. The attestation records which
+      # workflow run built the bytes, and verifying it requires reaching GitHub. Keep both.
+      - name: Collect artifact paths for attestation
+        id: subjects
+        shell: bash
+        env:
+          ARTIFACT_PATHS: ${{ steps.tauri.outputs.artifactPaths }}
+        run: |
+          # Bundles only: skip the .sig sidecars (signatures over the bundles, not
+          # artifacts in their own right) and latest.json (a pointer regenerated on every
+          # release, so a provenance claim over it ages out immediately).
+          bundles="$(printf '%s' "${ARTIFACT_PATHS:-[]}" |
+            jq -r '.[] | select(endswith(".sig") or endswith("latest.json") | not)')"
+
+          # Fail loud rather than attesting only the CLI. If tauri-action changes its
+          # output shape, an empty list here would leave the installer unattested while
+          # the job still went green — the release would look provenance-covered when the
+          # artifact users actually download was not.
+          if [ -z "$bundles" ]; then
+            echo "::error::no Tauri bundles found in artifactPaths; refusing to attest a partial artifact set"
+            echo "artifactPaths was: ${ARTIFACT_PATHS:-<unset>}"
+            exit 1
+          fi
+
+          {
+            echo 'paths<<SUBJECTS_EOF'
+            echo "astro-up-cli.exe"
+            echo "$bundles"
+            echo 'SUBJECTS_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Attest build provenance
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: ${{ steps.subjects.outputs.paths }}
 
   publish-release:
     name: Publish Release
