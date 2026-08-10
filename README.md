@@ -28,6 +28,24 @@ astro-up check         # Check for updates
 astro-up update --all  # Update everything
 ```
 
+### Verifying a download
+
+Every released binary and installer carries a GitHub build provenance attestation — a
+signed statement of which workflow run, at which commit, produced those exact bytes.
+Check one with the [GitHub CLI](https://cli.github.com/):
+
+```sh
+gh attestation verify Astro-Up_x64-setup.exe -R nightwatch-astro/astro-up
+gh attestation verify astro-up-cli.exe       -R nightwatch-astro/astro-up
+```
+
+Verification contacts GitHub, since the attestation is stored with the repository rather
+than alongside the download. Add `--format json` for the full predicate.
+
+This is separate from the `.sig` files in each release: those are Tauri updater
+signatures, checked by the app's own auto-updater against its embedded public key, and
+they work offline.
+
 ## Development
 
 ```sh
