@@ -5,6 +5,7 @@ import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useCoreEvents } from "./composables/useCoreEvents";
+import { useTheme } from "./composables/useTheme";
 import { useKeyboard } from "./composables/useKeyboard";
 import { useOperations } from "./composables/useOperations";
 import { useErrorLog } from "./stores/errorLog";
@@ -273,7 +274,10 @@ function dismissUpdate() {
   updateVersion.value = null;
 }
 
+const { init: initTheme } = useTheme();
+
 onMounted(() => {
+  initTheme();
   setupUpdateListener();
   setupBackendLogListener();
 });
