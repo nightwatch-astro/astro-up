@@ -90,7 +90,13 @@ garde = { version = "0.23", features = ["derive", "url"] }
 humantime = "2"
 humantime-serde = "1"
 tracing = "0.1"
-astro-up-core = { version = "0.1.10", path = "crates/astro-up-core" }
+# No `version` field: the crate is `publish = false`, so a version requirement
+# here is never resolved from a registry and only constrains the path dependency.
+# A stale requirement is invisible while it happens to admit the current version
+# and then breaks the release: `^0.1.10` accepted every 0.1.x bump but rejected
+# the 0.2.0 release-please cut, because `cargo-workspace` rewrites each crate's
+# own version and not this requirement.
+astro-up-core = { path = "crates/astro-up-core" }
 insta = { version = "1", features = ["json", "toml", "redactions"] }
 pretty_assertions = "1"
 rstest = "0.26"
