@@ -124,7 +124,7 @@ jobs:
 
       - name: Install sccache
         if: steps.cli.outputs.source == 'build'
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: Build CLI (no release binary available)
         if: steps.cli.outputs.source == 'build'
