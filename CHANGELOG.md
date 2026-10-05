@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.2.0](https://github.com/nightwatch-astro/astro-up/compare/v0.1.36...v0.2.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* relicense from Apache-2.0 to AGPL-3.0-only ([#1104](https://github.com/nightwatch-astro/astro-up/issues/1104))
+
+### Features
+
+* apply theme preference in frontend and switch CI to sccache ([#1134](https://github.com/nightwatch-astro/astro-up/issues/1134)) ([2456ba4](https://github.com/nightwatch-astro/astro-up/commit/2456ba4b39f566cfb72d54d01b062a71826573f5))
+
+
+### Bug Fixes
+
+* drop the stale workspace version pin blocking the 0.2.0 release ([#1135](https://github.com/nightwatch-astro/astro-up/issues/1135)) ([d3bdbd9](https://github.com/nightwatch-astro/astro-up/commit/d3bdbd9a2bc544fa63c70c927a4831a1b22f0ca2))
+
+
+### Miscellaneous
+
+* relicense from Apache-2.0 to AGPL-3.0-only ([#1104](https://github.com/nightwatch-astro/astro-up/issues/1104)) ([5187589](https://github.com/nightwatch-astro/astro-up/commit/518758931f70165e3b08837eaad8d8c3569af6d8))
+
 ## [0.1.36](https://github.com/nightwatch-astro/astro-up/compare/v0.1.35...v0.1.36) (2026-04-15)
 
 
